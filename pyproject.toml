@@ -50,7 +50,7 @@ test = [
 typing = [
   "basedpyright>=1.33.0",
   "mypy>=1.16.0",
-  "ty>=0.0.1a26",
+  "ty>=0.0.2",
   { include-group = "test" },
 ]
 
