@@ -51,7 +51,7 @@ def _get_return_type_from_signature(sig: inspect.Signature) -> type:
     # Preserve the full generic type with type parameters
     origin = get_origin(return_annotation)
     if origin is not None and isinstance(origin, type):
-        return return_annotation  # type: ignore[no-any-return]
+        return return_annotation
     msg = "Return type must be a type."
     raise TypeError(msg)
 
@@ -200,7 +200,7 @@ class Calculation[T, **P]:
                 )
                 raise ValueError(msg)
         self.dep_ppaths = {name: ref_to_project_path(ref) for name, ref in dep_refs.items()}
-        self.output_type = _get_return_type_from_signature(sig)
+        self.output_type = _get_return_type_from_signature(sig)  # ty: ignore[invalid-assignment]
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
         return self.func(*args, **kwargs)
@@ -331,7 +331,7 @@ class Scope:
 
             assumed_verifications: list[Verification[...]] = []
             if hasattr(func, "__veriq_assumed_verifications__"):
-                assumed_verifications = func.__veriq_assumed_verifications__
+                assumed_verifications = func.__veriq_assumed_verifications__  # ty: ignore[invalid-assignment]
 
             verification = Verification(
                 name=verification_name,
@@ -367,7 +367,7 @@ class Scope:
 
             assumed_verifications: list[Verification[...]] = []
             if hasattr(func, "__veriq_assumed_verifications__"):
-                assumed_verifications = func.__veriq_assumed_verifications__
+                assumed_verifications = func.__veriq_assumed_verifications__  # ty: ignore[invalid-assignment]
 
             calculation = Calculation(
                 name=calculation_name,

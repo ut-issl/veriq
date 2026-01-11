@@ -31,7 +31,7 @@ class Table[K: (StrEnum, tuple[StrEnum, ...]), V](dict[K, V]):
     def _serialize_key(key: K) -> str:
         """Serialize a key to a string for JSON representation."""
         if isinstance(key, tuple):
-            return ",".join(str(k.value) for k in key)
+            return ",".join(str(k.value) for k in key)  # ty: ignore[unresolved-attribute] # k is `StrEnum` but ty cannot infer it
         return str(key.value)
 
     def _serialize_for_pydantic(self) -> dict[str, V]:
@@ -81,7 +81,7 @@ class Table[K: (StrEnum, tuple[StrEnum, ...]), V](dict[K, V]):
                         raise ValueError(msg)
                     key = tuple(enum_type(part) for enum_type, part in zip(enum_types, parts, strict=True))
 
-                deserialized[key] = val
+                deserialized[key] = val  # ty: ignore[invalid-assignment]
 
             # Create the Table instance, which will validate completeness
             return cls(deserialized)
@@ -151,16 +151,16 @@ class Table[K: (StrEnum, tuple[StrEnum, ...]), V](dict[K, V]):
             expected_keys = frozenset(key_type)
 
         self._key_type = type(key_sample)
-        self._expected_keys = expected_keys
+        self._expected_keys = expected_keys  # ty: ignore[invalid-assignment]
 
-        missing_keys = expected_keys - set(mapping.keys())
+        missing_keys = expected_keys - set(mapping.keys())  # ty: ignore[unsupported-operator]
         if missing_keys:
             msg = f"Table is missing keys: {missing_keys}"
             raise ValueError(msg)
 
-        disallowed_keys = set(mapping.keys()) - expected_keys
+        disallowed_keys = set(mapping.keys()) - expected_keys  # ty: ignore[unsupported-operator]
         if disallowed_keys:
             msg = f"Table has disallowed keys: {disallowed_keys}"
             raise ValueError(msg)
 
-        super().__init__(mapping)  # type: ignore[arg-type]
+        super().__init__(mapping)

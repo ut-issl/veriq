@@ -255,6 +255,7 @@ def get_value_by_parts(data: BaseModel, parts: tuple[PartBase, ...]) -> Any:
                     else:
                         # Single enum key
                         key = key_type(key)
+                assert isinstance(current, Table)
                 current = current[key]
             case _:
                 msg = f"Unknown part type: {type(part)}"
@@ -266,7 +267,7 @@ def hydrate_value_by_leaf_values[T](model: type[T], leaf_values: Mapping[tuple[P
     # If there's a value at the empty path (), it represents the complete object
     # This happens when we store both the whole Table and individual items
     if () in leaf_values:
-        return leaf_values[()]  # type: ignore[no-any-return]
+        return leaf_values[()]
 
     # Handle generic Table types (e.g., Table[Option, float])
     origin = get_origin(model)
@@ -301,7 +302,7 @@ def hydrate_value_by_leaf_values[T](model: type[T], leaf_values: Mapping[tuple[P
                     key = tuple(enum_type(part) for enum_type, part in zip(enum_types, parts_str, strict=True))
 
                 table_mapping[key] = value
-            return origin(table_mapping)  # type: ignore[no-any-return]
+            return origin(table_mapping)
         msg = f"Table type must have exactly 2 type arguments, got {len(type_args)}"
         raise TypeError(msg)
 
@@ -320,7 +321,7 @@ def hydrate_value_by_leaf_values[T](model: type[T], leaf_values: Mapping[tuple[P
         if len(leaf_values) != 1 or any(len(parts) != 0 for parts in leaf_values):
             msg = f"Expected single leaf value for non-model type '{model}', got: {leaf_values}"
             raise ValueError(msg)
-        return next(iter(leaf_values.values()))  # type: ignore[no-any-return]
+        return next(iter(leaf_values.values()))
 
     field_values: dict[str, Any] = {}
 
