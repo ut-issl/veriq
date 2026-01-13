@@ -1,20 +1,18 @@
 """Comprehensive edge case tests for vq.Table including nested tables and Pydantic models as values.
 
-Note: Tests for Table[K, PydanticModel] where PydanticModel values are accessed through
-calculations are currently excluded because this feature is not yet fully supported in the
-evaluation system. However, Tables with Pydantic model values DO work for:
-- Serialization to TOML (see test_table_basemodel_toml.py)
-- Direct access in Python code
-- Loading from TOML files
+This test suite covers:
+- Table[K, PydanticModel] - Tables with Pydantic models as values
+- Table[K, Table[K2, V]] - Nested tables (up to 3 levels deep tested)
+- Table[K, V] where V is various types (string, int, bool, list, dict)
+- Edge cases with tuple keys (single-element, 4-element)
+- Usage in calculations, verifications, and serialization
 
-The limitation is specifically around path resolution and dependency graph building for
-nested structures within table values.
+All table features are fully supported including path-based access through calculations.
 """
 
 from enum import StrEnum
 from typing import Annotated
 
-import pytest
 from pydantic import BaseModel
 
 import veriq as vq
@@ -56,11 +54,6 @@ class Status(StrEnum):
 
 
 # ==================== Tests: Table with Pydantic model as value ====================
-# Note: The following tests are commented out because Table[K, PydanticModel] with
-# path-based access through calculations is not yet fully supported in the evaluation
-# system. The issue is that iter_leaf_path_parts() doesn't properly flatten Table
-# values that contain Pydantic models. However, these tables DO work for TOML I/O
-# (see test_table_basemodel_toml.py) and direct Python access.
 
 
 def test_table_with_pydantic_model_value_serialization() -> None:
@@ -93,11 +86,6 @@ def test_table_with_pydantic_model_value_serialization() -> None:
     assert serialized["component_specs"]["battery"]["power"] == 100.0
 
 
-@pytest.mark.xfail(
-    reason="Table[K, PydanticModel] with path-based access in calculations not yet supported. "
-    "Issue: iter_leaf_path_parts() doesn't properly flatten Table values containing Pydantic models.",
-    strict=True,
-)
 def test_table_with_pydantic_model_value_in_root_model() -> None:
     """Test Table[K, PydanticModel] in root model - basic case with model values."""
     project = vq.Project("Test Project")
@@ -143,10 +131,6 @@ def test_table_with_pydantic_model_value_in_root_model() -> None:
     assert battery_power == 100.0
 
 
-@pytest.mark.xfail(
-    reason="Table[K, PydanticModel] as calculation output not yet supported",
-    strict=True,
-)
 def test_table_with_pydantic_model_value_in_calculation() -> None:
     """Test Table[K, PydanticModel] as calculation output."""
     project = vq.Project("Test Project")
@@ -195,10 +179,6 @@ def test_table_with_pydantic_model_value_in_calculation() -> None:
     assert nominal_avg_power == 100.0
 
 
-@pytest.mark.xfail(
-    reason="Table[K, PydanticModel] with nested field access not yet supported",
-    strict=True,
-)
 def test_table_with_pydantic_model_value_nested_access() -> None:
     """Test accessing individual fields within Pydantic model values in a table."""
     project = vq.Project("Test Project")
@@ -246,10 +226,6 @@ def test_table_with_pydantic_model_value_nested_access() -> None:
     assert temp_range == 80.0  # 60.0 - (-20.0)
 
 
-@pytest.mark.xfail(
-    reason="Table[K, PydanticModel] with deeply nested models not yet supported",
-    strict=True,
-)
 def test_table_with_complex_pydantic_model_value() -> None:
     """Test Table with nested Pydantic models as values."""
     project = vq.Project("Test Project")

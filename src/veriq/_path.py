@@ -183,7 +183,7 @@ def iter_leaf_path_parts(  # noqa: PLR0912, C901
         # Extract type arguments from the generic Table
         type_args = get_args(model)
         if len(type_args) == 2:
-            key_type_arg, _value_type_arg = type_args
+            key_type_arg, value_type_arg = type_args
 
             # Determine the actual enum type(s)
             key_type_args = get_args(key_type_arg)
@@ -195,17 +195,25 @@ def iter_leaf_path_parts(  # noqa: PLR0912, C901
                 enum_type = enum_types[0]
                 if isclass(enum_type) and issubclass(enum_type, StrEnum):
                     for enum_value in enum_type:
-                        yield (
-                            *_current_path_parts,
-                            ItemPart(key=enum_value.value),
+                        # Recurse into the value type for each key
+                        yield from iter_leaf_path_parts(
+                            value_type_arg,
+                            _current_path_parts=(
+                                *_current_path_parts,
+                                ItemPart(key=enum_value.value),
+                            ),
                         )
             # Tuple of StrEnum keys
             elif all(isclass(et) and issubclass(et, StrEnum) for et in enum_types):
                 for values in product(*(list(et) for et in enum_types)):
                     key = ",".join(v.value for v in values)
-                    yield (
-                        *_current_path_parts,
-                        ItemPart(key=key),
+                    # Recurse into the value type for each key
+                    yield from iter_leaf_path_parts(
+                        value_type_arg,
+                        _current_path_parts=(
+                            *_current_path_parts,
+                            ItemPart(key=key),
+                        ),
                     )
         return
 
