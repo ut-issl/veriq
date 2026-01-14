@@ -9,9 +9,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Annotated
 
-import veriq as vq
 from pydantic import BaseModel
-from veriq._path import CalcPath, ProjectPath
+
+import veriq as vq
 
 
 class Mode(StrEnum):
@@ -77,7 +77,7 @@ def test_multidim_table_with_string_interpolated_ref():
     # Create input TOML
     with TemporaryDirectory() as tmpdir:
         input_path = Path(tmpdir) / "input.toml"
-        output_path = Path(tmpdir) / "output.toml"
+        Path(tmpdir) / "output.toml"
 
         # Write input TOML with multi-dimensional table keys
         input_toml = """
@@ -90,7 +90,7 @@ def test_multidim_table_with_string_interpolated_ref():
 
         # Load and evaluate - this should fail with KeyError
         model_data = vq.load_model_data_from_toml(project, input_path)
-        results = vq.evaluate_project(project, model_data)
+        _results = vq.evaluate_project(project, model_data)
 
         # The verification should have been evaluated
         # This will trigger the bug!

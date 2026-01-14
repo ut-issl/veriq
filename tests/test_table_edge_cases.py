@@ -19,7 +19,6 @@ import veriq as vq
 from veriq._eval import evaluate_project
 from veriq._path import AttributePart, CalcPath, ItemPart, ModelPath, ProjectPath, VerificationPath
 
-
 # ==================== Enum definitions ====================
 
 
@@ -58,7 +57,7 @@ class Status(StrEnum):
 
 def test_table_with_pydantic_model_value_serialization() -> None:
     """Test that Table[K, PydanticModel] can be created and serialized (without evaluation)."""
-    
+
     class ComponentSpec(BaseModel):
         power: float
         mass: float
@@ -400,7 +399,7 @@ def test_nested_table_tuple_to_single() -> None:
     ]
     # Battery is first (index 0), so (0+1)*100 = 100
     # Launch is first (index 0), so 0*10 = 0
-    # Total: 100 + 0 = 100
+    # Total: 100 + 0 = 100  # noqa: ERA001
     assert power == 100.0
 
 
@@ -868,10 +867,7 @@ def test_table_in_verification() -> None:
         actual_power: Annotated[vq.Table[Component, float], vq.Ref("$.actual_power")],
     ) -> bool:
         # Verify all components are within power limits
-        for component in Component:
-            if actual_power[component] > power_limits[component]:
-                return False
-        return True
+        return all(actual_power[component] <= power_limits[component] for component in Component)
 
     model_data = {
         scope.name: RootModel(
