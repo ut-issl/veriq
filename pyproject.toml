@@ -64,8 +64,17 @@ strict = true
 [tool.pip-licenses]
 allow-only = "MIT License;BSD License;Apache 2.0;Python Software Foundation License;PSF-2.0;ISC License (ISCL);Apache Software License;The Unlicense (Unlicense);MIT;BSD-3-Clause"
 
-[tool.pytest.ini_options]
-addopts = "-ra --verbose --verbose --capture=no --strict-markers --color=yes --log-cli-level=INFO"
+[tool.pytest]
+addopts = [
+  "--capture=no",
+  "--color=yes",
+  "--log-cli-level=INFO",
+  "--strict-markers",
+  "--verbose",
+  "--verbose",
+  "-ra",  # show extra test summary info for all tests except passed tests
+]
+minversion = "9.0"
 testpaths = ["tests"]
 
 [tool.ruff]

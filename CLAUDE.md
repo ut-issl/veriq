@@ -209,11 +209,16 @@ Per-file ignores:
 
 ### Testing Patterns
 
-Tests use pytest with strict configuration:
+Pytest options are already configured in `pyproject.toml`, so you can just run:
 
 ```bash
-# pytest.ini_options includes:
-# -ra --verbose --capture=no --strict-markers --color=yes --log-cli-level=INFO
+uv run pytest
+```
+
+Or with coverage:
+
+```bash
+just test
 ```
 
 Common test pattern:
