@@ -206,7 +206,8 @@ def iter_leaf_path_parts(  # noqa: PLR0912, C901
             # Tuple of StrEnum keys
             elif all(isclass(et) and issubclass(et, StrEnum) for et in enum_types):
                 for values in product(*(list(et) for et in enum_types)):
-                    key = ",".join(v.value for v in values)
+                    # Store as tuple of strings to match path parsing behavior
+                    key = tuple(v.value for v in values)
                     # Recurse into the value type for each key
                     yield from iter_leaf_path_parts(
                         value_type_arg,
