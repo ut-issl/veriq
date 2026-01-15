@@ -93,12 +93,12 @@ class Table[K: (StrEnum, tuple[StrEnum, ...]), V](dict[K, V]):
         # Get the schema for the value type
         value_schema = handler.generate_schema(value_type_arg)
 
-        # Generate all valid keys based on the enum types
-        # This creates explicit properties in the JSON schema instead of using additionalProperties
+        # Generate all valid keys from enum types
         if len(enum_types) == 1:
             # Single enum key: just use the enum values directly
             # Example: Mode.NOMINAL, Mode.SAFE -> ["nominal", "safe"]
-            valid_keys = [member.value for member in enum_types[0]]
+            enum_type = enum_types[0]
+            valid_keys = [member.value for member in enum_type]
         else:
             # Tuple of enum keys: generate all combinations using cartesian product
             # Example: (Phase.INITIAL, Mode.NOMINAL), (Phase.INITIAL, Mode.SAFE), ...

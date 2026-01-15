@@ -1,7 +1,7 @@
 """Tests for the schema command to ensure it generates correct JSON schemas."""
 
 import json
-import sys
+import subprocess
 import tomllib
 from enum import StrEnum
 from pathlib import Path
@@ -15,8 +15,6 @@ from veriq._table import Table
 
 def test_schema_command_restricts_table_keys(tmp_path: Path) -> None:
     """Test that the schema command generates JSON schema that restricts Table keys."""
-    import subprocess
-
     # Create a minimal project with a Table field
     project_file = tmp_path / "test_project.py"
     project_code = """
@@ -92,7 +90,7 @@ mission = 15.0
     with invalid_toml.open("rb") as f:
         invalid_data = tomllib.load(f)
 
-    with pytest.raises(jsonschema.ValidationError, match="mission|additional"):
+    with pytest.raises(jsonschema.ValidationError, match=r"mission|additional"):
         jsonschema.validate(invalid_data, schema)
 
 
@@ -125,7 +123,7 @@ def test_schema_table_has_explicit_enum_key_properties() -> None:
 
     # Look for the Design model definition
     design_def = None
-    for def_name, def_value in schema["$defs"].items():
+    for def_value in schema["$defs"].values():
         if "power_consumption" in def_value.get("properties", {}):
             design_def = def_value
             break
@@ -203,8 +201,6 @@ def test_schema_restricts_table_keys_with_pydantic() -> None:
 
 def test_schema_restricts_tuple_table_keys(tmp_path: Path) -> None:
     """Test that schema restricts keys for Table with tuple keys."""
-    import subprocess
-
     # Create a project with a tuple-keyed Table
     project_file = tmp_path / "test_tuple_table.py"
     project_code = """
