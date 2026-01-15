@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Annotated
 
+import tomli_w
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
@@ -13,6 +14,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from veriq._build import build_dependencies_graph
+from veriq._default import default
 from veriq._eval import evaluate_project
 from veriq._io import export_to_toml, load_model_data_from_toml
 from veriq._models import Project
@@ -329,6 +331,56 @@ def schema(
 
     err_console.print()
     err_console.print("[green]✓ Schema generation complete[/green]")
+    err_console.print()
+
+
+@app.command()
+def init(
+    path: Annotated[
+        str,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ],
+    *,
+    output: Annotated[
+        Path,
+        typer.Option("-o", "--output", help="Path to output TOML file"),
+    ],
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+) -> None:
+    """Generate a sample input TOML file with default values."""
+    err_console.print()
+
+    # Load the project
+    if ":" in path:
+        # Module path format
+        err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
+        project = _load_project_from_module_path(path)
+    else:
+        # Script path format
+        script_path = Path(path)
+        err_console.print(f"[cyan]Loading project from script:[/cyan] {script_path}")
+        project = _load_project_from_script(script_path, project_var)
+
+    err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
+    err_console.print()
+
+    # Generate default input data
+    err_console.print("[cyan]Generating default input data...[/cyan]")
+    input_data_model = project.input_model()
+    input_default_data = default(input_data_model)
+
+    # Write to TOML file
+    err_console.print(f"[cyan]Writing sample input to:[/cyan] {output}")
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    with output.open("wb") as f:
+        tomli_w.dump(input_default_data.model_dump(), f)
+
+    err_console.print()
+    err_console.print("[green]✓ Sample input file generated[/green]")
     err_console.print()
 
 

@@ -10,6 +10,7 @@ The default value of a type `T` will be determined as follows:
 
 from __future__ import annotations
 
+from annotationlib import ForwardRef
 from enum import Enum
 from itertools import product
 from typing import TYPE_CHECKING, Any, Final, get_args, get_origin
@@ -101,6 +102,10 @@ DEFAULT_IMPL: Final[dict[type, Callable[[Any], object]]] = {
 
 
 def default[T](type_: type[T]) -> T:
+    # Handle ForwardRef by evaluating it first
+    if isinstance(type_, ForwardRef):
+        type_ = type_.evaluate()
+
     # Handle generic types by checking origin
     origin = get_origin(type_)
 
