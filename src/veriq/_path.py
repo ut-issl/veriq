@@ -136,9 +136,8 @@ class VerificationPath(Path):
         if not self.root.startswith(self.PREFIX):
             msg = f"VerificationPath root must start with '{self.PREFIX}'. Got: {self.root}"
             raise ValueError(msg)
-        if self.parts:
-            msg = "VerificationPath must not have parts."
-            raise ValueError(msg)
+        # Parts are now allowed for Table[K, bool] verifications
+        # where parts represent the table item access (e.g., ?verify[key])
 
     @property
     def verification_name(self) -> str:

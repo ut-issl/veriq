@@ -125,7 +125,7 @@ def _load_project_from_module_path(module_path: str) -> Project:
 
 
 @app.command()
-def calc(  # noqa: C901
+def calc(  # noqa: C901, PLR0912, PLR0915
     path: Annotated[
         str,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
@@ -185,7 +185,11 @@ def calc(  # noqa: C901
                 scope_name = ppath.scope
                 scope = project.scopes[scope_name]
                 verification = scope.verifications[verification_name]
-                verification_results.append((f"{scope_name}::?{verification_name}", value, verification.xfail))
+                # Build display name including path parts for Table[K, bool] verifications
+                display_name = f"{scope_name}::?{verification_name}"
+                if ppath.path.parts:
+                    display_name += str(ppath.path)[len(f"?{verification_name}"):]
+                verification_results.append((display_name, value, verification.xfail))
                 if (not value) ^ verification.xfail:
                     exit_as_err = True
 

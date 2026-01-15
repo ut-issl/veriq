@@ -11,6 +11,7 @@ from scoped_context import NoContextError, ScopedContext
 from typing_extensions import _AnnotatedAlias
 
 from ._path import AttributePart, CalcPath, ItemPart, ModelPath, ProjectPath, VerificationPath, parse_path
+from ._table import Table
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -54,6 +55,27 @@ def _get_return_type_from_signature(sig: inspect.Signature) -> type:
         return return_annotation
     msg = "Return type must be a type."
     raise TypeError(msg)
+
+
+def _is_valid_verification_return_type(return_type: type) -> bool:
+    """Check if the return type is valid for a verification function.
+
+    Valid return types are:
+    - bool
+    - Table[K, bool] (where K is StrEnum or tuple of StrEnum)
+    """
+    if return_type is bool:
+        return True
+
+    # Check for Table[K, bool]
+    origin = get_origin(return_type)
+    if origin is Table or (isinstance(origin, type) and issubclass(origin, Table)):
+        type_args = get_args(return_type)
+        if len(type_args) == 2:
+            _key_type, value_type = type_args
+            # Value type must be bool
+            return value_type is bool
+    return False
 
 
 @dataclass(slots=True)
@@ -134,8 +156,11 @@ class Project:
             }
             calc_model = create_model(f"{scope_name}Calc", **calc_fields) if calc_fields else None  # ty: ignore[no-matching-overload]
 
-            # Create verification model with all verifications
-            verification_fields = dict.fromkeys(scope.verifications, (bool, ...))
+            # Create verification model with all verifications (using actual return types)
+            verification_fields = {
+                verif_name: (verif.output_type, ...)
+                for verif_name, verif in scope.verifications.items()
+            }
             verification_model = (
                 create_model(f"{scope_name}Verification", **verification_fields)  # ty: ignore[no-matching-overload]
                 if verification_fields
@@ -242,7 +267,41 @@ class Project:
             return current_type
 
         if isinstance(ppath.path, VerificationPath):
-            return bool
+            verif_name = ppath.path.root.lstrip(ppath.path.PREFIX)
+            verification = scope.verifications.get(verif_name)
+            if verification is None:
+                msg = f"Verification '{verif_name}' not found in scope '{scope.name}'."
+                raise KeyError(msg)
+            current_type = verification.output_type
+            for part in ppath.path.parts:
+                if isinstance(current_type, ForwardRef):
+                    current_type = current_type.evaluate()
+                match part:
+                    case AttributePart(name):
+                        if not issubclass(current_type, BaseModel):
+                            msg = f"Type '{current_type}' is not a Pydantic model."
+                            raise TypeError(msg)
+                        try:
+                            field_info = current_type.model_fields[name]
+                        except KeyError as e:
+                            msg = f"Attribute '{name}' not found in model '{current_type.__name__}'."
+                            raise KeyError(msg) from e
+                        if field_info.annotation is None:
+                            msg = f"Attribute '{name}' in model '{current_type.__name__}' has no type annotation."
+                            raise TypeError(msg)
+                        current_type = field_info.annotation
+                    case ItemPart(key):
+                        args = get_args(current_type)
+                        if len(args) != 2:
+                            msg = f"Type '{current_type}' is not subscriptable with key '{key}'."
+                            raise TypeError(msg)
+                        current_type = args[1]
+                    case _:
+                        msg = f"Unknown part type: {type(part)}"
+                        raise TypeError(msg)
+            if isinstance(current_type, ForwardRef):
+                current_type = current_type.evaluate()
+            return current_type
 
         msg = f"Unsupported path type: {ppath.path.__class__.__name__}"
         raise TypeError(msg)
@@ -264,7 +323,7 @@ class Calculation[T, **P]:
     func: Callable[P, T] = field(repr=False)
     default_scope_name: str = field()
     imported_scope_names: list[str] = field(default_factory=list)
-    assumed_verifications: list[Verification[...]] = field(default_factory=list)
+    assumed_verifications: list[Verification[Any, ...]] = field(default_factory=list)
 
     # Fields initialized in __post_init__
     dep_ppaths: dict[str, ProjectPath] = field(init=False)
@@ -295,18 +354,22 @@ class Calculation[T, **P]:
 
 
 @dataclass(slots=True)
-class Verification[**P]:
-    """A class to represent a verification in the verification process."""
+class Verification[T, **P]:
+    """A class to represent a verification in the verification process.
+
+    The return type T must be either `bool` or `Table[K, bool]`.
+    """
 
     name: str
-    func: Callable[P, bool] = field(repr=False)  # TODO: disallow positional-only arguments
+    func: Callable[P, T] = field(repr=False)  # TODO: disallow positional-only arguments
     default_scope_name: str = field()
     imported_scope_names: list[str] = field(default_factory=list)
-    assumed_verifications: list[Verification[...]] = field(default_factory=list)
+    assumed_verifications: list[Verification[Any, ...]] = field(default_factory=list)
     xfail: bool = field(default=False, kw_only=True)
 
     # Fields initialized in __post_init__
     dep_ppaths: dict[str, ProjectPath] = field(init=False)
+    output_type: type[T] = field(init=False)
 
     def __post_init__(self) -> None:
         sig = inspect.signature(self.func)
@@ -327,7 +390,16 @@ class Verification[**P]:
                 raise ValueError(msg)
         self.dep_ppaths = {name: ref_to_project_path(ref) for name, ref in dep_refs.items()}
 
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> bool:
+        # Extract and validate return type
+        self.output_type = _get_return_type_from_signature(sig)  # ty: ignore[invalid-assignment]
+        if not _is_valid_verification_return_type(self.output_type):
+            msg = (
+                f"Verification '{self.name}' has invalid return type '{self.output_type}'. "
+                "Return type must be 'bool' or 'Table[K, bool]'."
+            )
+            raise TypeError(msg)
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
         return self.func(*args, **kwargs)
 
 
@@ -344,7 +416,7 @@ class Requirement(ScopedContext):
     id: str
     description: str
     decomposed_requirements: list[Requirement] = field(default_factory=list, repr=False)
-    verified_by: list[Verification[...]] = field(default_factory=list, repr=False)
+    verified_by: list[Verification[Any, ...]] = field(default_factory=list, repr=False)
     depends_on: list[Requirement] = field(default_factory=list, repr=False)
 
     def iter_requirements(self, *, depth: int | None = None, leaf_only: bool = False) -> Iterable[Requirement]:
@@ -362,7 +434,7 @@ class Scope:
     name: str
     _root_model: type[BaseModel] | None = field(default=None)
     _requirements: dict[str, Requirement] = field(default_factory=dict)
-    _verifications: dict[str, Verification[...]] = field(default_factory=dict)
+    _verifications: dict[str, Verification[Any, ...]] = field(default_factory=dict)
     _calculations: dict[str, Calculation[Any, ...]] = field(default_factory=dict)
 
     def get_root_model(self) -> type[BaseModel]:
@@ -378,7 +450,7 @@ class Scope:
         return self._requirements
 
     @property
-    def verifications(self) -> dict[str, Verification[...]]:
+    def verifications(self) -> dict[str, Verification[Any, ...]]:
         """Get all verifications in the scope."""
         return self._verifications
 
@@ -399,16 +471,19 @@ class Scope:
 
         return decorator
 
-    def verification[**P](
+    def verification[T, **P](
         self,
         name: str | None = None,
         imports: Iterable[str] = (),
         *,
         xfail: bool = False,
-    ) -> Callable[[Callable[P, bool]], Verification[P]]:
-        """Decorator to mark a function as a verification in the scope."""
+    ) -> Callable[[Callable[P, T]], Verification[T, P]]:
+        """Decorator to mark a function as a verification in the scope.
 
-        def decorator(func: Callable[P, bool]) -> Verification[P]:
+        The decorated function must return either `bool` or `Table[K, bool]`.
+        """
+
+        def decorator(func: Callable[P, T]) -> Verification[T, P]:
             if name is None:
                 if not hasattr(func, "__name__") or not isinstance(func.__name__, str):
                     msg = "Function must have a valid name."
@@ -417,7 +492,7 @@ class Scope:
             else:
                 verification_name = name
 
-            assumed_verifications: list[Verification[...]] = []
+            assumed_verifications: list[Verification[Any, ...]] = []
             if hasattr(func, "__veriq_assumed_verifications__"):
                 assumed_verifications = func.__veriq_assumed_verifications__  # ty: ignore[invalid-assignment]
 
@@ -453,7 +528,7 @@ class Scope:
             else:
                 calculation_name = name
 
-            assumed_verifications: list[Verification[...]] = []
+            assumed_verifications: list[Verification[Any, ...]] = []
             if hasattr(func, "__veriq_assumed_verifications__"):
                 assumed_verifications = func.__veriq_assumed_verifications__  # ty: ignore[invalid-assignment]
 
@@ -472,7 +547,9 @@ class Scope:
 
         return decorator
 
-    def requirement(self, id_: str, /, description: str, verified_by: Iterable[Verification[...]] = ()) -> Requirement:
+    def requirement(
+        self, id_: str, /, description: str, verified_by: Iterable[Verification[Any, ...]] = (),
+    ) -> Requirement:
         """Create and add a requirement to the scope."""
         requirement = Requirement(description=description, verified_by=list(verified_by), id=id_)
         if id_ in self._requirements:

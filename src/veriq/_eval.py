@@ -104,7 +104,15 @@ def evaluate_project(project: Project, model_data: Mapping[str, BaseModel]) -> d
             logger.debug(f"  Calling verification {verif.name} with inputs: {input_values}")
             verif_result = verif.func(**input_values)
             logger.debug(f"  Verification result: {verif_result!r}")
-            result[ppath] = verif_result
+            # Decompose verification result into leaf paths (handles both bool and Table[K, bool])
+            for leaf_parts in iter_leaf_path_parts(verif.output_type):
+                leaf_ppath = ProjectPath(
+                    scope=ppath.scope,
+                    path=VerificationPath(root=ppath.path.root, parts=leaf_parts),
+                )
+                value = get_value_by_parts(verif_result, leaf_parts)
+                logger.debug(f"    Setting verification leaf {leaf_ppath} = {value!r}")
+                result[leaf_ppath] = value
         else:
             msg = f"Unsupported path type for evaluation: {type(ppath.path)}"
             raise TypeError(msg)
