@@ -93,32 +93,57 @@ class Table[K: (StrEnum, tuple[StrEnum, ...]), V](dict[K, V]):
         # Get the schema for the value type
         value_schema = handler.generate_schema(value_type_arg)
 
-        # Create the schema for dict[str, V]
-        dict_schema = core_schema.dict_schema(
-            keys_schema=core_schema.str_schema(),
-            values_schema=value_schema,
+        # Generate all valid keys based on the enum types
+        # This creates explicit properties in the JSON schema instead of using additionalProperties
+        if len(enum_types) == 1:
+            # Single enum key: just use the enum values directly
+            # Example: Mode.NOMINAL, Mode.SAFE -> ["nominal", "safe"]
+            valid_keys = [member.value for member in enum_types[0]]
+        else:
+            # Tuple of enum keys: generate all combinations using cartesian product
+            # Example: (Phase.INITIAL, Mode.NOMINAL), (Phase.INITIAL, Mode.SAFE), ...
+            # Serialized as: "initial,nominal", "initial,safe", ...
+            valid_keys = [
+                ",".join(member.value for member in combo)
+                for combo in product(*(list(enum_type) for enum_type in enum_types))
+            ]
+
+        # Create a typed dict schema with explicit fields for each valid key
+        # This ensures the JSON schema has "properties" with exact keys and "additionalProperties": false
+        # instead of using a generic dict schema with "additionalProperties": <value_schema>
+        fields = {
+            key: core_schema.typed_dict_field(
+                value_schema,
+                required=True,  # All enum combinations are required in a Table
+            )
+            for key in valid_keys
+        }
+
+        typed_dict_schema = core_schema.typed_dict_schema(
+            fields,
+            extra_behavior="forbid",  # Reject any keys not in the enum - sets "additionalProperties": false
         )
 
         # Create a schema that accepts either a Table instance or a dict
         python_schema = core_schema.union_schema(
             [
-                # Accept Table instances directly
+                # Accept Table instances directly (for in-memory Python objects)
                 core_schema.is_instance_schema(cls),
-                # Accept dict[str, V] and convert to Table
+                # Accept dict[str, V] and convert to Table (for deserialization from JSON/TOML)
                 core_schema.no_info_after_validator_function(
                     validate_from_dict,
-                    dict_schema,
+                    typed_dict_schema,  # Use typed dict schema instead of generic dict schema
                 ),
             ],
         )
 
-        # Wrap with serialization
+        # Wrap with serialization to convert Table back to dict[str, V] when serializing
         return core_schema.no_info_after_validator_function(
             lambda x: x,  # Identity function since validation is already done
             python_schema,
             serialization=core_schema.plain_serializer_function_ser_schema(
                 serialize_table,
-                return_schema=dict_schema,
+                return_schema=typed_dict_schema,  # Use same typed dict schema for serialization
             ),
         )
 

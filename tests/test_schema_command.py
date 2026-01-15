@@ -13,13 +13,8 @@ import veriq as vq
 from veriq._table import Table
 
 
-@pytest.mark.xfail(reason="JSON schema doesn't restrict Table keys to enum values (uses additionalProperties)")
 def test_schema_command_restricts_table_keys(tmp_path: Path) -> None:
-    """Test that the schema command generates JSON schema that restricts Table keys.
-    
-    This test is marked as xfail because the current implementation uses 'additionalProperties'
-    instead of explicitly listing the allowed enum keys in the JSON schema.
-    """
+    """Test that the schema command generates JSON schema that restricts Table keys."""
     import subprocess
 
     # Create a minimal project with a Table field
@@ -101,12 +96,11 @@ mission = 15.0
         jsonschema.validate(invalid_data, schema)
 
 
-def test_schema_table_lacks_enum_key_restrictions() -> None:
-    """Test that demonstrates the current limitation: JSON schema doesn't restrict Table keys to enum values.
+def test_schema_table_has_explicit_enum_key_properties() -> None:
+    """Test that JSON schema for Table fields explicitly lists allowed enum keys.
 
-    This test documents the current behavior where the JSON schema for Table fields
-    uses 'additionalProperties' instead of explicitly listing the allowed enum keys.
-    This means the JSON schema is less strict than the Pydantic validation.
+    The JSON schema should have explicit 'properties' for each enum value
+    and 'additionalProperties': false to properly restrict keys.
     """
 
     class Mode(StrEnum):
@@ -140,18 +134,19 @@ def test_schema_table_lacks_enum_key_restrictions() -> None:
 
     power_consumption_schema = design_def["properties"]["power_consumption"]
 
-    # CURRENT BEHAVIOR: The schema uses additionalProperties instead of explicit properties
-    assert power_consumption_schema == {
-        "additionalProperties": {"type": "number"},
-        "title": "Power Consumption",
-        "type": "object",
-    }, "Table schema currently uses additionalProperties, not explicit enum keys"
+    # Verify the schema has explicit properties for each enum value
+    assert "properties" in power_consumption_schema, "Table should have 'properties' in schema"
+    assert set(power_consumption_schema["properties"].keys()) == {"nominal", "safe"}
 
-    # DESIRED BEHAVIOR (currently not implemented):
-    # The schema should have:
-    # - "properties" with only {"nominal": {"type": "number"}, "safe": {"type": "number"}}
-    # - "additionalProperties": False
-    # This would properly restrict keys in JSON schema validation
+    # Verify each property has the correct type
+    assert power_consumption_schema["properties"]["nominal"]["type"] == "number"
+    assert power_consumption_schema["properties"]["safe"]["type"] == "number"
+
+    # Verify that additionalProperties is set to False to reject extra keys
+    assert power_consumption_schema["additionalProperties"] is False
+
+    # Verify that all keys are required
+    assert set(power_consumption_schema["required"]) == {"nominal", "safe"}
 
 
 def test_schema_restricts_table_keys_with_pydantic() -> None:
@@ -206,13 +201,8 @@ def test_schema_restricts_table_keys_with_pydantic() -> None:
         input_model.model_validate(invalid_data)
 
 
-@pytest.mark.xfail(reason="JSON schema doesn't restrict Table keys to enum values (uses additionalProperties)")
 def test_schema_restricts_tuple_table_keys(tmp_path: Path) -> None:
-    """Test that schema restricts keys for Table with tuple keys.
-    
-    This test is marked as xfail because the current implementation uses 'additionalProperties'
-    instead of explicitly listing the allowed tuple key combinations in the JSON schema.
-    """
+    """Test that schema restricts keys for Table with tuple keys."""
     import subprocess
 
     # Create a project with a tuple-keyed Table
