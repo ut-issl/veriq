@@ -57,12 +57,27 @@ def _get_return_type_from_signature(sig: inspect.Signature) -> type:
     raise TypeError(msg)
 
 
-def _is_valid_verification_return_type(return_type: type) -> bool:
+def is_valid_verification_return_type(return_type: type) -> bool:
     """Check if the return type is valid for a verification function.
+
+    This is a pure function that validates verification return types.
 
     Valid return types are:
     - bool
     - Table[K, bool] (where K is StrEnum or tuple of StrEnum)
+
+    Args:
+        return_type: The type to validate
+
+    Returns:
+        True if the return type is valid for a verification, False otherwise
+
+    Examples:
+        >>> is_valid_verification_return_type(bool)
+        True
+        >>> is_valid_verification_return_type(int)
+        False
+
     """
     if return_type is bool:
         return True
@@ -392,7 +407,7 @@ class Verification[T, **P]:
 
         # Extract and validate return type
         self.output_type = _get_return_type_from_signature(sig)  # ty: ignore[invalid-assignment]
-        if not _is_valid_verification_return_type(self.output_type):
+        if not is_valid_verification_return_type(self.output_type):
             msg = (
                 f"Verification '{self.name}' has invalid return type '{self.output_type}'. "
                 "Return type must be 'bool' or 'Table[K, bool]'."
