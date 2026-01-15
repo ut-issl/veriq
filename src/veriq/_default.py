@@ -10,6 +10,7 @@ The default value of a type `T` will be determined as follows:
 
 from __future__ import annotations
 
+from annotationlib import ForwardRef
 from enum import Enum
 from itertools import product
 from typing import TYPE_CHECKING, Any, Final, get_args, get_origin
@@ -29,10 +30,7 @@ def _default_enum[E: Enum](type_: type[E]) -> E:
 
 
 def _default_pydantic_basemodel[M: BaseModel](type_: type[M]) -> M:
-    default_values = {
-        name: default(field_info.annotation)
-        for name, field_info in type_.model_fields.items()
-    }
+    default_values = {name: default(field_info.annotation) for name, field_info in type_.model_fields.items()}
     return type_(**default_values)
 
 
@@ -101,6 +99,10 @@ DEFAULT_IMPL: Final[dict[type, Callable[[Any], object]]] = {
 
 
 def default[T](type_: type[T]) -> T:
+    # Handle ForwardRef by evaluating it first
+    if isinstance(type_, ForwardRef):
+        type_ = type_.evaluate()
+
     # Handle generic types by checking origin
     origin = get_origin(type_)
 

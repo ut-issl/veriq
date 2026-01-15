@@ -6,7 +6,7 @@ from annotationlib import ForwardRef
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, get_args, get_origin
 
-from pydantic import BaseModel
+from pydantic import BaseModel, create_model
 from scoped_context import NoContextError, ScopedContext
 from typing_extensions import _AnnotatedAlias
 
@@ -74,6 +74,94 @@ class Project:
     def scopes(self) -> dict[str, Scope]:
         """Get all scopes in the project."""
         return self._scopes
+
+    def input_model(self) -> type[BaseModel]:
+        """Generate a Pydantic BaseModel for the project input file.
+
+        The input model has the structure:
+        {
+            "ScopeName": {
+                "model": <root model instance>
+            },
+            ...
+        }
+        """
+        # Create a model for each scope that contains just the root model
+        scope_models = {}
+        for scope_name, scope in self._scopes.items():
+            root_model_type = scope.get_root_model()
+            # Create a model with a "model" field
+            scope_input_model = create_model(
+                f"{scope_name}Input",
+                model=(root_model_type, ...),
+            )
+            scope_models[scope_name] = (scope_input_model, ...)
+
+        # Create the project-level model
+        return create_model(
+            f"{self.name}Input",
+            **scope_models,
+        )
+
+    def output_model(self) -> type[BaseModel]:
+        """Generate a Pydantic BaseModel for the project output file.
+
+        The output model has the structure:
+        {
+            "ScopeName": {
+                "model": <root model instance>,
+                "calc": {
+                    "calculation_name": <calculation output>,
+                    ...
+                },
+                "verification": {
+                    "verification_name": <bool>,
+                    ...
+                }
+            },
+            ...
+        }
+        """
+        # Create a model for each scope
+        scope_models = {}
+        for scope_name, scope in self._scopes.items():
+            root_model_type = scope.get_root_model()
+
+            # Create calc model with all calculations
+            calc_fields = {
+                calc_name: (calc.output_type, ...)
+                for calc_name, calc in scope.calculations.items()
+            }
+            calc_model = create_model(f"{scope_name}Calc", **calc_fields) if calc_fields else None  # ty: ignore[no-matching-overload]
+
+            # Create verification model with all verifications
+            verification_fields = dict.fromkeys(scope.verifications, (bool, ...))
+            verification_model = (
+                create_model(f"{scope_name}Verification", **verification_fields)  # ty: ignore[no-matching-overload]
+                if verification_fields
+                else None
+            )
+
+            # Create scope output model
+            scope_output_fields = {
+                "model": (root_model_type, ...),
+            }
+            if calc_model is not None:
+                scope_output_fields["calc"] = (calc_model, ...)
+            if verification_model is not None:
+                scope_output_fields["verification"] = (verification_model, ...)
+
+            scope_output_model = create_model(  # ty: ignore[no-matching-overload]
+                f"{scope_name}Output",
+                **scope_output_fields,
+            )
+            scope_models[scope_name] = (scope_output_model, ...)
+
+        # Create the project-level model
+        return create_model(
+            f"{self.name}Output",
+            **scope_models,
+        )
 
     def get_type(self, ppath: ProjectPath) -> type:  # noqa: C901,PLR0915,PLR0912
         """Get the type of the given project path."""
