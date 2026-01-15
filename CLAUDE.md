@@ -70,20 +70,20 @@ veriq calc my_package.module:project -i input.toml -o output.toml
 
 ### Core Design Patterns
 
-**1. Decorator Pattern for Registration**
+#### 1. Decorator Pattern for Registration
 
 - `@scope.root_model()` - Register Pydantic model as scope input
 - `@scope.calculation()` - Convert functions into Calculation objects
 - `@scope.verification()` - Convert functions into Verification objects
 - Decorators automatically extract dependencies from function signatures
 
-**2. Context Manager Pattern for Hierarchy**
+#### 2. Context Manager Pattern for Hierarchy
 
 - `Scope` and `Requirement` use context managers for hierarchical structure
 - Automatic registration when entering contexts
 - Example: `with scope: [define contents]`
 
-**3. Dependency Injection via References**
+#### 3. Dependency Injection via References
 
 - Function parameters use `Annotated[Type, vq.Ref(path)]` to declare dependencies
 - Reference syntax:
@@ -94,7 +94,7 @@ veriq calc my_package.module:project -i input.toml -o output.toml
   - `scope="ScopeName"` - Cross-scope reference
 - Automatic dependency resolution during evaluation
 
-**4. Lazy Evaluation with Dependency Graph**
+#### 4. Lazy Evaluation with Dependency Graph
 
 - Dependency graph built at check time via `build_dependencies_graph()`
 - Evaluation deferred until `evaluate_project()` call
@@ -189,7 +189,7 @@ Annotated[float, vq.Ref("$.matrix[launch,nominal]")]
 All code follows strict type checking and linting:
 
 - **Line length:** 120 characters
-- **Type checking:** `mypy --strict` enabled
+- **Type checking:** `ty`
 - **Linting:** Ruff with `select = ["ALL"]` (many rules enabled)
 - **Dataclasses:** Use `@dataclass(slots=True)` for efficiency
 - **Frozen types:** Use frozen dataclasses for immutable types
