@@ -30,10 +30,7 @@ def _default_enum[E: Enum](type_: type[E]) -> E:
 
 
 def _default_pydantic_basemodel[M: BaseModel](type_: type[M]) -> M:
-    default_values = {
-        name: default(field_info.annotation)
-        for name, field_info in type_.model_fields.items()
-    }
+    default_values = {name: default(field_info.annotation) for name, field_info in type_.model_fields.items()}
     return type_(**default_values)
 
 
@@ -140,4 +137,3 @@ def default[T](type_: type[T]) -> T:
 
     msg = f"No default value defined for type {type_}"
     raise ValueError(msg)
-|||||||
