@@ -188,7 +188,7 @@ def calc(  # noqa: C901, PLR0912, PLR0915
                 # Build display name including path parts for Table[K, bool] verifications
                 display_name = f"{scope_name}::?{verification_name}"
                 if ppath.path.parts:
-                    display_name += str(ppath.path)[len(f"?{verification_name}"):]
+                    display_name += str(ppath.path)[len(f"?{verification_name}") :]
                 verification_results.append((display_name, value, verification.xfail))
                 if (not value) ^ verification.xfail:
                     exit_as_err = True
@@ -493,6 +493,30 @@ def update(
         err_console.print("[green]✓ Input file updated successfully[/green]")
 
     err_console.print()
+
+
+@app.command()
+def diff(
+    file1: Annotated[
+        Path,
+        typer.Argument(help="Path to the first TOML file"),
+    ],
+    file2: Annotated[
+        Path,
+        typer.Argument(help="Path to the second TOML file"),
+    ],
+) -> None:
+    """Compare two TOML files and check if they are identical."""
+    with file1.open("rb") as f1, file2.open("rb") as f2:
+        toml1 = tomllib.load(f1)
+        toml2 = tomllib.load(f2)
+
+    if toml1 == toml2:
+        err_console.print("[green]✓ The TOML files are identical.[/green]")
+        raise typer.Exit(0)
+
+    err_console.print("[red]✗ The TOML files differ.[/red]")
+    raise typer.Exit(1)
 
 
 def main() -> None:
