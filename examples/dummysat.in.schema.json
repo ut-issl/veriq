@@ -1,0 +1,310 @@
+{
+  "$defs": {
+    "AOCSDesign": {
+      "properties": {},
+      "title": "AOCSDesign",
+      "type": "object"
+    },
+    "AOCSInput": {
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/AOCSModel"
+        }
+      },
+      "required": ["model"],
+      "title": "AOCSInput",
+      "type": "object"
+    },
+    "AOCSModel": {
+      "properties": {
+        "design": {
+          "$ref": "#/$defs/AOCSDesign"
+        },
+        "requirement": {
+          "$ref": "#/$defs/AOCSRequirement"
+        }
+      },
+      "required": ["design", "requirement"],
+      "title": "AOCSModel",
+      "type": "object"
+    },
+    "AOCSRequirement": {
+      "properties": {},
+      "title": "AOCSRequirement",
+      "type": "object"
+    },
+    "BatteryModel": {
+      "properties": {
+        "capacity": {
+          "title": "Capacity",
+          "type": "number"
+        },
+        "min_capacity": {
+          "title": "Min Capacity",
+          "type": "number"
+        }
+      },
+      "required": ["capacity", "min_capacity"],
+      "title": "BatteryModel",
+      "type": "object"
+    },
+    "PowerInput": {
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/PowerSubsystemModel"
+        }
+      },
+      "required": ["model"],
+      "title": "PowerInput",
+      "type": "object"
+    },
+    "PowerSubsystemDesign": {
+      "properties": {
+        "battery_a": {
+          "$ref": "#/$defs/BatteryModel"
+        },
+        "battery_b": {
+          "$ref": "#/$defs/BatteryModel"
+        },
+        "solar_panel": {
+          "$ref": "#/$defs/SolarPanelModel"
+        }
+      },
+      "required": ["battery_a", "battery_b", "solar_panel"],
+      "title": "PowerSubsystemDesign",
+      "type": "object"
+    },
+    "PowerSubsystemModel": {
+      "properties": {
+        "design": {
+          "$ref": "#/$defs/PowerSubsystemDesign"
+        },
+        "requirement": {
+          "$ref": "#/$defs/PowerSubsystemRequirement"
+        }
+      },
+      "required": ["design", "requirement"],
+      "title": "PowerSubsystemModel",
+      "type": "object"
+    },
+    "PowerSubsystemRequirement": {
+      "properties": {},
+      "title": "PowerSubsystemRequirement",
+      "type": "object"
+    },
+    "RWAInput": {
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/ReactionWheelAssemblyModel"
+        }
+      },
+      "required": ["model"],
+      "title": "RWAInput",
+      "type": "object"
+    },
+    "ReactionWheelAssemblyModel": {
+      "properties": {
+        "wheel_x": {
+          "$ref": "#/$defs/ReactionWheelModel"
+        },
+        "wheel_y": {
+          "$ref": "#/$defs/ReactionWheelModel"
+        },
+        "wheel_z": {
+          "$ref": "#/$defs/ReactionWheelModel"
+        },
+        "power_consumption": {
+          "additionalProperties": false,
+          "properties": {
+            "nominal": {
+              "title": "Nominal",
+              "type": "number"
+            },
+            "safe": {
+              "title": "Safe",
+              "type": "number"
+            },
+            "mission": {
+              "title": "Mission",
+              "type": "number"
+            }
+          },
+          "required": ["nominal", "safe", "mission"],
+          "title": "Power Consumption",
+          "type": "object"
+        },
+        "power_limit": {
+          "additionalProperties": false,
+          "properties": {
+            "nominal": {
+              "title": "Nominal",
+              "type": "number"
+            },
+            "safe": {
+              "title": "Safe",
+              "type": "number"
+            },
+            "mission": {
+              "title": "Mission",
+              "type": "number"
+            }
+          },
+          "required": ["nominal", "safe", "mission"],
+          "title": "Power Limit",
+          "type": "object"
+        },
+        "peak_power_consumption": {
+          "additionalProperties": false,
+          "properties": {
+            "initial,nominal": {
+              "title": "Initial,Nominal",
+              "type": "number"
+            },
+            "initial,safe": {
+              "title": "Initial,Safe",
+              "type": "number"
+            },
+            "initial,mission": {
+              "title": "Initial,Mission",
+              "type": "number"
+            },
+            "cruise,nominal": {
+              "title": "Cruise,Nominal",
+              "type": "number"
+            },
+            "cruise,safe": {
+              "title": "Cruise,Safe",
+              "type": "number"
+            },
+            "cruise,mission": {
+              "title": "Cruise,Mission",
+              "type": "number"
+            }
+          },
+          "required": [
+            "initial,nominal",
+            "initial,safe",
+            "initial,mission",
+            "cruise,nominal",
+            "cruise,safe",
+            "cruise,mission"
+          ],
+          "title": "Peak Power Consumption",
+          "type": "object"
+        },
+        "mass": {
+          "title": "Mass",
+          "type": "number"
+        }
+      },
+      "required": [
+        "wheel_x",
+        "wheel_y",
+        "wheel_z",
+        "power_consumption",
+        "power_limit",
+        "peak_power_consumption",
+        "mass"
+      ],
+      "title": "ReactionWheelAssemblyModel",
+      "type": "object"
+    },
+    "ReactionWheelModel": {
+      "properties": {
+        "max_torque": {
+          "title": "Max Torque",
+          "type": "number"
+        },
+        "power_consumption": {
+          "title": "Power Consumption",
+          "type": "number"
+        },
+        "mass": {
+          "title": "Mass",
+          "type": "number"
+        }
+      },
+      "required": ["max_torque", "power_consumption", "mass"],
+      "title": "ReactionWheelModel",
+      "type": "object"
+    },
+    "SatelliteModel": {
+      "properties": {},
+      "title": "SatelliteModel",
+      "type": "object"
+    },
+    "SolarPanelModel": {
+      "properties": {
+        "area": {
+          "title": "Area",
+          "type": "number"
+        },
+        "efficiency": {
+          "title": "Efficiency",
+          "type": "number"
+        },
+        "max_temperature": {
+          "title": "Max Temperature",
+          "type": "number"
+        },
+        "thermal_coefficient": {
+          "title": "Thermal Coefficient",
+          "type": "number"
+        }
+      },
+      "required": [
+        "area",
+        "efficiency",
+        "max_temperature",
+        "thermal_coefficient"
+      ],
+      "title": "SolarPanelModel",
+      "type": "object"
+    },
+    "SystemInput": {
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/SatelliteModel"
+        }
+      },
+      "required": ["model"],
+      "title": "SystemInput",
+      "type": "object"
+    },
+    "ThermalInput": {
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/ThermalModel"
+        }
+      },
+      "required": ["model"],
+      "title": "ThermalInput",
+      "type": "object"
+    },
+    "ThermalModel": {
+      "properties": {},
+      "title": "ThermalModel",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "System": {
+      "$ref": "#/$defs/SystemInput"
+    },
+    "AOCS": {
+      "$ref": "#/$defs/AOCSInput"
+    },
+    "Power": {
+      "$ref": "#/$defs/PowerInput"
+    },
+    "Thermal": {
+      "$ref": "#/$defs/ThermalInput"
+    },
+    "RWA": {
+      "$ref": "#/$defs/RWAInput"
+    }
+  },
+  "required": ["System", "AOCS", "Power", "Thermal", "RWA"],
+  "title": "ProjectInput",
+  "type": "object"
+}

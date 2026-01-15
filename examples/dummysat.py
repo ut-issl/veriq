@@ -56,6 +56,7 @@ class ReactionWheelAssemblyModel(BaseModel):
 
     # required by PowerInterface
     power_consumption: vq.Table[OperationMode, float]
+    power_limit: vq.Table[OperationMode, float]
     peak_power_consumption: vq.Table[tuple[OperationPhase, OperationMode], float]
 
     # required by StructuralInterface
@@ -89,11 +90,14 @@ class PowerSubsystemRequirement(BaseModel): ...
 
 class BatteryModel(BaseModel):
     capacity: float  # in Watt-hours
+    min_capacity: float  # minimum required capacity in Watt-hours
 
 
 class SolarPanelModel(BaseModel):
     area: float  # in square meters
     efficiency: float  # as a fraction
+    max_temperature: float  # maximum allowable temperature in Celsius
+    thermal_coefficient: float  # heat-to-temperature conversion factor
 
 
 class SolarPanelResult(BaseModel):
@@ -127,7 +131,18 @@ def power_thermal_compatibility(
 def verify_battery(
     first_battery: Annotated[BatteryModel, vq.Ref("$.design.battery_a")],
 ) -> bool:
-    return first_battery.capacity > 50.0  # Example condition
+    return first_battery.capacity > first_battery.min_capacity
+
+
+# Verification returning Table[K, bool]: verify power margins per operation mode.
+# Each entry in the returned table represents a separate verification result.
+@rwa.verification()
+def verify_power_margin(
+    power_consumption: Annotated[vq.Table[OperationMode, float], vq.Ref("$.power_consumption")],
+    power_limit: Annotated[vq.Table[OperationMode, float], vq.Ref("$.power_limit")],
+) -> vq.Table[OperationMode, bool]:
+    """Verify that power consumption is within limits for each operation mode."""
+    return vq.Table({mode: power_consumption[mode] < power_limit[mode] for mode in OperationMode})
 
 
 @thermal.calculation(imports=["Power"])
@@ -136,10 +151,13 @@ def calculate_temperature(
         float,
         vq.Ref("@calculate_solar_panel_heat.heat_generation", scope="Power"),
     ],
+    thermal_coefficient: Annotated[
+        float,
+        vq.Ref("$.design.solar_panel.thermal_coefficient", scope="Power"),
+    ],
 ) -> ThermalResult:
     """Calculate the thermal result based on the thermal model and solar panel result."""
-    # Here we would implement the actual calculation logic.
-    temperature = solar_panel_heat_generation * 0.5  # Example calculation
+    temperature = solar_panel_heat_generation * thermal_coefficient
     return ThermalResult(solar_panel_temperature_max=temperature)
 
 
@@ -149,10 +167,10 @@ def solar_panel_max_temperature(
         float,
         vq.Ref("@calculate_temperature.solar_panel_temperature_max", scope="Thermal"),
     ],
+    solar_panel: Annotated[SolarPanelModel, vq.Ref("$.design.solar_panel")],
 ) -> bool:
     """Assert that the solar panel maximum temperature is within limits."""
-    # Here we would implement the actual assertion logic.
-    return solar_panel_temperature_max < 45  # Example limit
+    return solar_panel_temperature_max < solar_panel.max_temperature
 
 
 @power.calculation()
