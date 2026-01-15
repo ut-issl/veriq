@@ -85,14 +85,14 @@ def test_project_input_model() -> None:
         },
     }
     # Check the power_input_model_value is valid
-    power_input_model_instance = PowerModel.model_validate(power_input_model_value)
+    _power_input_model_instance = PowerModel.model_validate(power_input_model_value)
 
     project_input_model_value = {
         power.name: {
             "model": power_input_model_value,
         },
     }
-    project_input_model_instance = project.input_model().model_validate(project_input_model_value)
+    _project_input_model_instance = project.input_model().model_validate(project_input_model_value)
 
 
 def test_project_output_model() -> None:
@@ -118,7 +118,7 @@ def test_project_output_model() -> None:
         },
     }
     # Check the power_input_model_value is valid
-    power_input_model_instance = PowerModel.model_validate(power_input_model_value)
+    _power_input_model_instance = PowerModel.model_validate(power_input_model_value)
 
     power_calc_model_value = {
         "calculate_battery_performance": {
@@ -136,4 +136,4 @@ def test_project_output_model() -> None:
             "verification": power_verification_model_value,
         },
     }
-    project_output_model_instance = project.output_model().model_validate(project_output_model_value)
+    _project_output_model_instance = project.output_model().model_validate(project_output_model_value)
