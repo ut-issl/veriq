@@ -1,16 +1,22 @@
 """Tests for the schema command to ensure it generates correct JSON schemas."""
 
+from __future__ import annotations
+
 import json
 import subprocess
 import tomllib
 from enum import StrEnum
-from pathlib import Path
+from typing import TYPE_CHECKING
 
+import jsonschema
 import pytest
 from pydantic import BaseModel, ValidationError
 
 import veriq as vq
-from veriq._table import Table
+from veriq._table import Table  # noqa: TC001
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_schema_command_restricts_table_keys(tmp_path: Path) -> None:
@@ -39,8 +45,8 @@ scope.root_model()(Design)
 
     # Generate JSON schema
     schema_file = tmp_path / "schema.json"
-    result = subprocess.run(
-        ["uv", "run", "veriq", "schema", str(project_file), "-o", str(schema_file)],
+    result = subprocess.run(  # noqa: S603
+        ["uv", "run", "veriq", "schema", str(project_file), "-o", str(schema_file)],  # noqa: S607
         capture_output=True,
         text=True,
         check=False,
@@ -74,12 +80,6 @@ mission = 15.0
     with valid_toml.open("rb") as f:
         valid_data = tomllib.load(f)
 
-    # Import jsonschema for validation
-    try:
-        import jsonschema
-    except ImportError:
-        pytest.skip("jsonschema not installed")
-
     # Valid data should pass
     try:
         jsonschema.validate(valid_data, schema)
@@ -106,7 +106,7 @@ def test_schema_table_has_explicit_enum_key_properties() -> None:
         SAFE = "safe"
 
     class Design(BaseModel):
-        power_consumption: Table[Mode, float]
+        power_consumption: vq.Table[Mode, float]
 
     project = vq.Project(name="TestProject")
     scope = vq.Scope(name="Power")
@@ -229,8 +229,8 @@ scope.root_model()(Design)
 
     # Generate JSON schema
     schema_file = tmp_path / "tuple_schema.json"
-    result = subprocess.run(
-        ["uv", "run", "veriq", "schema", str(project_file), "-o", str(schema_file)],
+    result = subprocess.run(  # noqa: S603
+        ["uv", "run", "veriq", "schema", str(project_file), "-o", str(schema_file)],  # noqa: S607
         capture_output=True,
         text=True,
         check=False,
@@ -262,11 +262,6 @@ scope.root_model()(Design)
 "cruise,safe" = 6.0
 "cruise,mission" = 15.0
 """)
-
-    try:
-        import jsonschema
-    except ImportError:
-        pytest.skip("jsonschema not installed")
 
     # Validate valid data
     with valid_toml.open("rb") as f:
