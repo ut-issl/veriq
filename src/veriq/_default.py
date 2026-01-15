@@ -140,3 +140,4 @@ def default[T](type_: type[T]) -> T:
 
     msg = f"No default value defined for type {type_}"
     raise ValueError(msg)
+|||||||

@@ -121,3 +121,4 @@ class Phase(StrEnum):
 def test_table[T](type_: type[T], expected: T) -> None:
     default_val = default(type_)
     assert default_val == expected
+|||||||
