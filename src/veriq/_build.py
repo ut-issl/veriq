@@ -60,12 +60,14 @@ def build_dependencies_graph(project: Project) -> DepencenciesGraph:  # noqa: PL
                         scope=dep_ppath.scope,
                         path=src_leaf_path,
                     )
-                    dst_leaf_ppath = ProjectPath(
-                        scope=scope_name,
-                        path=VerificationPath(root=f"?{verif_name}"),
-                    )
-                    predecessors_dd[dst_leaf_ppath].add(src_leaf_ppath)
-                    successors_dd[src_leaf_ppath].add(dst_leaf_ppath)
+                    # Create leaf paths for verification outputs (handles both bool and Table[K, bool])
+                    for dst_leaf_parts in iter_leaf_path_parts(verif.output_type):
+                        dst_leaf_ppath = ProjectPath(
+                            scope=scope_name,
+                            path=VerificationPath(root=f"?{verif_name}", parts=dst_leaf_parts),
+                        )
+                        predecessors_dd[dst_leaf_ppath].add(src_leaf_ppath)
+                        successors_dd[src_leaf_ppath].add(dst_leaf_ppath)
 
     return DepencenciesGraph(
         predecessors=dict(predecessors_dd),

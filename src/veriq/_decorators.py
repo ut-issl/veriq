@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from ._models import Verification
 
 
-def assume[T, **P](verification: Verification[...]) -> Callable[[Callable[P, T]], Callable[P, T]]:
+def assume[T, **P](verification: Verification[..., ...]) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorator to mark that a calculation assumes a verification."""
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:

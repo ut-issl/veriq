@@ -1,9 +1,28 @@
+#:schema ./dummysat.in.schema.json
+
 [System.model]
 
-[AOCS.model]
+[AOCS.model.design]
+
 [AOCS.model.requirement]
 
-[AOCS.model.design]
+[Power.model.design.battery_a]
+capacity = 100.0
+min_capacity = 50.0
+
+[Power.model.design.battery_b]
+capacity = 100.0
+min_capacity = 50.0
+
+[Power.model.design.solar_panel]
+area = 2.0
+efficiency = 0.3
+max_temperature = 85.0
+thermal_coefficient = 0.5
+
+[Power.model.requirement]
+
+[Thermal.model]
 
 [RWA.model]
 mass = 6.0
@@ -28,6 +47,11 @@ nominal = 15.0
 safe = 5.0
 mission = 10.0
 
+[RWA.model.power_limit]
+nominal = 20.0
+safe = 10.0
+mission = 25.0
+
 [RWA.model.peak_power_consumption]
 "initial,nominal" = 20.0
 "initial,safe" = 10.0
@@ -35,12 +59,3 @@ mission = 10.0
 "cruise,nominal" = 25.0
 "cruise,safe" = 12.0
 "cruise,mission" = 18.0
-
-[Power.model.design]
-battery_a = { capacity = 100.0 }
-battery_b = { capacity = 100.0 }
-solar_panel = { area = 2.0, efficiency = 0.3 }
-
-[Power.model.requirement]
-
-[Thermal.model]

@@ -128,9 +128,16 @@ def export_to_toml(
             section_keys = [scope_name, "calc", path.calc_name]
             field_keys = _parts_to_keys(path.parts)
         elif isinstance(path, VerificationPath):
-            # Verification paths: {scope}.verification.{verification_name}
-            section_keys = [scope_name, "verification"]
-            field_keys = [path.verification_name]
+            # Verification paths: {scope}.verification.{verification_name} or
+            # {scope}.verification.{verification_name}.{field_path} for Table[K, bool]
+            if path.parts:
+                # Table[K, bool] verification - has parts for table indexing
+                section_keys = [scope_name, "verification", path.verification_name]
+                field_keys = _parts_to_keys(path.parts)
+            else:
+                # Plain bool verification - no parts
+                section_keys = [scope_name, "verification"]
+                field_keys = [path.verification_name]
         else:
             msg = f"Unknown path type: {type(path)}"
             raise TypeError(msg)
