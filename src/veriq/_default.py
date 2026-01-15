@@ -11,6 +11,7 @@ The default value of a type `T` will be determined as follows:
 from __future__ import annotations
 
 from enum import Enum
+from itertools import product
 from typing import TYPE_CHECKING, Any, Final, get_args, get_origin
 
 from pydantic import BaseModel
@@ -54,6 +55,41 @@ def _default_tuple(type_: Any) -> tuple[Any, ...]:
     return tuple(default(arg) for arg in args)
 
 
+def _default_table(type_: Any) -> Any:
+    """Create default Table based on type annotation.
+
+    Handles:
+    - Table[Mode, int] → Table({Mode.A: 0, Mode.B: 0})
+    - Table[tuple[Mode, Phase], int] → Table({(m, p): 0 for m in Mode for p in Phase})
+    """
+    from veriq._table import Table  # noqa: PLC0415
+
+    args = get_args(type_)
+    if len(args) != 2:
+        msg = f"Table requires exactly 2 type arguments, got {len(args)}"
+        raise TypeError(msg)
+
+    key_type_arg, value_type_arg = args
+
+    # Get default value for the value type
+    default_value = default(value_type_arg)
+
+    # Determine the actual enum type(s) for keys
+    key_type_args = get_args(key_type_arg)
+    if key_type_args:
+        # tuple[Mode, Phase] case
+        enum_types = key_type_args
+        # Generate all combinations of enum values
+        all_keys = [tuple(values) for values in product(*(list(enum_type) for enum_type in enum_types))]
+    else:
+        # Single enum type like Mode
+        enum_types = (key_type_arg,)
+        all_keys = list(key_type_arg)
+
+    # Create the table with all keys mapped to default value
+    return Table(dict.fromkeys(all_keys, default_value))
+
+
 DEFAULT_IMPL: Final[dict[type, Callable[[Any], object]]] = {
     # `Enum` should come before `str` because `StrEnum` is subclass of `str`, but should be treated as `Enum`.
     Enum: _default_enum,
@@ -65,10 +101,20 @@ DEFAULT_IMPL: Final[dict[type, Callable[[Any], object]]] = {
 
 
 def default[T](type_: type[T]) -> T:
-    # Handle tuple types (both generic like tuple[int] and plain tuple class)
+    # Handle generic types by checking origin
     origin = get_origin(type_)
+
+    # Handle tuple types (both generic like tuple[int] and plain tuple class)
     if origin is tuple or type_ is tuple:
         return _default_tuple(type_)  # ty: ignore[invalid-return-type]
+
+    # Handle Table types (generic like Table[Mode, int])
+    if origin is not None:
+        # Import Table here to avoid circular dependency
+        from veriq._table import Table  # noqa: PLC0415
+
+        if origin is Table:
+            return _default_table(type_)
 
     # Handle types with custom default method
     if hasattr(type_, "default"):
