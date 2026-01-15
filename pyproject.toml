@@ -45,6 +45,7 @@ license = [
 ]
 ruff = ["ruff>=0.11.13"]
 test = [
+  "coverage>=7.10.4",
   "jsonschema>=4.26.0",
   "pytest>=8.4.0",
 ]
@@ -58,6 +59,23 @@ typing = [
 [build-system]
 requires = ["uv_build>=0.9.0,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.coverage.run]
+source = ["src/veriq"]
+
+[tool.coverage.report]
+exclude_also = [
+  "def __repr__",
+  "if self.debug:",
+  "if settings.DEBUG",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if 0:",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+  'class .*\bProtocol\):',
+  '@(abc\.)?abstractmethod',
+]
 
 [tool.mypy]
 strict = true

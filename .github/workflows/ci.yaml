@@ -92,24 +92,18 @@ jobs:
         run: uv sync --no-dev --group test
 
       - name: Run pytest
-        run: uv run -- pytest # without coverage
-        # run: uv run -- coverage run -m pytest --import-mode importlib # with coverage
+        run: uv run -- coverage run -m pytest --import-mode importlib
 
-      # The following steps are optional and can be uncommented if coverage reports are needed.
+      - name: Generate coverage report
+        run: |
+          uv run -- coverage report -m
+          uv run -- coverage xml -o ./coverage.xml
 
-      # - name: Generate coverage report
-      #   run: |
-      #     uv run -- coverage report -m
-      #     uv run -- coverage xml -o coverage/coverage.xml
-      #     uv run -- genbadge coverage -i coverage/coverage.xml -o coverage/badge.svg
-
-      # - name: Commit and push
-      #   if: github.event_name == 'pull_request'
-      #   uses: EndBug/add-and-commit@v9
-      #   with:
-      #     default_author: github_actions
-      #     message: "Update tox report"
-      #     push: "origin HEAD:${{ github.head_ref }} --force"
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   collect:
     needs: [ruff, ty, markdownlint, pytest]
