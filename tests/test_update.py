@@ -45,13 +45,13 @@ def test_deep_merge_nested_dicts():
             "a": 1,
             "b": 2,
             "nested": {"x": 10, "y": 20},
-        }
+        },
     }
     existing = {
         "outer": {
             "a": 100,
             "nested": {"x": 999},
-        }
+        },
     }
 
     result, warnings = deep_merge(new_default, existing)
@@ -61,7 +61,7 @@ def test_deep_merge_nested_dicts():
             "a": 100,
             "b": 2,
             "nested": {"x": 999, "y": 20},
-        }
+        },
     }
     assert len(warnings) == 0
 
@@ -184,19 +184,19 @@ def test_deep_merge_path_tracking():
     new_default = {
         "level1": {
             "level2": {
-                "level3": {"field": 1}
-            }
-        }
+                "level3": {"field": 1},
+            },
+        },
     }
     existing = {
         "level1": {
             "level2": {
-                "level3": {"field": 100, "removed": 999}
-            }
-        }
+                "level3": {"field": 100, "removed": 999},
+            },
+        },
     }
 
-    result, warnings = deep_merge(new_default, existing)
+    _result, warnings = deep_merge(new_default, existing)
 
     assert len(warnings) == 1
     assert warnings[0].path == "level1.level2.level3.removed"
@@ -207,7 +207,7 @@ def test_deep_merge_multiple_warnings():
     new_default = {"a": 1, "b": {"c": 2}}
     existing = {"a": 10, "b": {"c": 20, "d": 30}, "e": 40}
 
-    result, warnings = deep_merge(new_default, existing)
+    _result, warnings = deep_merge(new_default, existing)
 
     assert len(warnings) == 2
     paths = {w.path for w in warnings}
