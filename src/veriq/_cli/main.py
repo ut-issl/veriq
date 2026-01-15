@@ -1,4 +1,5 @@
 import importlib
+import json
 import logging
 import sys
 from pathlib import Path
@@ -275,6 +276,59 @@ def check(
 
     err_console.print()
     err_console.print("[green]✓ Project is valid[/green]")
+    err_console.print()
+
+
+@app.command()
+def schema(
+    path: Annotated[
+        str,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ],
+    *,
+    output: Annotated[
+        Path,
+        typer.Option("-o", "--output", help="Path to output JSON schema file"),
+    ],
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+    indent: Annotated[
+        int,
+        typer.Option("--indent", help="JSON indentation spaces"),
+    ] = 2,
+) -> None:
+    """Generate JSON schema for the project input model."""
+    err_console.print()
+
+    # Load the project
+    if ":" in path:
+        # Module path format
+        err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
+        project = _load_project_from_module_path(path)
+    else:
+        # Script path format
+        script_path = Path(path)
+        err_console.print(f"[cyan]Loading project from script:[/cyan] {script_path}")
+        project = _load_project_from_script(script_path, project_var)
+
+    err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
+    err_console.print()
+
+    # Generate input model schema
+    err_console.print("[cyan]Generating input model JSON schema...[/cyan]")
+    input_model = project.input_model()
+    json_schema = input_model.model_json_schema()
+
+    # Write to file
+    err_console.print(f"[cyan]Writing schema to:[/cyan] {output}")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w") as f:
+        json.dump(json_schema, f, indent=indent)
+
+    err_console.print()
+    err_console.print("[green]✓ Schema generation complete[/green]")
     err_console.print()
 
 
