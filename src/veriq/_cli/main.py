@@ -1,7 +1,9 @@
 import importlib
+import io
 import json
 import logging
 import sys
+import tomllib
 from pathlib import Path
 from typing import Annotated
 
@@ -19,6 +21,7 @@ from veriq._eval import evaluate_project
 from veriq._io import export_to_toml, load_model_data_from_toml
 from veriq._models import Project
 from veriq._path import VerificationPath
+from veriq._update import update_input_data
 
 from .discover import get_module_data_from_path
 
@@ -381,6 +384,110 @@ def init(
 
     err_console.print()
     err_console.print("[green]✓ Sample input file generated[/green]")
+    err_console.print()
+
+
+@app.command()
+def update(
+    path: Annotated[
+        str,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ],
+    *,
+    input: Annotated[  # noqa: A002
+        Path,
+        typer.Option("-i", "--input", help="Path to existing input TOML file"),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("-o", "--output", help="Path to output TOML file"),
+    ],
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Preview changes without writing to file"),
+    ] = False,
+) -> None:
+    """Update an existing input TOML file with new schema defaults.
+
+    This command intelligently merges your existing input file with the current
+    project schema. It preserves all your existing values while adding new fields
+    with default values and warning about removed fields.
+    """
+    err_console.print()
+
+    # Load the project
+    if ":" in path:
+        # Module path format
+        err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
+        project = _load_project_from_module_path(path)
+    else:
+        # Script path format
+        script_path = Path(path)
+        err_console.print(f"[cyan]Loading project from script:[/cyan] {script_path}")
+        project = _load_project_from_script(script_path, project_var)
+
+    err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
+    err_console.print()
+
+    # Load existing input file
+    err_console.print(f"[cyan]Loading existing input from:[/cyan] {input}")
+    with input.open("rb") as f:
+        existing_data = tomllib.load(f)
+
+    # Generate new default data from current schema
+    err_console.print("[cyan]Generating defaults from current schema...[/cyan]")
+    project_input_model = project.input_model()
+    new_default_data = default(project_input_model)
+
+    # Perform the update (functional core)
+    err_console.print("[cyan]Merging existing data with new defaults...[/cyan]")
+    result = update_input_data(new_default_data.model_dump(), existing_data)
+
+    # Display warnings if any
+    if result.warnings:
+        err_console.print()
+        err_console.print("[yellow]⚠ Warnings:[/yellow]")
+        for warning in result.warnings:
+            err_console.print(f"  [yellow]•[/yellow] {warning.message}")
+        err_console.print()
+
+    # Preview or write
+    if dry_run:
+        err_console.print("[yellow]🔍 Dry run - no files will be modified[/yellow]")
+        err_console.print()
+        err_console.print("[cyan]Preview of updated data:[/cyan]")
+
+        # Show a preview using TOML format
+        preview_buffer = io.BytesIO()
+        tomli_w.dump(result.updated_data, preview_buffer)
+        preview_text = preview_buffer.getvalue().decode("utf-8")
+
+        # Display first 50 lines
+        max_preview_lines = 50
+        lines = preview_text.split("\n")
+        if len(lines) > max_preview_lines:
+            err_console.print("\n".join(lines[:max_preview_lines]))
+            err_console.print(f"\n[dim]... ({len(lines) - max_preview_lines} more lines)[/dim]")
+        else:
+            err_console.print(preview_text)
+
+        err_console.print()
+        err_console.print("[yellow]i Run without --dry-run to write changes[/yellow]")
+    else:
+        # Write the updated data
+        err_console.print(f"[cyan]Writing updated input to:[/cyan] {output}")
+        output.parent.mkdir(parents=True, exist_ok=True)
+
+        with output.open("wb") as f:
+            tomli_w.dump(result.updated_data, f)
+
+        err_console.print()
+        err_console.print("[green]✓ Input file updated successfully[/green]")
+
     err_console.print()
 
 
