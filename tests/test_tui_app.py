@@ -173,6 +173,73 @@ class TestTableNavigation:
 class TestCellEditing:
     """Tests for cell editing functionality."""
 
+    async def test_click_cell_then_another_cell(self):
+        """Test clicking one cell and then another quickly doesn't cause duplicate ID error."""
+        from textual.coordinate import Coordinate
+        from textual.widgets._data_table import CellKey, ColumnKey, RowKey
+
+        project = create_test_project()
+        toml_data = {
+            "TestScope": {
+                "model": {
+                    "power": {"nominal": 10.0, "safe": 5.0},
+                    "matrix": {
+                        "nominal,initial": 1.0,
+                        "nominal,cruise": 2.0,
+                        "safe,initial": 3.0,
+                        "safe,cruise": 4.0,
+                    },
+                },
+            },
+        }
+        toml_path = create_toml_file(toml_data)
+
+        try:
+            app = VeriqEditApp(toml_path, project)
+            async with app.run_test(size=(120, 40)) as pilot:
+                editor = app.query_one("#editor-TestScope", TableEditor)
+
+                # Simulate selecting the first cell (nominal row, Value column)
+                editor.cursor_coordinate = Coordinate(0, 1)
+                editor.post_message(
+                    TableEditor.CellSelected(
+                        editor,
+                        value="10",
+                        coordinate=Coordinate(0, 1),
+                        cell_key=CellKey(
+                            row_key=RowKey("nominal"),
+                            column_key=ColumnKey("Value"),
+                        ),
+                    ),
+                )
+                await pilot.pause()
+
+                # First cell edit should be active
+                assert editor._editing is True
+                assert editor._edit_row_label == "nominal"
+
+                # Simulate selecting the second cell (safe row, Value column)
+                editor.cursor_coordinate = Coordinate(1, 1)
+                editor.post_message(
+                    TableEditor.CellSelected(
+                        editor,
+                        value="5",
+                        coordinate=Coordinate(1, 1),
+                        cell_key=CellKey(
+                            row_key=RowKey("safe"),
+                            column_key=ColumnKey("Value"),
+                        ),
+                    ),
+                )
+                await pilot.pause()
+
+                # Should not have raised DuplicateIds error
+                # The inline input should exist and be focused on the second cell
+                assert editor._editing is True
+                assert editor._edit_row_label == "safe"
+        finally:
+            toml_path.unlink()
+
     async def test_cell_edit_updates_data(self):
         """Test that editing a cell updates the underlying data."""
         project = create_test_project()

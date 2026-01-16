@@ -249,11 +249,6 @@ class TableEditor(DataTable):
         if self._editing:
             self._restore_cell_display()
 
-        # Clean up old input widget if it exists
-        if self._inline_input is not None:
-            self._inline_input.remove()
-            self._inline_input = None
-
         self._editing = True
         self._edit_coordinate = coordinate
         self._edit_row_label = row_label
@@ -263,13 +258,19 @@ class TableEditor(DataTable):
         formatted = self._format_value(current_value)
         self.update_cell_at(coordinate, f"[bold cyan]{formatted}[/]")
 
-        # Create the inline input
-        self._inline_input = InlineCellInput(
-            value=formatted,
-            id="inline-edit",
-        )
-        self.app.mount(self._inline_input)
-        self._inline_input.focus()
+        # Reuse existing input widget or create a new one
+        if self._inline_input is not None:
+            # Reuse the existing input - just update its value
+            self._inline_input.value = formatted
+            self._inline_input.focus()
+        else:
+            # Create the inline input
+            self._inline_input = InlineCellInput(
+                value=formatted,
+                id="inline-edit",
+            )
+            self.app.mount(self._inline_input)
+            self._inline_input.focus()
 
     def _restore_cell_display(self) -> None:
         """Restore the cell display to its original value without cleaning up edit state."""
