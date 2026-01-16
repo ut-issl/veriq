@@ -240,6 +240,72 @@ class TestCellEditing:
         finally:
             toml_path.unlink()
 
+    async def test_inline_edit_saves_on_enter(self):
+        """Test that pressing Enter in inline edit saves the value to the table."""
+        from textual.coordinate import Coordinate
+        from textual.widgets import Input
+        from textual.widgets._data_table import CellKey, ColumnKey, RowKey
+
+        project = create_test_project()
+        toml_data = {
+            "TestScope": {
+                "model": {
+                    "power": {"nominal": 10.0, "safe": 5.0},
+                    "matrix": {
+                        "nominal,initial": 1.0,
+                        "nominal,cruise": 2.0,
+                        "safe,initial": 3.0,
+                        "safe,cruise": 4.0,
+                    },
+                },
+            },
+        }
+        toml_path = create_toml_file(toml_data)
+
+        try:
+            app = VeriqEditApp(toml_path, project)
+            async with app.run_test(size=(120, 40)) as pilot:
+                editor = app.query_one("#editor-TestScope", TableEditor)
+                power_table = app.tables["TestScope"]["power"]
+
+                # Verify initial value
+                assert power_table.flat_data["nominal"] == 10.0
+
+                # Simulate selecting the cell (nominal row, Value column)
+                editor.cursor_coordinate = Coordinate(0, 1)
+                editor.post_message(
+                    TableEditor.CellSelected(
+                        editor,
+                        value="10",
+                        coordinate=Coordinate(0, 1),
+                        cell_key=CellKey(
+                            row_key=RowKey("nominal"),
+                            column_key=ColumnKey("Value"),
+                        ),
+                    ),
+                )
+                await pilot.pause()
+
+                # Edit should be active
+                assert editor._editing is True
+                assert editor._inline_input is not None
+
+                # Change the value in the input
+                editor._inline_input.value = "99.5"
+
+                # Press Enter to submit
+                editor._inline_input.post_message(Input.Submitted(editor._inline_input, "99.5"))
+                await pilot.pause()
+
+                # Value should be updated in the table data
+                assert power_table.flat_data["nominal"] == 99.5
+                assert power_table.modified is True
+
+                # Editing should be finished
+                assert editor._editing is False
+        finally:
+            toml_path.unlink()
+
     async def test_cell_edit_updates_data(self):
         """Test that editing a cell updates the underlying data."""
         project = create_test_project()

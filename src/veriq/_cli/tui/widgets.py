@@ -287,7 +287,7 @@ class TableEditor(DataTable):
             self._format_value(original_value),
         )
 
-    def _cancel_inline_edit(self) -> None:
+    def cancel_inline_edit(self) -> None:
         """Cancel the current inline edit and restore the original value."""
         if not self._editing or self._edit_coordinate is None:
             return
@@ -295,7 +295,7 @@ class TableEditor(DataTable):
         self._restore_cell_display()
         self._cleanup_inline_edit()
 
-    def _confirm_inline_edit(self, text: str) -> None:
+    def confirm_inline_edit(self, text: str) -> None:
         """Confirm the inline edit with the given value.
 
         Args:
@@ -311,7 +311,7 @@ class TableEditor(DataTable):
             parsed_value = self._parse_value(text, self.table_data.value_type)
         except (ValueError, TypeError):
             # Invalid value - cancel the edit
-            self._cancel_inline_edit()
+            self.cancel_inline_edit()
             return
 
         # Update the cell

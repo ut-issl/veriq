@@ -13,7 +13,7 @@ from textual.widgets import Footer, Header, Label, TabbedContent, TabPane
 
 from .data import TableData, load_tables_from_toml, save_tables_to_toml
 from .screens import ConfirmQuitScreen
-from .widgets import DimensionSelector, TableEditor, TableSelector
+from .widgets import DimensionSelector, InlineCellInput, TableEditor, TableSelector
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -271,6 +271,28 @@ class VeriqEditApp(App[None]):
     ) -> None:
         """Handle cell value updates - update the title to show modified state."""
         self._update_title()
+
+    def on_inline_cell_input_edit_confirmed(
+        self,
+        event: InlineCellInput.EditConfirmed,
+    ) -> None:
+        """Handle edit confirmation from inline input - forward to the current editor."""
+        if self._current_scope is None:
+            return
+        editor = self._editors.get(self._current_scope)
+        if editor:
+            editor.confirm_inline_edit(event.value)
+
+    def on_inline_cell_input_edit_cancelled(
+        self,
+        _event: InlineCellInput.EditCancelled,
+    ) -> None:
+        """Handle edit cancellation from inline input - forward to the current editor."""
+        if self._current_scope is None:
+            return
+        editor = self._editors.get(self._current_scope)
+        if editor:
+            editor.cancel_inline_edit()
 
     def _update_title(self) -> None:
         """Update the title to show modified indicator."""
