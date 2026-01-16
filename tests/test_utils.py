@@ -50,7 +50,7 @@ class TestTopologicalSort:
         #   -> c -> d
         #        -> e
         result = topological_sort(
-            {"a": ["b", "c"], "b": ["d"], "c": ["d", "e"], "d": [], "e": []}
+            {"a": ["b", "c"], "b": ["d"], "c": ["d", "e"], "d": [], "e": []},
         )
         # Verify ordering constraints
         assert result.index("a") < result.index("b")

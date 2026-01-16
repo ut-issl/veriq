@@ -55,10 +55,9 @@ class TestDepends:
         req_inner = scope.requirement("REQ-INNER", description="Inner")
         req_dep = scope.requirement("REQ-DEP", description="Dependency")
 
-        with req_outer:
-            with req_inner:
-                # This should add to req_inner (the current context)
-                depends(req_dep)
+        with req_outer, req_inner:
+            # This should add to req_inner (the current context)
+            depends(req_dep)
 
         # req_dep should be in req_inner's depends_on, not req_outer's
         assert req_dep in req_inner.depends_on

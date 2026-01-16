@@ -1,9 +1,7 @@
 """Tests for I/O serialization logic in veriq._io."""
 
 from enum import StrEnum, unique
-from typing import Annotated
 
-import pytest
 from pydantic import BaseModel
 
 import veriq as vq
@@ -22,7 +20,6 @@ from veriq._path import (
     ProjectPath,
     VerificationPath,
 )
-
 
 # --- Test Fixtures ---
 
@@ -64,8 +61,8 @@ class TestSerializeValue:
         assert _serialize_value("hello") == "hello"
 
     def test_serialize_primitive_bool(self):
-        assert _serialize_value(True) is True
-        assert _serialize_value(False) is False
+        assert _serialize_value(value=True) is True
+        assert _serialize_value(value=False) is False
 
     def test_serialize_basemodel(self):
         model = SimpleModel(value=1.5, name="test")
@@ -92,7 +89,7 @@ class TestSerializeValue:
                 (Color.GREEN, Size.LARGE): 4.0,
                 (Color.BLUE, Size.SMALL): 5.0,
                 (Color.BLUE, Size.LARGE): 6.0,
-            }
+            },
         )
         result = _serialize_value(table)
         assert result == {
@@ -111,7 +108,7 @@ class TestSerializeValue:
                 Color.RED: SimpleModel(value=1.0, name="red_model"),
                 Color.GREEN: SimpleModel(value=2.0, name="green_model"),
                 Color.BLUE: SimpleModel(value=3.0, name="blue_model"),
-            }
+            },
         )
         result = _serialize_value(table)
         assert result == {
@@ -215,7 +212,7 @@ class TestResultsToDict:
     def test_model_path(self):
         results = {
             ProjectPath(
-                scope="Power", path=ModelPath(root="$", parts=(AttributePart("value"),))
+                scope="Power", path=ModelPath(root="$", parts=(AttributePart("value"),)),
             ): 42.0,
         }
         result = results_to_dict(results)
@@ -254,16 +251,16 @@ class TestResultsToDict:
         }
         result = results_to_dict(results)
         assert result == {
-            "Power": {"verification": {"my_verif": {"red": True, "green": False}}}
+            "Power": {"verification": {"my_verif": {"red": True, "green": False}}},
         }
 
     def test_multiple_scopes(self):
         results = {
             ProjectPath(
-                scope="Power", path=ModelPath(root="$", parts=(AttributePart("a"),))
+                scope="Power", path=ModelPath(root="$", parts=(AttributePart("a"),)),
             ): 1.0,
             ProjectPath(
-                scope="Thermal", path=ModelPath(root="$", parts=(AttributePart("b"),))
+                scope="Thermal", path=ModelPath(root="$", parts=(AttributePart("b"),)),
             ): 2.0,
         }
         result = results_to_dict(results)
@@ -275,7 +272,7 @@ class TestResultsToDict:
     def test_combined_paths(self):
         results = {
             ProjectPath(
-                scope="Power", path=ModelPath(root="$", parts=(AttributePart("input"),))
+                scope="Power", path=ModelPath(root="$", parts=(AttributePart("input"),)),
             ): 10.0,
             ProjectPath(
                 scope="Power",
@@ -292,7 +289,7 @@ class TestResultsToDict:
                 "model": {"input": 10.0},
                 "calc": {"calc": {"output": 20.0}},
                 "verification": {"verif": True},
-            }
+            },
         }
 
 
@@ -314,7 +311,7 @@ class TestTomlToModelData:
         toml_contents = {
             "TestScope": {
                 "model": {"value": 3.14, "name": "pi"},
-            }
+            },
         }
 
         result = toml_to_model_data(project, toml_contents)
@@ -370,16 +367,16 @@ class TestTomlToModelData:
             "TestScope": {
                 "model": {
                     "data": {"red": 1.0, "green": 2.0, "blue": 3.0},
-                }
-            }
+                },
+            },
         }
 
         result = toml_to_model_data(project, toml_contents)
 
         assert "TestScope" in result
-        assert result["TestScope"].data[Color.RED] == 1.0
-        assert result["TestScope"].data[Color.GREEN] == 2.0
-        assert result["TestScope"].data[Color.BLUE] == 3.0
+        assert result["TestScope"].data[Color.RED] == 1.0  # ty: ignore[unresolved-attribute]
+        assert result["TestScope"].data[Color.GREEN] == 2.0  # ty: ignore[unresolved-attribute]
+        assert result["TestScope"].data[Color.BLUE] == 3.0  # ty: ignore[unresolved-attribute]
 
     def test_multiple_scopes(self):
         project = vq.Project("TestProject")
@@ -405,5 +402,5 @@ class TestTomlToModelData:
 
         assert "ScopeA" in result
         assert "ScopeB" in result
-        assert result["ScopeA"].a_value == 1.0
-        assert result["ScopeB"].b_value == "hello"
+        assert result["ScopeA"].a_value == 1.0  # ty: ignore[unresolved-attribute]
+        assert result["ScopeB"].b_value == "hello"  # ty: ignore[unresolved-attribute]

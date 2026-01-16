@@ -198,7 +198,7 @@ def toml_to_model_data(
         A dictionary mapping scope names to their validated root model instances
 
     """
-    from pydantic import BaseModel as PydanticBaseModel  # noqa: PLC0415
+    from pydantic import BaseModel as PydanticBaseModel  # noqa: PLC0415, TC002
 
     model_data: dict[str, PydanticBaseModel] = {}
     for scope_name, scope in project.scopes.items():

@@ -26,7 +26,7 @@ class TestAssumeDecorator:
             return 42.0
 
         assert hasattr(some_function, "__veriq_assumed_verifications__")
-        assert my_verification in some_function.__veriq_assumed_verifications__
+        assert my_verification in some_function.__veriq_assumed_verifications__  # ty: ignore[unsupported-operator]
 
     def test_assume_multiple_verifications(self):
         """Test that @assume can attach multiple verifications."""
@@ -50,8 +50,8 @@ class TestAssumeDecorator:
             return 42.0
 
         assert hasattr(some_function, "__veriq_assumed_verifications__")
-        assert verif_positive in some_function.__veriq_assumed_verifications__
-        assert verif_small in some_function.__veriq_assumed_verifications__
+        assert verif_positive in some_function.__veriq_assumed_verifications__  # ty: ignore[unsupported-operator]
+        assert verif_small in some_function.__veriq_assumed_verifications__  # ty: ignore[unsupported-operator]
 
     def test_assume_with_calculation_decorator(self):
         """Test that @assume works with @calculation decorator."""
@@ -82,7 +82,7 @@ class TestAssumeDecorator:
             value: float
 
         @scope.verification()
-        def dummy_verif(val: Annotated[float, vq.Ref("$.value")]) -> bool:
+        def dummy_verif(_val: Annotated[float, vq.Ref("$.value")]) -> bool:
             return True
 
         @assume(dummy_verif)
