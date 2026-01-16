@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
+from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.message import Message
-from textual.widgets import DataTable, Label, Select, Static
+from textual.widgets import DataTable, Input, Label, Select, Static
 
 if TYPE_CHECKING:
     from enum import StrEnum
@@ -88,24 +89,34 @@ class DimensionSelector(Static):
         return result
 
 
+class InlineCellInput(Input):
+    """Input widget for inline cell editing."""
+
+    BINDINGS: ClassVar[list[Binding]] = [
+        Binding("escape", "cancel", "Cancel", show=False),
+    ]
+
+    class EditConfirmed(Message):
+        """Message sent when edit is confirmed."""
+
+        def __init__(self, value: str) -> None:
+            super().__init__()
+            self.value = value
+
+    class EditCancelled(Message):
+        """Message sent when edit is cancelled."""
+
+    def on_input_submitted(self, _event: Input.Submitted) -> None:
+        """Handle Enter key - confirm the edit."""
+        self.post_message(self.EditConfirmed(self.value))
+
+    def action_cancel(self) -> None:
+        """Handle Escape key - cancel the edit."""
+        self.post_message(self.EditCancelled())
+
+
 class TableEditor(DataTable):
     """DataTable subclass with cell editing support for veriq Tables."""
-
-    class CellEditRequested(Message):
-        """Message sent when a cell edit is requested."""
-
-        def __init__(
-            self,
-            coordinate: Coordinate,
-            current_value: Any,
-            row_label: str,
-            col_label: str,
-        ) -> None:
-            super().__init__()
-            self.coordinate = coordinate
-            self.current_value = current_value
-            self.row_label = row_label
-            self.col_label = col_label
 
     class CellValueUpdated(Message):
         """Message sent when a cell value has been updated."""
@@ -128,6 +139,12 @@ class TableEditor(DataTable):
         self.fixed_dims: dict[int, StrEnum] = {}
         self._row_labels: list[str] = []
         self._col_labels: list[str] = []
+        # Inline editing state
+        self._editing: bool = False
+        self._edit_coordinate: Coordinate | None = None
+        self._edit_row_label: str = ""
+        self._edit_col_label: str = ""
+        self._inline_input: InlineCellInput | None = None
 
     def load_table(
         self,
@@ -184,7 +201,7 @@ class TableEditor(DataTable):
             self.load_table(self.table_data, fixed_dims)
 
     def on_data_table_cell_selected(self, event: DataTable.CellSelected) -> None:
-        """Handle cell selection - request edit for non-label cells."""
+        """Handle cell selection - start inline edit for non-label cells."""
         # Skip the first column (row labels)
         if event.coordinate.column == 0:
             return
@@ -205,15 +222,167 @@ class TableEditor(DataTable):
         # Get current value
         current_value = self.table_data.get_cell(self.fixed_dims, row_label, col_label)
 
-        # Post message to request edit
-        self.post_message(
-            self.CellEditRequested(
-                coordinate=event.coordinate,
-                current_value=current_value,
-                row_label=row_label,
-                col_label=col_label,
-            ),
+        # Start inline editing
+        self._start_inline_edit(event.coordinate, current_value, row_label, col_label)
+
+    def _start_inline_edit(
+        self,
+        coordinate: Coordinate,
+        current_value: Any,
+        row_label: str,
+        col_label: str,
+    ) -> None:
+        """Start inline editing at the given coordinate.
+
+        Args:
+            coordinate: The cell coordinate to edit
+            current_value: The current value in the cell
+            row_label: The row label
+            col_label: The column label
+
+        """
+        # If already editing the same cell, do nothing
+        if self._editing and self._edit_coordinate == coordinate:
+            return
+
+        # Cancel any existing edit first (restore old cell display)
+        if self._editing:
+            self._restore_cell_display()
+
+        # Clean up old input widget if it exists
+        if self._inline_input is not None:
+            self._inline_input.remove()
+            self._inline_input = None
+
+        self._editing = True
+        self._edit_coordinate = coordinate
+        self._edit_row_label = row_label
+        self._edit_col_label = col_label
+
+        # Update the cell to show the input value directly
+        formatted = self._format_value(current_value)
+        self.update_cell_at(coordinate, f"[bold cyan]{formatted}[/]")
+
+        # Create the inline input
+        self._inline_input = InlineCellInput(
+            value=formatted,
+            id="inline-edit",
         )
+        self.app.mount(self._inline_input)
+        self._inline_input.focus()
+
+    def _restore_cell_display(self) -> None:
+        """Restore the cell display to its original value without cleaning up edit state."""
+        if self._edit_coordinate is None or self.table_data is None:
+            return
+
+        original_value = self.table_data.get_cell(
+            self.fixed_dims,
+            self._edit_row_label,
+            self._edit_col_label,
+        )
+        self.update_cell_at(
+            self._edit_coordinate,
+            self._format_value(original_value),
+        )
+
+    def _cancel_inline_edit(self) -> None:
+        """Cancel the current inline edit and restore the original value."""
+        if not self._editing or self._edit_coordinate is None:
+            return
+
+        self._restore_cell_display()
+        self._cleanup_inline_edit()
+
+    def _confirm_inline_edit(self, text: str) -> None:
+        """Confirm the inline edit with the given value.
+
+        Args:
+            text: The text value from the input
+
+        """
+        if not self._editing or self._edit_coordinate is None or self.table_data is None:
+            self._cleanup_inline_edit()
+            return
+
+        # Parse the value
+        try:
+            parsed_value = self._parse_value(text, self.table_data.value_type)
+        except (ValueError, TypeError):
+            # Invalid value - cancel the edit
+            self._cancel_inline_edit()
+            return
+
+        # Update the cell
+        self.update_cell_value(
+            self._edit_row_label,
+            self._edit_col_label,
+            parsed_value,
+        )
+        self._cleanup_inline_edit()
+
+    def _cleanup_inline_edit(self) -> None:
+        """Clean up the inline editing state."""
+        if self._inline_input is not None:
+            self._inline_input.remove()
+            self._inline_input = None
+
+        self._editing = False
+        self._edit_coordinate = None
+        self._edit_row_label = ""
+        self._edit_col_label = ""
+        self.focus()
+
+    def _parse_value(self, text: str, value_type: type) -> Any:
+        """Parse the input text into the appropriate type.
+
+        Args:
+            text: The input text to parse
+            value_type: The expected type
+
+        Returns:
+            The parsed value
+
+        Raises:
+            ValueError: If the text cannot be parsed to the expected type
+
+        """
+        text = text.strip()
+
+        if value_type is float:
+            return float(text)
+
+        if value_type is int:
+            return int(text)
+
+        if value_type is bool:
+            lower = text.lower()
+            if lower in ("true", "1", "yes"):
+                return True
+            if lower in ("false", "0", "no"):
+                return False
+            msg = "Boolean value must be true/false, 1/0, or yes/no"
+            raise ValueError(msg)
+
+        if value_type is str:
+            return text
+
+        # Try to construct the type directly
+        return value_type(text)
+
+    def on_inline_cell_input_edit_confirmed(
+        self,
+        event: InlineCellInput.EditConfirmed,
+    ) -> None:
+        """Handle edit confirmation from inline input."""
+        self._confirm_inline_edit(event.value)
+
+    def on_inline_cell_input_edit_cancelled(
+        self,
+        _event: InlineCellInput.EditCancelled,
+    ) -> None:
+        """Handle edit cancellation from inline input."""
+        self._cancel_inline_edit()
 
     def update_cell_value(
         self,

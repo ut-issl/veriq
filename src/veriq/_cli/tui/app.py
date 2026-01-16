@@ -12,7 +12,7 @@ from textual.containers import Container, Vertical
 from textual.widgets import Footer, Header, Label, TabbedContent, TabPane
 
 from .data import TableData, load_tables_from_toml, save_tables_to_toml
-from .screens import ConfirmQuitScreen, EditCellScreen
+from .screens import ConfirmQuitScreen
 from .widgets import DimensionSelector, TableEditor, TableSelector
 
 if TYPE_CHECKING:
@@ -66,6 +66,14 @@ class VeriqEditApp(App[None]):
         width: auto;
         padding: 0 1;
         color: $warning;
+    }
+
+    #inline-edit {
+        dock: bottom;
+        height: 3;
+        background: $boost;
+        border: tall $primary;
+        padding: 0 1;
     }
     """
 
@@ -257,40 +265,12 @@ class VeriqEditApp(App[None]):
             fixed_dims = dim_selector.get_fixed_dims()
             editor.update_slice(fixed_dims)
 
-    def on_table_editor_cell_edit_requested(
+    def on_table_editor_cell_value_updated(
         self,
-        event: TableEditor.CellEditRequested,
+        _event: TableEditor.CellValueUpdated,
     ) -> None:
-        """Handle cell edit requests by showing the edit modal."""
-        if self._current_scope is None or self._current_table_path is None:
-            return
-
-        table_data = self.tables.get(self._current_scope, {}).get(
-            self._current_table_path,
-        )
-        if table_data is None:
-            return
-
-        async def handle_edit() -> None:
-            result = await self.push_screen_wait(
-                EditCellScreen(
-                    current_value=event.current_value,
-                    value_type=table_data.value_type,
-                    row_label=event.row_label,
-                    col_label=event.col_label,
-                ),
-            )
-            if result is not None:
-                editor = self._editors.get(self._current_scope)
-                if editor:
-                    editor.update_cell_value(
-                        event.row_label,
-                        event.col_label,
-                        result,
-                    )
-                    self._update_title()
-
-        self.run_worker(handle_edit())
+        """Handle cell value updates - update the title to show modified state."""
+        self._update_title()
 
     def _update_title(self) -> None:
         """Update the title to show modified indicator."""
