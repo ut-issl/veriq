@@ -519,5 +519,55 @@ def diff(
     raise typer.Exit(1)
 
 
+@app.command()
+def edit(
+    path: Annotated[
+        str,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ],
+    *,
+    input: Annotated[  # noqa: A002
+        Path,
+        typer.Option("-i", "--input", help="Path to input TOML file to edit"),
+    ],
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+) -> None:
+    """Edit input TOML file with interactive TUI.
+
+    Opens a spreadsheet-like interface for editing Table fields in the input file.
+    Supports 2D and 3D tables with dimension slicing.
+
+    Controls:
+    - Arrow keys: Navigate cells
+    - Enter: Edit selected cell
+    - Tab: Switch to next table
+    - S: Save changes
+    - Q: Quit (prompts to save if unsaved changes)
+    """
+    # Import TUI components here to avoid loading textual for other commands
+    from .tui.app import VeriqEditApp  # noqa: PLC0415
+
+    # Load the project
+    if ":" in path:
+        # Module path format
+        project = _load_project_from_module_path(path)
+    else:
+        # Script path format
+        script_path = Path(path)
+        project = _load_project_from_script(script_path, project_var)
+
+    # Verify input file exists
+    if not input.exists():
+        err_console.print(f"[red]Error: Input file not found: {input}[/red]")
+        raise typer.Exit(code=1)
+
+    # Launch the TUI
+    tui_app = VeriqEditApp(input, project)
+    tui_app.run()
+
+
 def main() -> None:
     app()
