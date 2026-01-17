@@ -333,22 +333,18 @@ class VeriqEditApp(App[None]):
 
         self._update_title()
 
-    def action_quit(self) -> None:
+    async def action_quit(self) -> None:
         """Quit the application, prompting to save if needed."""
         if self._has_unsaved_changes():
-
-            async def handle_quit() -> None:
-                result = await self.push_screen_wait(ConfirmQuitScreen())
-                if result is True:
-                    # Save and quit
-                    self._save_changes()
-                    self.exit()
-                elif result is False:
-                    # Quit without saving
-                    self.exit()
-                # else: result is None, cancel - do nothing
-
-            self.run_worker(handle_quit())
+            result = await self.push_screen_wait(ConfirmQuitScreen())
+            if result is True:
+                # Save and quit
+                self._save_changes()
+                self.exit()
+            elif result is False:
+                # Quit without saving
+                self.exit()
+            # else: result is None, cancel - do nothing
         else:
             self.exit()
 

@@ -5,9 +5,13 @@ from __future__ import annotations
 import tempfile
 from enum import StrEnum, unique
 from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 import tomli_w
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from textual.widgets._data_table import CellType
 
 import veriq as vq
 from veriq._cli.tui.app import VeriqEditApp
@@ -204,7 +208,7 @@ class TestCellEditing:
                 editor.post_message(
                     TableEditor.CellSelected(
                         editor,
-                        value="10",
+                        value=cast("CellType", "10"),  # ty: ignore[invalid-argument-type]
                         coordinate=Coordinate(0, 1),
                         cell_key=CellKey(
                             row_key=RowKey("nominal"),
@@ -223,7 +227,7 @@ class TestCellEditing:
                 editor.post_message(
                     TableEditor.CellSelected(
                         editor,
-                        value="5",
+                        value=cast("CellType", "5"),  # ty: ignore[invalid-argument-type]
                         coordinate=Coordinate(1, 1),
                         cell_key=CellKey(
                             row_key=RowKey("safe"),
@@ -276,7 +280,7 @@ class TestCellEditing:
                 editor.post_message(
                     TableEditor.CellSelected(
                         editor,
-                        value="10",
+                        value=cast("CellType", "10"),  # ty: ignore[invalid-argument-type]
                         coordinate=Coordinate(0, 1),
                         cell_key=CellKey(
                             row_key=RowKey("nominal"),

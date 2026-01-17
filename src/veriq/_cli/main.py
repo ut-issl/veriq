@@ -19,7 +19,6 @@ from veriq._build import build_dependencies_graph
 from veriq._default import default
 from veriq._eval import evaluate_project
 from veriq._io import export_to_toml, load_model_data_from_toml
-from veriq._ir import build_graph_spec
 from veriq._models import Project
 from veriq._path import VerificationPath
 from veriq._update import update_input_data

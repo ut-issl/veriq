@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
 from itertools import product
-from typing import TYPE_CHECKING, Any, get_args, get_origin
+from typing import TYPE_CHECKING, Any, ForwardRef, get_args, get_origin
 
 from pydantic import BaseModel
 
@@ -238,9 +239,6 @@ def _resolve_forward_ref(
         The resolved type, or the original type if not a ForwardRef
 
     """
-    import sys
-    from typing import ForwardRef
-
     if not isinstance(field_type, ForwardRef):
         return field_type
 

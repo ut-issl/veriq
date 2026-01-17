@@ -6,14 +6,15 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from textual.binding import Binding
 from textual.containers import Horizontal
+from textual.coordinate import Coordinate
 from textual.message import Message
 from textual.widgets import DataTable, Input, Label, Select, Static
+from textual.widgets._select import NoSelection
 
 if TYPE_CHECKING:
     from enum import StrEnum
 
     from textual.app import ComposeResult
-    from textual.coordinate import Coordinate
 
     from .data import TableData
 
@@ -50,7 +51,7 @@ class DimensionSelector(Static):
         super().__init__(id=id)
         self.options = options
         self.key_types = key_types
-        self._selects: dict[int, Select[str]] = {}
+        self._selects: dict[int, Select[str | None]] = {}
 
     def compose(self) -> ComposeResult:
         """Compose the widget."""
@@ -73,7 +74,7 @@ class DimensionSelector(Static):
         # Extract dimension index from select ID
         if event.select.id and event.select.id.startswith("dim-select-"):
             dim_idx = int(event.select.id.split("-")[-1])
-            if event.value is not None:
+            if event.value is not None and isinstance(event.value, str):
                 # Convert string value back to enum
                 enum_type = self.key_types[dim_idx]
                 enum_value = enum_type(event.value)
@@ -83,7 +84,7 @@ class DimensionSelector(Static):
         """Get the current fixed dimension values."""
         result: dict[int, StrEnum] = {}
         for dim_idx, select in self._selects.items():
-            if select.value is not None:
+            if select.value is not None and isinstance(select.value, str):
                 enum_type = self.key_types[dim_idx]
                 result[dim_idx] = enum_type(select.value)
         return result
@@ -376,14 +377,14 @@ class TableEditor(DataTable):
         event: InlineCellInput.EditConfirmed,
     ) -> None:
         """Handle edit confirmation from inline input."""
-        self._confirm_inline_edit(event.value)
+        self.confirm_inline_edit(event.value)
 
     def on_inline_cell_input_edit_cancelled(
         self,
         _event: InlineCellInput.EditCancelled,
     ) -> None:
         """Handle edit cancellation from inline input."""
-        self._cancel_inline_edit()
+        self.cancel_inline_edit()
 
     def update_cell_value(
         self,
@@ -410,7 +411,7 @@ class TableEditor(DataTable):
             row_idx = self._row_labels.index(row_label)
             col_idx = self._col_labels.index(col_label) + 1  # Adjust for label column
             self.update_cell_at(
-                (row_idx, col_idx),
+                Coordinate(row_idx, col_idx),
                 self._format_value(new_value),
             )
         except (ValueError, IndexError):
@@ -465,14 +466,17 @@ class TableSelector(Static):
 
     def on_select_changed(self, event: Select.Changed) -> None:
         """Handle table selection change."""
-        if event.value is not None:
-            self.post_message(self.TableSelected(event.value))
+        if event.value is not None and not isinstance(event.value, NoSelection):
+            self.post_message(self.TableSelected(str(event.value)))
 
     @property
     def current_table(self) -> str | None:
         """Get the currently selected table path."""
         if self._select is not None:
-            return self._select.value
+            value = self._select.value
+            if isinstance(value, NoSelection):
+                return None
+            return value
         return None
 
     def set_table(self, field_path: str) -> None:
