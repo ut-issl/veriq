@@ -11,7 +11,9 @@
           "$ref": "#/$defs/AOCSModel"
         }
       },
-      "required": ["model"],
+      "required": [
+        "model"
+      ],
       "title": "AOCSInput",
       "type": "object"
     },
@@ -24,7 +26,10 @@
           "$ref": "#/$defs/AOCSRequirement"
         }
       },
-      "required": ["design", "requirement"],
+      "required": [
+        "design",
+        "requirement"
+      ],
       "title": "AOCSModel",
       "type": "object"
     },
@@ -44,8 +49,38 @@
           "type": "number"
         }
       },
-      "required": ["capacity", "min_capacity"],
+      "required": [
+        "capacity",
+        "min_capacity"
+      ],
       "title": "BatteryModel",
+      "type": "object"
+    },
+    "FileRef": {
+      "description": "Reference to a local file.\n\nStreams file for checksum - doesn't load entire file into memory.\nUser accesses data via `path` attribute.\n\nExample:\n    # In model definition\n    class MyModel(BaseModel):\n        config_file: FileRef\n\n    # In calculation\n    @scope.calculation()\n    def process(config_file: Annotated[FileRef, vq.Ref(\"$.config_file\")]) -> Result:\n        data = config_file.path.read_bytes()\n        return process_data(data)\n\n    # In TOML\n    [Scope.model.config_file]\n    path = \"data/config.json\"\n    checksum = \"sha256:abc123...\"  # Added by veriq after first run",
+      "properties": {
+        "checksum": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checksum"
+        },
+        "path": {
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "FileRef",
       "type": "object"
     },
     "PowerInput": {
@@ -54,7 +89,9 @@
           "$ref": "#/$defs/PowerSubsystemModel"
         }
       },
-      "required": ["model"],
+      "required": [
+        "model"
+      ],
       "title": "PowerInput",
       "type": "object"
     },
@@ -85,7 +122,11 @@
               "type": "number"
             }
           },
-          "required": ["nominal", "safe", "mission"],
+          "required": [
+            "nominal",
+            "safe",
+            "mission"
+          ],
           "title": "Power Generation",
           "type": "object"
         },
@@ -105,9 +146,16 @@
               "type": "number"
             }
           },
-          "required": ["nominal", "safe", "mission"],
+          "required": [
+            "nominal",
+            "safe",
+            "mission"
+          ],
           "title": "Power Consumption",
           "type": "object"
+        },
+        "config_file": {
+          "$ref": "#/$defs/FileRef"
         }
       },
       "required": [
@@ -115,7 +163,8 @@
         "battery_b",
         "solar_panel",
         "power_generation",
-        "power_consumption"
+        "power_consumption",
+        "config_file"
       ],
       "title": "PowerSubsystemDesign",
       "type": "object"
@@ -129,7 +178,10 @@
           "$ref": "#/$defs/PowerSubsystemRequirement"
         }
       },
-      "required": ["design", "requirement"],
+      "required": [
+        "design",
+        "requirement"
+      ],
       "title": "PowerSubsystemModel",
       "type": "object"
     },
@@ -144,7 +196,9 @@
           "$ref": "#/$defs/ReactionWheelAssemblyModel"
         }
       },
-      "required": ["model"],
+      "required": [
+        "model"
+      ],
       "title": "RWAInput",
       "type": "object"
     },
@@ -175,7 +229,11 @@
               "type": "number"
             }
           },
-          "required": ["nominal", "safe", "mission"],
+          "required": [
+            "nominal",
+            "safe",
+            "mission"
+          ],
           "title": "Power Consumption",
           "type": "object"
         },
@@ -195,7 +253,11 @@
               "type": "number"
             }
           },
-          "required": ["nominal", "safe", "mission"],
+          "required": [
+            "nominal",
+            "safe",
+            "mission"
+          ],
           "title": "Power Limit",
           "type": "object"
         },
@@ -270,7 +332,11 @@
           "type": "number"
         }
       },
-      "required": ["max_torque", "power_consumption", "mass"],
+      "required": [
+        "max_torque",
+        "power_consumption",
+        "mass"
+      ],
       "title": "ReactionWheelModel",
       "type": "object"
     },
@@ -313,7 +379,9 @@
           "$ref": "#/$defs/SatelliteModel"
         }
       },
-      "required": ["model"],
+      "required": [
+        "model"
+      ],
       "title": "SystemInput",
       "type": "object"
     },
@@ -323,7 +391,9 @@
           "$ref": "#/$defs/ThermalModel"
         }
       },
-      "required": ["model"],
+      "required": [
+        "model"
+      ],
       "title": "ThermalInput",
       "type": "object"
     },
@@ -350,7 +420,13 @@
       "$ref": "#/$defs/RWAInput"
     }
   },
-  "required": ["System", "AOCS", "Power", "Thermal", "RWA"],
+  "required": [
+    "System",
+    "AOCS",
+    "Power",
+    "Thermal",
+    "RWA"
+  ],
   "title": "ProjectInput",
   "type": "object"
 }

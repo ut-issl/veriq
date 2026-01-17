@@ -1,21 +1,52 @@
 import logging
 import tomllib
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import tomli_w
 
+from ._context import (  # noqa: F401 - get_input_base_dir re-exported
+    get_input_base_dir,
+    reset_input_base_dir,
+    set_input_base_dir,
+)
 from ._path import AttributePart, CalcPath, ItemPart, ModelPath, PartBase, ProjectPath, VerificationPath
 from ._table import Table
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterator, Mapping
 
     from pydantic import BaseModel
 
     from ._models import Project
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Base Directory Context for Path Resolution
+# =============================================================================
+
+
+@contextmanager
+def input_base_dir(base_dir: Path) -> Iterator[None]:
+    """Context manager to set the base directory for resolving relative paths.
+
+    When loading input files (e.g., TOML), use this context to resolve relative
+    paths (e.g., FileRef.path) relative to a base directory (typically the
+    input file's parent directory).
+
+    Example:
+        with input_base_dir(toml_path.parent):
+            model_data = load_model_data(...)
+
+    """
+    token = set_input_base_dir(base_dir)
+    try:
+        yield
+    finally:
+        reset_input_base_dir(token)
 
 
 def _serialize_value(value: Any) -> Any:
@@ -54,13 +85,17 @@ def _serialize_value(value: Any) -> Any:
             result[key_str] = _serialize_value(v)
         return result
 
-    # Handle dict - recursively serialize values
+    # Handle dict - recursively serialize values, excluding None (TOML doesn't support None)
     if isinstance(value, dict):
-        return {k: _serialize_value(v) for k, v in value.items()}
+        return {k: _serialize_value(v) for k, v in value.items() if v is not None}
 
     # Handle list/tuple - recursively serialize items
     if isinstance(value, (list, tuple)):
         return [_serialize_value(item) for item in value]
+
+    # Handle Path objects - convert to string
+    if isinstance(value, Path):
+        return str(value)
 
     # Primitives and TOML-native types (str, int, float, bool, datetime, etc.)
     return value
@@ -218,6 +253,9 @@ def load_model_data_from_toml(
 ) -> dict[str, BaseModel]:
     """Load model data from a TOML file for each scope in the project.
 
+    FileRef paths in the TOML are resolved relative to the TOML file's directory,
+    making projects portable and self-contained.
+
     Args:
         project: The project containing scope definitions
         input_path: Path to the input TOML file containing model data
@@ -226,12 +264,15 @@ def load_model_data_from_toml(
         A dictionary mapping scope names to their validated root model instances
 
     """
-    input_path = Path(input_path)
+    input_path = Path(input_path).resolve()
+    base_dir = input_path.parent
 
     with input_path.open("rb") as f:
         toml_contents = tomllib.load(f)
 
-    model_data = toml_to_model_data(project, toml_contents)
+    # Use context manager so FileRef resolves paths relative to TOML directory
+    with input_base_dir(base_dir):
+        model_data = toml_to_model_data(project, toml_contents)
 
     logger.debug(f"Loaded model data from {input_path}")
     return model_data

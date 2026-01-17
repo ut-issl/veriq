@@ -1,3 +1,4 @@
+import json
 from enum import StrEnum, unique
 from typing import Annotated
 
@@ -87,6 +88,9 @@ class PowerSubsystemDesign(BaseModel):
     # Power budget per operation mode
     power_generation: vq.Table[OperationMode, float]  # in Watts
     power_consumption: vq.Table[OperationMode, float]  # in Watts
+
+    # External configuration file
+    config_file: vq.FileRef
 
 
 class PowerSubsystemRequirement(BaseModel): ...
@@ -190,10 +194,15 @@ def solar_panel_max_temperature(
 @vq.assume(solar_panel_max_temperature)
 def calculate_solar_panel_heat(
     solar_panel: Annotated[SolarPanelModel, vq.Ref("$.design.solar_panel")],
+    config_file: Annotated[vq.FileRef, vq.Ref("$.design.config_file")],
 ) -> SolarPanelResult:
-    """Calculate the heat generation of the solar panel."""
-    # Here we would implement the actual calculation logic.
-    heat_generation = 100.0  # Example calculation
+    """Calculate the heat generation of the solar panel using config parameters."""
+    # Load configuration from external file
+    config = json.loads(config_file.path.read_text())
+    efficiency_derating = config.get("efficiency_derating", 1.0)
+
+    # Calculate heat generation with derating factor
+    heat_generation = 100.0 * efficiency_derating
     return SolarPanelResult(heat_generation=heat_generation)
 
 
