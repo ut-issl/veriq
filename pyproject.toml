@@ -85,7 +85,7 @@ strict = true
 [tool.pip-licenses]
 allow-only = "MIT License;BSD License;Apache 2.0;Python Software Foundation License;PSF-2.0;ISC License (ISCL);Apache Software License;The Unlicense (Unlicense);MIT;BSD-3-Clause"
 
-[tool.pytest.ini_options]
+[tool.pytest]
 addopts = [
   "--capture=no",
   "--color=yes",
