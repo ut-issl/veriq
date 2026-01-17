@@ -431,3 +431,21 @@ class TestHydrateValueByLeafValues:
         leaf_values = {(): table}
         result = hydrate_value_by_leaf_values(vq.Table[Color, float], leaf_values)
         assert result is table
+
+    def test_basemodel_with_generic_table_field(self):
+        """Test hydrating a BaseModel that has a generic Table field.
+
+        This tests the fix for the issubclass() error when field_type
+        is a generic alias like Table[Color, float] instead of a class.
+        """
+        leaf_values = {
+            (AttributePart("data"), ItemPart("red")): 1.0,
+            (AttributePart("data"), ItemPart("green")): 2.0,
+            (AttributePart("data"), ItemPart("blue")): 3.0,
+        }
+        result = hydrate_value_by_leaf_values(ModelWithTable, leaf_values)
+        assert isinstance(result, ModelWithTable)
+        assert isinstance(result.data, vq.Table)
+        assert result.data[Color.RED] == 1.0
+        assert result.data[Color.GREEN] == 2.0
+        assert result.data[Color.BLUE] == 3.0
