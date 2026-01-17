@@ -31,7 +31,7 @@ safe = 35.0  # Minimal loads in safe mode
 mission = 140.0  # High loads during mission (payload active)
 
 [Power.model.design.config_file]
-path = "examples/power_config.json"
+path = "power_config.json"
 checksum = "sha256:5218467b66140a4995551b6ea58a2b5cc452606784b6296704ffdc0cd6ea0c0c"
 
 [Power.model.requirement]

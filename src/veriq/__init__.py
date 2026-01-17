@@ -21,6 +21,7 @@ __all__ = [
     "evaluate_graph",
     "evaluate_project",
     "export_to_toml",
+    "fileref_base_dir",
     "is_valid_verification_return_type",
     "load_model_data_from_toml",
     "validate_external_data",
@@ -34,6 +35,7 @@ from ._external_data import (
     ChecksumValidationResult,
     ExternalData,
     FileRef,
+    fileref_base_dir,
     validate_external_data,
 )
 from ._graph import DependencyGraph

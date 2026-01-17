@@ -222,6 +222,9 @@ def load_model_data_from_toml(
 ) -> dict[str, BaseModel]:
     """Load model data from a TOML file for each scope in the project.
 
+    FileRef paths in the TOML are resolved relative to the TOML file's directory,
+    making projects portable and self-contained.
+
     Args:
         project: The project containing scope definitions
         input_path: Path to the input TOML file containing model data
@@ -230,12 +233,17 @@ def load_model_data_from_toml(
         A dictionary mapping scope names to their validated root model instances
 
     """
-    input_path = Path(input_path)
+    from ._external_data import fileref_base_dir  # noqa: PLC0415
+
+    input_path = Path(input_path).resolve()
+    base_dir = input_path.parent
 
     with input_path.open("rb") as f:
         toml_contents = tomllib.load(f)
 
-    model_data = toml_to_model_data(project, toml_contents)
+    # Use context manager so FileRef resolves paths relative to TOML directory
+    with fileref_base_dir(base_dir):
+        model_data = toml_to_model_data(project, toml_contents)
 
     logger.debug(f"Loaded model data from {input_path}")
     return model_data
