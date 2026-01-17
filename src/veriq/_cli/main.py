@@ -392,7 +392,7 @@ def init(
 
 
 @app.command()
-def update(
+def update(  # noqa: PLR0913, PLR0915
     path: Annotated[
         str,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
@@ -413,6 +413,10 @@ def update(
     dry_run: Annotated[
         bool,
         typer.Option("--dry-run", help="Preview changes without writing to file"),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("-y", "--yes", help="Skip confirmation prompt"),
     ] = False,
 ) -> None:
     """Update an existing input TOML file with new schema defaults.
@@ -482,6 +486,14 @@ def update(
         err_console.print()
         err_console.print("[yellow]i Run without --dry-run to write changes[/yellow]")
     else:
+        # Confirm before writing (comments will be lost)
+        if not yes:
+            err_console.print()
+            err_console.print(
+                "[yellow]Warning: TOML comments in the input file will NOT be preserved.[/yellow]",
+            )
+            typer.confirm("Do you want to continue?", abort=True)
+
         # Write the updated data
         err_console.print(f"[cyan]Writing updated input to:[/cyan] {output}")
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -517,6 +529,68 @@ def diff(
 
     err_console.print("[red]✗ The TOML files differ.[/red]")
     raise typer.Exit(1)
+
+
+@app.command()
+def edit(
+    path: Annotated[
+        str,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ],
+    *,
+    input: Annotated[  # noqa: A002
+        Path,
+        typer.Option("-i", "--input", help="Path to input TOML file to edit"),
+    ],
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+    yes: Annotated[
+        bool,
+        typer.Option("-y", "--yes", help="Skip confirmation prompt"),
+    ] = False,
+) -> None:
+    """Edit input TOML file with interactive TUI.
+
+    Opens a spreadsheet-like interface for editing Table fields in the input file.
+    Supports 2D and 3D tables with dimension slicing.
+
+    Controls:
+    - Arrow keys: Navigate cells
+    - Enter: Edit selected cell
+    - Tab: Switch to next table
+    - S: Save changes
+    - Q: Quit (prompts to save if unsaved changes)
+    """
+    # Import TUI components here to avoid loading textual for other commands
+    from .tui.app import VeriqEditApp  # noqa: PLC0415
+
+    # Load the project
+    if ":" in path:
+        # Module path format
+        project = _load_project_from_module_path(path)
+    else:
+        # Script path format
+        script_path = Path(path)
+        project = _load_project_from_script(script_path, project_var)
+
+    # Verify input file exists
+    if not input.exists():
+        err_console.print(f"[red]Error: Input file not found: {input}[/red]")
+        raise typer.Exit(code=1)
+
+    # Confirm before editing (comments will be lost when saving)
+    if not yes:
+        err_console.print()
+        err_console.print(
+            "[yellow]Warning: TOML comments in the input file will NOT be preserved when saving.[/yellow]",
+        )
+        typer.confirm("Do you want to continue?", abort=True)
+
+    # Launch the TUI
+    tui_app = VeriqEditApp(input, project)
+    tui_app.run()
 
 
 def main() -> None:

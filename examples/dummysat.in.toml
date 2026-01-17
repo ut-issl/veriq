@@ -20,6 +20,16 @@ efficiency = 0.3
 max_temperature = 85.0
 thermal_coefficient = 0.5
 
+[Power.model.design.power_generation]
+nominal = 120.0  # Full solar panel output during normal ops
+safe = 60.0  # Reduced generation in safe mode (sun-pointing only)
+mission = 150.0  # Peak generation during mission (optimal sun angle)
+
+[Power.model.design.power_consumption]
+nominal = 85.0  # Baseline subsystem loads + RWA nominal
+safe = 35.0  # Minimal loads in safe mode
+mission = 140.0  # High loads during mission (payload active)
+
 [Power.model.requirement]
 
 [Thermal.model]

@@ -21,6 +21,7 @@ dependencies = [
   "pydantic>=2.11.7",
   "rich>=14.0.0",
   "scoped-context>=0.0.1",
+  "textual>=7.3.0",
   "tomli-w>=1.1.0",
   "typer>=0.16.1",
 ]
@@ -48,6 +49,7 @@ test = [
   "coverage>=7.10.4",
   "jsonschema>=4.26.0",
   "pytest>=8.4.0",
+  "pytest-asyncio>=1.3.0",
 ]
 typing = [
   "basedpyright>=1.33.0",
@@ -83,7 +85,7 @@ strict = true
 [tool.pip-licenses]
 allow-only = "MIT License;BSD License;Apache 2.0;Python Software Foundation License;PSF-2.0;ISC License (ISCL);Apache Software License;The Unlicense (Unlicense);MIT;BSD-3-Clause"
 
-[tool.pytest]
+[tool.pytest.ini_options]
 addopts = [
   "--capture=no",
   "--color=yes",
@@ -95,6 +97,8 @@ addopts = [
 ]
 minversion = "9.0"
 testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 120
@@ -145,6 +149,9 @@ unfixable = [
   "INP001",  # implicit-namespace-package
   "ANN201",  # missing-return-type-undocumented-public-function
   "S101",  # use of assert
+  "SLF001",  # private-member-access (common in tests)
+  "F841",  # unused-variable (e.g., pilot in async context)
+  "PLC0415",  # import-outside-top-level (local test helpers)
 ]
 "examples/**.py" = [
   "D",  # Docstring

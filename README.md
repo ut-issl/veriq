@@ -1,5 +1,13 @@
 # veriq — Requirements Verification Tool
 
+[![PyPI](https://img.shields.io/pypi/v/veriq)](https://pypi.org/project/veriq/)
+![PyPI - License](https://img.shields.io/pypi/l/veriq)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/veriq)
+[![Test Status](https://github.com/ut-issl/veriq/actions/workflows/ci.yaml/badge.svg)](https://github.com/ut-issl/veriq/actions)
+[![codecov](https://codecov.io/gh/ut-issl/veriq/graph/badge.svg?token=to2H6ZCztP)](https://codecov.io/gh/ut-issl/veriq)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 > [!WARNING]
 > This package is still under active development.
 > There are known issues and limitations.

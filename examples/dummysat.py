@@ -84,6 +84,10 @@ class PowerSubsystemDesign(BaseModel):
     battery_b: BatteryModel
     solar_panel: SolarPanelModel
 
+    # Power budget per operation mode
+    power_generation: vq.Table[OperationMode, float]  # in Watts
+    power_consumption: vq.Table[OperationMode, float]  # in Watts
+
 
 class PowerSubsystemRequirement(BaseModel): ...
 
@@ -132,6 +136,15 @@ def verify_battery(
     first_battery: Annotated[BatteryModel, vq.Ref("$.design.battery_a")],
 ) -> bool:
     return first_battery.capacity > first_battery.min_capacity
+
+
+@power.verification()
+def verify_power_budget(
+    power_generation: Annotated[vq.Table[OperationMode, float], vq.Ref("$.design.power_generation")],
+    power_consumption: Annotated[vq.Table[OperationMode, float], vq.Ref("$.design.power_consumption")],
+) -> vq.Table[OperationMode, bool]:
+    """Verify that power generation exceeds consumption for each operation mode."""
+    return vq.Table({mode: power_generation[mode] > power_consumption[mode] for mode in OperationMode})  # ty: ignore[invalid-return-type]
 
 
 # Verification returning Table[K, bool]: verify power margins per operation mode.
