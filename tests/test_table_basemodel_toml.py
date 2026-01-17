@@ -48,7 +48,7 @@ def test_table_with_basemodel_values_export_to_toml(tmp_path: Path) -> None:
         "Component": ComponentModel(
             design=ComponentDesign(
                 name="TestComponent",
-                configs=vq.Table(
+                configs=vq.Table(  # ty: ignore[invalid-argument-type]
                     {
                         OperationMode.NOMINAL: ComponentConfig(
                             power_consumption=100.0,
@@ -92,7 +92,7 @@ def test_table_with_basemodel_values_roundtrip(tmp_path: Path) -> None:
         "Component": ComponentModel(
             design=ComponentDesign(
                 name="TestComponent",
-                configs=vq.Table(
+                configs=vq.Table(  # ty: ignore[invalid-argument-type]
                     {
                         OperationMode.NOMINAL: ComponentConfig(
                             power_consumption=100.0,
@@ -122,11 +122,11 @@ def test_table_with_basemodel_values_roundtrip(tmp_path: Path) -> None:
     loaded_data = vq.load_model_data_from_toml(project, output_path)
 
     # Verify the loaded data matches the original
-    assert loaded_data["Component"].design.name == "TestComponent"
-    assert loaded_data["Component"].design.configs[OperationMode.NOMINAL].power_consumption == 100.0
-    assert loaded_data["Component"].design.configs[OperationMode.NOMINAL].temperature_limit == 85.0
-    assert loaded_data["Component"].design.configs[OperationMode.SAFE].power_consumption == 20.0
-    assert loaded_data["Component"].design.configs[OperationMode.SAFE].temperature_limit == 70.0
+    assert loaded_data["Component"].design.name == "TestComponent"  # ty: ignore[unresolved-attribute]
+    assert loaded_data["Component"].design.configs[OperationMode.NOMINAL].power_consumption == 100.0  # ty: ignore[unresolved-attribute]
+    assert loaded_data["Component"].design.configs[OperationMode.NOMINAL].temperature_limit == 85.0  # ty: ignore[unresolved-attribute]
+    assert loaded_data["Component"].design.configs[OperationMode.SAFE].power_consumption == 20.0  # ty: ignore[unresolved-attribute]
+    assert loaded_data["Component"].design.configs[OperationMode.SAFE].temperature_limit == 70.0  # ty: ignore[unresolved-attribute]
 
 
 def test_table_with_basemodel_values_toml_structure(tmp_path: Path) -> None:
@@ -147,7 +147,7 @@ def test_table_with_basemodel_values_toml_structure(tmp_path: Path) -> None:
         "Component": ComponentModel(
             design=ComponentDesign(
                 name="TestComponent",
-                configs=vq.Table(
+                configs=vq.Table(  # ty: ignore[invalid-argument-type]
                     {
                         OperationMode.NOMINAL: ComponentConfig(
                             power_consumption=100.0,

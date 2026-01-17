@@ -96,19 +96,24 @@ def _parts_to_keys(parts: tuple[PartBase, ...]) -> list[str]:
     return keys
 
 
-def export_to_toml(
-    _project: Project,
-    _model_data: Mapping[str, BaseModel],
-    results: dict[ProjectPath, Any],
-    output_path: Path | str,
-) -> None:
-    """Export model data and evaluation results to a TOML file.
+def results_to_dict(results: dict[ProjectPath, Any]) -> dict[str, Any]:
+    """Convert evaluation results to a nested dictionary structure.
+
+    This is a pure function that converts the flat results dictionary
+    (with ProjectPath keys) into a nested dictionary suitable for TOML export.
 
     Args:
-        project: The project containing scope definitions
-        model_data: The input model data for each scope
         results: The evaluation results from evaluate_project
-        output_path: Path to the output TOML file
+
+    Returns:
+        A nested dictionary with the structure:
+        {
+            "ScopeName": {
+                "model": {...},
+                "calc": {...},
+                "verification": {...}
+            }
+        }
 
     """
     toml_data: dict[str, Any] = {}
@@ -148,12 +153,63 @@ def export_to_toml(
         # Set the value in the nested dictionary
         _set_nested_value(toml_data, all_keys, value)
 
+    return toml_data
+
+
+def export_to_toml(
+    _project: Project,
+    _model_data: Mapping[str, BaseModel],
+    results: dict[ProjectPath, Any],
+    output_path: Path | str,
+) -> None:
+    """Export model data and evaluation results to a TOML file.
+
+    Args:
+        project: The project containing scope definitions
+        model_data: The input model data for each scope
+        results: The evaluation results from evaluate_project
+        output_path: Path to the output TOML file
+
+    """
+    toml_data = results_to_dict(results)
+
     # Write to TOML file
     output_path = Path(output_path)
     with output_path.open("wb") as f:
         tomli_w.dump(toml_data, f)
 
     logger.debug(f"Exported results to {output_path}")
+
+
+def toml_to_model_data(
+    project: Project,
+    toml_contents: dict[str, Any],
+) -> dict[str, BaseModel]:
+    """Convert TOML dictionary contents to validated model data.
+
+    This is a pure function that validates and converts TOML contents
+    into Pydantic model instances for each scope in the project.
+
+    Args:
+        project: The project containing scope definitions
+        toml_contents: The parsed TOML dictionary
+
+    Returns:
+        A dictionary mapping scope names to their validated root model instances
+
+    """
+    from pydantic import BaseModel as PydanticBaseModel  # noqa: PLC0415, TC002
+
+    model_data: dict[str, PydanticBaseModel] = {}
+    for scope_name, scope in project.scopes.items():
+        if scope_name in toml_contents and "model" in toml_contents[scope_name]:
+            root_model = scope.get_root_model()
+            model_data[scope_name] = root_model.model_validate(toml_contents[scope_name]["model"])
+            logger.debug(f"Loaded model data for scope '{scope_name}'")
+        else:
+            logger.debug(f"No model data found for scope '{scope_name}'")
+
+    return model_data
 
 
 def load_model_data_from_toml(
@@ -175,14 +231,7 @@ def load_model_data_from_toml(
     with input_path.open("rb") as f:
         toml_contents = tomllib.load(f)
 
-    model_data: dict[str, BaseModel] = {}
-    for scope_name, scope in project.scopes.items():
-        if scope_name in toml_contents and "model" in toml_contents[scope_name]:
-            root_model = scope.get_root_model()
-            model_data[scope_name] = root_model.model_validate(toml_contents[scope_name]["model"])
-            logger.debug(f"Loaded model data for scope '{scope_name}'")
-        else:
-            logger.debug(f"No model data found for scope '{scope_name}' in {input_path}")
+    model_data = toml_to_model_data(project, toml_contents)
 
     logger.debug(f"Loaded model data from {input_path}")
     return model_data

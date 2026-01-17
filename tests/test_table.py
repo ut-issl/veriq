@@ -37,7 +37,7 @@ def test_table_as_calc_output() -> None:
         input_table: Annotated[vq.Table[Option, float], vq.Ref("$.input_table")],
     ) -> vq.Table[Option, float]:
         # Transform the input table by multiplying by 2
-        return vq.Table(
+        return vq.Table(  # ty: ignore[invalid-return-type]
             {
                 Option.OPTION_A: input_table[Option.OPTION_A] * 2,
                 Option.OPTION_B: input_table[Option.OPTION_B] * 2,
@@ -47,7 +47,7 @@ def test_table_as_calc_output() -> None:
     # Create model data
     model_data = {
         scope.name: RootModel(
-            input_table=vq.Table(
+            input_table=vq.Table(  # ty: ignore[invalid-argument-type]
                 {
                     Option.OPTION_A: 3.14,
                     Option.OPTION_B: 2.71,
@@ -87,7 +87,7 @@ def test_table_as_calc_output_with_calc_input() -> None:
         input_table: Annotated[vq.Table[Option, float], vq.Ref("$.input_table")],
     ) -> vq.Table[Option, float]:
         # Transform the input table by multiplying by 2
-        return vq.Table(
+        return vq.Table(  # ty: ignore[invalid-return-type]
             {
                 Option.OPTION_A: input_table[Option.OPTION_A] * 2,
                 Option.OPTION_B: input_table[Option.OPTION_B] * 2,
@@ -99,7 +99,7 @@ def test_table_as_calc_output_with_calc_input() -> None:
         doubled_table: Annotated[vq.Table[Option, float], vq.Ref("@double_table")],
     ) -> vq.Table[Option, float]:
         # Further transform the doubled table by multiplying by 3
-        return vq.Table(
+        return vq.Table(  # ty: ignore[invalid-return-type]
             {
                 Option.OPTION_A: doubled_table[Option.OPTION_A] * 3,
                 Option.OPTION_B: doubled_table[Option.OPTION_B] * 3,
@@ -109,7 +109,7 @@ def test_table_as_calc_output_with_calc_input() -> None:
     # Create model data
     model_data = {
         "Test Scope": RootModel(
-            input_table=vq.Table(
+            input_table=vq.Table(  # ty: ignore[invalid-argument-type]
                 {
                     Option.OPTION_A: 3.14,
                     Option.OPTION_B: 2.71,
@@ -150,7 +150,7 @@ def test_table_with_tuple_index_as_calc_output() -> None:
         input_table: Annotated[vq.Table[tuple[Region, Product], float], vq.Ref("$.input_table")],
     ) -> vq.Table[tuple[Region, Product], float]:
         # Transform the input table by multiplying by 2
-        return vq.Table(
+        return vq.Table(  # ty: ignore[invalid-return-type]
             {
                 (Region.NORTH, Product.WIDGET): input_table[(Region.NORTH, Product.WIDGET)] * 2,
                 (Region.NORTH, Product.GADGET): input_table[(Region.NORTH, Product.GADGET)] * 2,
@@ -162,7 +162,7 @@ def test_table_with_tuple_index_as_calc_output() -> None:
     # Create model data
     model_data = {
         scope.name: RootModel(
-            input_table=vq.Table(
+            input_table=vq.Table(  # ty: ignore[invalid-argument-type]
                 {
                     (Region.NORTH, Product.WIDGET): 10.0,
                     (Region.NORTH, Product.GADGET): 20.0,
@@ -207,7 +207,7 @@ def test_table_with_tuple_index_as_calc_output_with_calc_input() -> None:
         input_table: Annotated[vq.Table[tuple[Region, Product], float], vq.Ref("$.input_table")],
     ) -> vq.Table[tuple[Region, Product], float]:
         # Transform the input table by multiplying by 2
-        return vq.Table(
+        return vq.Table(  # ty: ignore[invalid-return-type]
             {
                 (Region.NORTH, Product.WIDGET): input_table[(Region.NORTH, Product.WIDGET)] * 2,
                 (Region.NORTH, Product.GADGET): input_table[(Region.NORTH, Product.GADGET)] * 2,
@@ -221,7 +221,7 @@ def test_table_with_tuple_index_as_calc_output_with_calc_input() -> None:
         doubled_table: Annotated[vq.Table[tuple[Region, Product], float], vq.Ref("@double_table")],
     ) -> vq.Table[tuple[Region, Product], float]:
         # Further transform the doubled table by multiplying by 3
-        return vq.Table(
+        return vq.Table(  # ty: ignore[invalid-return-type]
             {
                 (Region.NORTH, Product.WIDGET): doubled_table[(Region.NORTH, Product.WIDGET)] * 3,
                 (Region.NORTH, Product.GADGET): doubled_table[(Region.NORTH, Product.GADGET)] * 3,
@@ -233,7 +233,7 @@ def test_table_with_tuple_index_as_calc_output_with_calc_input() -> None:
     # Create model data
     model_data = {
         "Test Scope": RootModel(
-            input_table=vq.Table(
+            input_table=vq.Table(  # ty: ignore[invalid-argument-type]
                 {
                     (Region.NORTH, Product.WIDGET): 10.0,
                     (Region.NORTH, Product.GADGET): 20.0,
@@ -278,7 +278,7 @@ def test_table_with_triple_tuple_index() -> None:
         input_table: Annotated[vq.Table[tuple[Region, Product, Option], float], vq.Ref("$.input_table")],
     ) -> vq.Table[tuple[Region, Product, Option], float]:
         # Transform the input table by adding 100
-        return vq.Table(
+        return vq.Table(  # ty: ignore[invalid-return-type]
             {
                 (Region.NORTH, Product.WIDGET, Option.OPTION_A): input_table[
                     (Region.NORTH, Product.WIDGET, Option.OPTION_A)
@@ -318,7 +318,7 @@ def test_table_with_triple_tuple_index() -> None:
     # Create model data
     model_data = {
         scope.name: RootModel(
-            input_table=vq.Table(
+            input_table=vq.Table(  # ty: ignore[invalid-argument-type]
                 {
                     (Region.NORTH, Product.WIDGET, Option.OPTION_A): 1.0,
                     (Region.NORTH, Product.WIDGET, Option.OPTION_B): 2.0,

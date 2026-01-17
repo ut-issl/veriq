@@ -14,7 +14,7 @@ typecheck:
 
 # Run pytest and generate coverage report
 test:
-    uv run -- coverage run --source=./src/pdag -m pytest --import-mode importlib
+    uv run -- coverage run -m pytest --import-mode importlib
     uv run -- coverage report -m
     uv run -- coverage xml -o ./coverage.xml
 

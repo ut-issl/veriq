@@ -100,8 +100,8 @@ if __name__ == "__main__":
     print(f"✓ Loaded data back from {output_path}")
 
     # Verify the data
-    assert loaded_data["Power"].battery_capacity == 1000.0
-    assert loaded_data["Power"].mode_configs[OperationMode.NOMINAL].consumption == 100.0
+    assert loaded_data["Power"].battery_capacity == 1000.0  # ty: ignore[unresolved-attribute]
+    assert loaded_data["Power"].mode_configs[OperationMode.NOMINAL].consumption == 100.0  # ty: ignore[unresolved-attribute]
     print("✓ Data roundtrip successful!")
 
     # Clean up

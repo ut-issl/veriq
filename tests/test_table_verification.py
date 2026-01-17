@@ -130,7 +130,7 @@ def test_verification_decorator_accepts_table_bool_return() -> None:
     # Should not raise - Table[K, bool] is valid
     @scope.verification()
     def verify_table(value: Annotated[float, vq.Ref("$.value")]) -> vq.Table[Mode, bool]:
-        return vq.Table({
+        return vq.Table({  # ty: ignore[invalid-return-type]
             Mode.NOMINAL: value > 0,
             Mode.SAFE: value > 10,
         })
@@ -153,8 +153,8 @@ def test_verification_decorator_rejects_invalid_return_type() -> None:
     with pytest.raises(TypeError, match="Return type must be 'bool' or 'Table\\[K, bool\\]'"):
 
         @scope.verification()
-        def verify_invalid(value: Annotated[float, vq.Ref("$.value")]) -> vq.Table[Mode, float]:  # type: ignore[type-var]
-            return vq.Table({
+        def verify_invalid(value: Annotated[float, vq.Ref("$.value")]) -> vq.Table[Mode, float]:
+            return vq.Table({  # ty: ignore[invalid-return-type]
                 Mode.NOMINAL: value,
                 Mode.SAFE: value * 2,
             })
@@ -185,11 +185,11 @@ def test_table_verification_evaluation_stores_leaf_paths() -> None:
     def verify_margins(
         margin: Annotated[vq.Table[Mode, float], vq.Ref("$.margin")],
     ) -> vq.Table[Mode, bool]:
-        return vq.Table({mode: margin[mode] > 0.1 for mode in Mode})
+        return vq.Table({mode: margin[mode] > 0.1 for mode in Mode})  # ty: ignore[invalid-return-type]
 
     model_data = {
         "TestScope": TestModel(
-            margin=vq.Table({
+            margin=vq.Table({  # ty: ignore[invalid-argument-type]
                 Mode.NOMINAL: 0.2,  # > 0.1, should pass
                 Mode.SAFE: 0.05,  # < 0.1, should fail
             }),
@@ -237,12 +237,12 @@ def test_bool_and_table_verifications_coexist() -> None:
     def verify_margins(
         margins: Annotated[vq.Table[Mode, float], vq.Ref("$.margins")],
     ) -> vq.Table[Mode, bool]:
-        return vq.Table({mode: margins[mode] > 0.1 for mode in Mode})
+        return vq.Table({mode: margins[mode] > 0.1 for mode in Mode})  # ty: ignore[invalid-return-type]
 
     model_data = {
         "TestScope": TestModel(
             threshold=1.0,
-            margins=vq.Table({
+            margins=vq.Table({  # ty: ignore[invalid-argument-type]
                 Mode.NOMINAL: 0.2,
                 Mode.SAFE: 0.05,
             }),
@@ -289,7 +289,7 @@ def test_multidim_table_verification_evaluation() -> None:
     def verify_matrix(
         matrix: Annotated[vq.Table[tuple[Phase, Mode], float], vq.Ref("$.matrix")],
     ) -> vq.Table[tuple[Phase, Mode], bool]:
-        return vq.Table({
+        return vq.Table({  # ty: ignore[invalid-return-type]
             (phase, mode): matrix[(phase, mode)] > 0
             for phase in Phase
             for mode in Mode
@@ -297,7 +297,7 @@ def test_multidim_table_verification_evaluation() -> None:
 
     model_data = {
         "TestScope": TestModel(
-            matrix=vq.Table({
+            matrix=vq.Table({  # ty: ignore[invalid-argument-type]
                 (Phase.INITIAL, Mode.NOMINAL): 1.0,   # > 0, True
                 (Phase.INITIAL, Mode.SAFE): -1.0,    # < 0, False
                 (Phase.CRUISE, Mode.NOMINAL): 2.0,   # > 0, True
@@ -346,7 +346,7 @@ def test_output_model_includes_table_verification_types() -> None:
 
     @scope.verification()
     def verify_table(value: Annotated[float, vq.Ref("$.value")]) -> vq.Table[Mode, bool]:
-        return vq.Table({
+        return vq.Table({  # ty: ignore[invalid-return-type]
             Mode.NOMINAL: value > 0,
             Mode.SAFE: value > 10,
         })
@@ -396,7 +396,7 @@ def test_get_type_returns_correct_verification_types() -> None:
 
     @scope.verification()
     def verify_table(value: Annotated[float, vq.Ref("$.value")]) -> vq.Table[Mode, bool]:
-        return vq.Table({
+        return vq.Table({  # ty: ignore[invalid-return-type]
             Mode.NOMINAL: value > 0,
             Mode.SAFE: value > 10,
         })

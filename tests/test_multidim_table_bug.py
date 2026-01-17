@@ -45,7 +45,7 @@ def test_multidim_table_with_toml_roundtrip():
         result = {}
         for key, value in data.items():
             result[key] = value * 2
-        return vq.Table(result)
+        return vq.Table(result)  # ty: ignore[invalid-return-type]
 
 
 def test_multidim_table_with_string_interpolated_ref():

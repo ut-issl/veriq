@@ -142,7 +142,7 @@ def verify_power_margin(
     power_limit: Annotated[vq.Table[OperationMode, float], vq.Ref("$.power_limit")],
 ) -> vq.Table[OperationMode, bool]:
     """Verify that power consumption is within limits for each operation mode."""
-    return vq.Table({mode: power_consumption[mode] < power_limit[mode] for mode in OperationMode})
+    return vq.Table({mode: power_consumption[mode] < power_limit[mode] for mode in OperationMode})  # ty: ignore[invalid-return-type]
 
 
 @thermal.calculation(imports=["Power"])
