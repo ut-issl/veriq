@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self, get_args, get_origin
 
 from pydantic import BaseModel
 
+from ._external_data import ExternalData
 from ._table import Table
 
 if TYPE_CHECKING:
@@ -225,6 +226,11 @@ def iter_leaf_path_parts(  # noqa: PLR0912, C901
         # For a properly parameterized Table, we handle it above
         yield _current_path_parts
         return
+    if issubclass(model, ExternalData):
+        # ExternalData subclasses (e.g., FileRef) are treated as leaf values
+        # They are not decomposed into their fields (path, checksum, etc.)
+        yield _current_path_parts
+        return
     if not issubclass(model, BaseModel):
         yield _current_path_parts
         return
@@ -352,9 +358,8 @@ def hydrate_value_by_leaf_values[T](model: type[T], leaf_values: Mapping[tuple[P
         # Check for generic types using get_origin
         field_origin = get_origin(field_type)
         is_basemodel = isclass(field_type) and issubclass(field_type, BaseModel)
-        is_table = (
-            (isclass(field_type) and issubclass(field_type, Table))
-            or (field_origin is not None and isclass(field_origin) and issubclass(field_origin, Table))
+        is_table = (isclass(field_type) and issubclass(field_type, Table)) or (
+            field_origin is not None and isclass(field_origin) and issubclass(field_origin, Table)
         )
 
         if is_basemodel:
