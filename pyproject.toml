@@ -36,7 +36,6 @@ veriq = "veriq._cli.main:app"
 [dependency-groups]
 dev = [
   "pre-commit>=4.2.0",
-  "pytest-asyncio>=1.3.0",
   { include-group = "license" },
   { include-group = "ruff" },
   { include-group = "test" },
@@ -50,6 +49,7 @@ test = [
   "coverage>=7.10.4",
   "jsonschema>=4.26.0",
   "pytest>=8.4.0",
+  "pytest-asyncio>=1.3.0",
 ]
 typing = [
   "basedpyright>=1.33.0",

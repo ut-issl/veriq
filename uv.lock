@@ -727,6 +727,7 @@ test = [
     { name = "coverage" },
     { name = "jsonschema" },
     { name = "pytest" },
+    { name = "pytest-asyncio" },
 ]
 typing = [
     { name = "basedpyright" },
@@ -734,6 +735,7 @@ typing = [
     { name = "jsonschema" },
     { name = "mypy" },
     { name = "pytest" },
+    { name = "pytest-asyncio" },
     { name = "ty" },
 ]
 
@@ -766,6 +768,7 @@ test = [
     { name = "coverage", specifier = ">=7.10.4" },
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "pytest", specifier = ">=8.4.0" },
+    { name = "pytest-asyncio", specifier = ">=1.3.0" },
 ]
 typing = [
     { name = "basedpyright", specifier = ">=1.33.0" },
@@ -773,6 +776,7 @@ typing = [
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "mypy", specifier = ">=1.16.0" },
     { name = "pytest", specifier = ">=8.4.0" },
+    { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "ty", specifier = ">=0.0.2" },
 ]
 
