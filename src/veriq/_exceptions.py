@@ -1,2 +1,0 @@
-class VeriqCLIEError(Exception):
-    pass

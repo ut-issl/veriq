@@ -349,20 +349,21 @@ def hydrate_value_by_leaf_values[T](model: type[T], leaf_values: Mapping[tuple[P
         logger.debug(f"Available leaf values: {leaf_values}")
 
         field_value: Any
-        if issubclass(field_type, BaseModel):
+        # Check for generic types using get_origin
+        field_origin = get_origin(field_type)
+        is_basemodel = isclass(field_type) and issubclass(field_type, BaseModel)
+        is_table = (
+            (isclass(field_type) and issubclass(field_type, Table))
+            or (field_origin is not None and isclass(field_origin) and issubclass(field_origin, Table))
+        )
+
+        if is_basemodel:
             sub_leaf_values = {tuple(parts[1:]): leaf_values[parts] for parts in matching_leaf_parts}
             field_value = hydrate_value_by_leaf_values(field_type, sub_leaf_values)
-        elif issubclass(field_type, Table):
-            table_mapping = {}
-            for parts in matching_leaf_parts:
-                key_part = parts[1]
-                if not isinstance(key_part, ItemPart):
-                    msg = f"Expected ItemPart for Table key, got: {type(key_part)}"
-                    raise TypeError(msg)
-                key = key_part.key
-                value = leaf_values[parts]
-                table_mapping[key] = value
-            field_value = field_type(table_mapping)
+        elif is_table:
+            # For generic Table types, delegate to hydrate_value_by_leaf_values
+            sub_leaf_values = {tuple(parts[1:]): leaf_values[parts] for parts in matching_leaf_parts}
+            field_value = hydrate_value_by_leaf_values(field_type, sub_leaf_values)
         else:
             if len(matching_leaf_parts) != 1 or len(matching_leaf_parts[0]) != 1:
                 msg = f"Expected single leaf part for field '{field_name}', got: {matching_leaf_parts}"

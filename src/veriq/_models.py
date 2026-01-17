@@ -20,7 +20,18 @@ logger = logging.getLogger(__name__)
 
 
 def _get_dep_refs_from_signature(sig: inspect.Signature) -> dict[str, Ref]:
-    """Extract Calc or Fetch annotation from the function signature."""
+    """Extract Ref annotations from the function signature.
+
+    Args:
+        sig: The function signature to extract refs from.
+
+    Returns:
+        A dictionary mapping parameter names to their Ref annotations.
+
+    Raises:
+        TypeError: If a parameter is missing a Ref annotation.
+
+    """
 
     def _get_dep_ref_from_annotation(
         name: str,
@@ -41,7 +52,18 @@ def _get_dep_refs_from_signature(sig: inspect.Signature) -> dict[str, Ref]:
 
 
 def _get_return_type_from_signature(sig: inspect.Signature) -> type:
-    """Extract return type from the function signature."""
+    """Extract return type from the function signature.
+
+    Args:
+        sig: The function signature to extract the return type from.
+
+    Returns:
+        The return type annotation.
+
+    Raises:
+        TypeError: If the function has no return type or an invalid one.
+
+    """
     return_annotation = sig.return_annotation
     if return_annotation is inspect.Signature.empty:
         msg = "Function must have a return type annotation."
@@ -55,6 +77,50 @@ def _get_return_type_from_signature(sig: inspect.Signature) -> type:
         return return_annotation
     msg = "Return type must be a type."
     raise TypeError(msg)
+
+
+def _validate_and_convert_refs(
+    dep_refs: dict[str, Ref],
+    default_scope_name: str,
+    imported_scope_names: list[str],
+    entity_name: str,
+    entity_type: str,
+) -> dict[str, ProjectPath]:
+    """Validate cross-scope references and convert Refs to ProjectPaths.
+
+    This is shared logic between Calculation and Verification.
+
+    Args:
+        dep_refs: Dictionary mapping parameter names to Ref objects.
+        default_scope_name: The default scope for unqualified refs.
+        imported_scope_names: List of allowed imported scope names.
+        entity_name: Name of the calculation/verification (for error messages).
+        entity_type: Type string like "calculation" or "verification".
+
+    Returns:
+        Dictionary mapping parameter names to ProjectPaths.
+
+    Raises:
+        ValueError: If a cross-scope reference is not in imported_scope_names.
+
+    """
+    dep_ppaths: dict[str, ProjectPath] = {}
+
+    for dep_name, dep_ref in dep_refs.items():
+        # Default scope if not specified
+        scope_name = dep_ref.scope if dep_ref.scope is not None else default_scope_name
+
+        # Validate cross-scope references
+        if scope_name != default_scope_name and scope_name not in imported_scope_names:
+            msg = (
+                f"Dependency '{dep_name}' is from scope '{scope_name}',"
+                f" which is not imported in {entity_type} '{entity_name}'."
+            )
+            raise ValueError(msg)
+
+        dep_ppaths[dep_name] = ProjectPath(scope=scope_name, path=parse_path(dep_ref.path))
+
+    return dep_ppaths
 
 
 def is_valid_verification_return_type(return_type: type) -> bool:
@@ -165,16 +231,12 @@ class Project:
             root_model_type = scope.get_root_model()
 
             # Create calc model with all calculations
-            calc_fields = {
-                calc_name: (calc.output_type, ...)
-                for calc_name, calc in scope.calculations.items()
-            }
+            calc_fields = {calc_name: (calc.output_type, ...) for calc_name, calc in scope.calculations.items()}
             calc_model = create_model(f"{scope_name}Calc", **calc_fields) if calc_fields else None  # ty: ignore[no-matching-overload]
 
             # Create verification model with all verifications (using actual return types)
             verification_fields = {
-                verif_name: (verif.output_type, ...)
-                for verif_name, verif in scope.verifications.items()
+                verif_name: (verif.output_type, ...) for verif_name, verif in scope.verifications.items()
             }
             verification_model = (
                 create_model(f"{scope_name}Verification", **verification_fields)  # ty: ignore[no-matching-overload]
@@ -347,21 +409,13 @@ class Calculation[T, **P]:
     def __post_init__(self) -> None:
         sig = inspect.signature(self.func)
         dep_refs = _get_dep_refs_from_signature(sig)
-
-        def ref_to_project_path(ref: Ref) -> ProjectPath:
-            scope_name = self.default_scope_name if ref.scope is None else ref.scope
-            return ProjectPath(scope=scope_name, path=parse_path(ref.path))
-
-        for dep_name, dep_ref in dep_refs.items():
-            if dep_ref.scope is None:
-                dep_ref.scope = self.default_scope_name
-            if dep_ref.scope != self.default_scope_name and dep_ref.scope not in self.imported_scope_names:
-                msg = (
-                    f"Dependency '{dep_name}' is from scope '{dep_ref.scope}',"
-                    f" which is not imported in calculation '{self.name}'."
-                )
-                raise ValueError(msg)
-        self.dep_ppaths = {name: ref_to_project_path(ref) for name, ref in dep_refs.items()}
+        self.dep_ppaths = _validate_and_convert_refs(
+            dep_refs,
+            self.default_scope_name,
+            self.imported_scope_names,
+            self.name,
+            "calculation",
+        )
         self.output_type = _get_return_type_from_signature(sig)  # ty: ignore[invalid-assignment]
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
@@ -389,21 +443,13 @@ class Verification[T, **P]:
     def __post_init__(self) -> None:
         sig = inspect.signature(self.func)
         dep_refs = _get_dep_refs_from_signature(sig)
-
-        def ref_to_project_path(ref: Ref) -> ProjectPath:
-            scope_name = self.default_scope_name if ref.scope is None else ref.scope
-            return ProjectPath(scope=scope_name, path=parse_path(ref.path))
-
-        for dep_name, dep_ref in dep_refs.items():
-            if dep_ref.scope is None:
-                dep_ref.scope = self.default_scope_name
-            if dep_ref.scope != self.default_scope_name and dep_ref.scope not in self.imported_scope_names:
-                msg = (
-                    f"Dependency '{dep_name}' is from scope '{dep_ref.scope}',"
-                    f" which is not imported in verification '{self.name}'."
-                )
-                raise ValueError(msg)
-        self.dep_ppaths = {name: ref_to_project_path(ref) for name, ref in dep_refs.items()}
+        self.dep_ppaths = _validate_and_convert_refs(
+            dep_refs,
+            self.default_scope_name,
+            self.imported_scope_names,
+            self.name,
+            "verification",
+        )
 
         # Extract and validate return type
         self.output_type = _get_return_type_from_signature(sig)  # ty: ignore[invalid-assignment]
@@ -563,7 +609,11 @@ class Scope:
         return decorator
 
     def requirement(
-        self, id_: str, /, description: str, verified_by: Iterable[Verification[Any, ...]] = (),
+        self,
+        id_: str,
+        /,
+        description: str,
+        verified_by: Iterable[Verification[Any, ...]] = (),
     ) -> Requirement:
         """Create and add a requirement to the scope."""
         requirement = Requirement(description=description, verified_by=list(verified_by), id=id_)
