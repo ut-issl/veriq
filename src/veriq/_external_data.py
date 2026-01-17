@@ -8,48 +8,17 @@ from __future__ import annotations
 
 import hashlib
 from abc import ABC, abstractmethod
-from contextlib import contextmanager
-from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path  # noqa: TC003 - Pydantic requires Path at runtime for field validation
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from ._context import get_input_base_dir
+
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Mapping
     from typing import Self
-
-
-# =============================================================================
-# Base Directory Context
-# =============================================================================
-
-_base_dir_var: ContextVar[Path | None] = ContextVar("fileref_base_dir", default=None)
-
-
-@contextmanager
-def fileref_base_dir(base_dir: Path) -> Iterator[None]:
-    """Context manager to set the base directory for resolving FileRef paths.
-
-    When loading TOML files, use this context to resolve relative FileRef paths
-    relative to a base directory (typically the TOML file's parent directory).
-
-    Example:
-        with fileref_base_dir(toml_path.parent):
-            model_data = load_model_data(...)
-
-    """
-    token = _base_dir_var.set(base_dir)
-    try:
-        yield
-    finally:
-        _base_dir_var.reset(token)
-
-
-def get_fileref_base_dir() -> Path | None:
-    """Get the current base directory for FileRef path resolution."""
-    return _base_dir_var.get()
 
 
 class ExternalData(BaseModel, ABC):
@@ -115,7 +84,7 @@ class FileRef(ExternalData):
     User accesses data via `path` attribute.
 
     Relative paths are resolved against the base directory set via
-    `fileref_base_dir()` context manager (typically the TOML file's directory).
+    `input_base_dir()` context manager (typically the TOML file's directory).
 
     Example:
         # In model definition
@@ -143,7 +112,7 @@ class FileRef(ExternalData):
     def _resolve_relative_path(self) -> Self:
         """Resolve relative paths against the base directory from context."""
         if not self.path.is_absolute():
-            base_dir = get_fileref_base_dir()
+            base_dir = get_input_base_dir()
             if base_dir is not None:
                 # Use object.__setattr__ since the model is frozen
                 object.__setattr__(self, "path", base_dir / self.path)

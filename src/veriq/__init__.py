@@ -21,7 +21,7 @@ __all__ = [
     "evaluate_graph",
     "evaluate_project",
     "export_to_toml",
-    "fileref_base_dir",
+    "input_base_dir",
     "is_valid_verification_return_type",
     "load_model_data_from_toml",
     "validate_external_data",
@@ -35,11 +35,10 @@ from ._external_data import (
     ChecksumValidationResult,
     ExternalData,
     FileRef,
-    fileref_base_dir,
     validate_external_data,
 )
 from ._graph import DependencyGraph
-from ._io import export_to_toml, load_model_data_from_toml
+from ._io import export_to_toml, input_base_dir, load_model_data_from_toml
 from ._ir import GraphSpec, NodeKind, NodeSpec, build_graph_spec
 from ._models import Project, Ref, Requirement, Scope, is_valid_verification_return_type
 from ._relations import depends

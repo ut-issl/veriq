@@ -1,21 +1,52 @@
 import logging
 import tomllib
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import tomli_w
 
+from ._context import (  # noqa: F401 - get_input_base_dir re-exported
+    get_input_base_dir,
+    reset_input_base_dir,
+    set_input_base_dir,
+)
 from ._path import AttributePart, CalcPath, ItemPart, ModelPath, PartBase, ProjectPath, VerificationPath
 from ._table import Table
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterator, Mapping
 
     from pydantic import BaseModel
 
     from ._models import Project
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Base Directory Context for Path Resolution
+# =============================================================================
+
+
+@contextmanager
+def input_base_dir(base_dir: Path) -> Iterator[None]:
+    """Context manager to set the base directory for resolving relative paths.
+
+    When loading input files (e.g., TOML), use this context to resolve relative
+    paths (e.g., FileRef.path) relative to a base directory (typically the
+    input file's parent directory).
+
+    Example:
+        with input_base_dir(toml_path.parent):
+            model_data = load_model_data(...)
+
+    """
+    token = set_input_base_dir(base_dir)
+    try:
+        yield
+    finally:
+        reset_input_base_dir(token)
 
 
 def _serialize_value(value: Any) -> Any:
@@ -233,8 +264,6 @@ def load_model_data_from_toml(
         A dictionary mapping scope names to their validated root model instances
 
     """
-    from ._external_data import fileref_base_dir  # noqa: PLC0415
-
     input_path = Path(input_path).resolve()
     base_dir = input_path.parent
 
@@ -242,7 +271,7 @@ def load_model_data_from_toml(
         toml_contents = tomllib.load(f)
 
     # Use context manager so FileRef resolves paths relative to TOML directory
-    with fileref_base_dir(base_dir):
+    with input_base_dir(base_dir):
         model_data = toml_to_model_data(project, toml_contents)
 
     logger.debug(f"Loaded model data from {input_path}")
