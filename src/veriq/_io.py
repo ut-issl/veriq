@@ -54,13 +54,17 @@ def _serialize_value(value: Any) -> Any:
             result[key_str] = _serialize_value(v)
         return result
 
-    # Handle dict - recursively serialize values
+    # Handle dict - recursively serialize values, excluding None (TOML doesn't support None)
     if isinstance(value, dict):
-        return {k: _serialize_value(v) for k, v in value.items()}
+        return {k: _serialize_value(v) for k, v in value.items() if v is not None}
 
     # Handle list/tuple - recursively serialize items
     if isinstance(value, (list, tuple)):
         return [_serialize_value(item) for item in value]
+
+    # Handle Path objects - convert to string
+    if isinstance(value, Path):
+        return str(value)
 
     # Primitives and TOML-native types (str, int, float, bool, datetime, etc.)
     return value

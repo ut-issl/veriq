@@ -1,0 +1,5 @@
+{
+  "version": "1.0",
+  "safety_margin": 0.15,
+  "efficiency_derating": 0.95
+}
