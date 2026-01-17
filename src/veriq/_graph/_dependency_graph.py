@@ -2,15 +2,12 @@
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Generic, TypeVar
 
 from ._algorithms import topological_sort
 
-T = TypeVar("T")
-
 
 @dataclass(frozen=True, slots=True)
-class DependencyGraph(Generic[T]):
+class DependencyGraph[T]:
     """A directed acyclic graph representing dependencies between nodes.
 
     This is a pure, immutable data structure with query methods.
@@ -23,13 +20,14 @@ class DependencyGraph(Generic[T]):
     Attributes:
         _predecessors: Mapping from node to its direct dependencies.
         _successors: Mapping from node to nodes that depend on it.
+
     """
 
     _predecessors: dict[T, frozenset[T]] = field(default_factory=dict)
     _successors: dict[T, frozenset[T]] = field(default_factory=dict)
 
     @classmethod
-    def from_edges(cls, edges: list[tuple[T, T]]) -> "DependencyGraph[T]":
+    def from_edges(cls, edges: list[tuple[T, T]]) -> DependencyGraph[T]:
         """Build a graph from a list of (source, target) edges.
 
         An edge (a, b) means "b depends on a" (a -> b in the DAG).
@@ -45,6 +43,7 @@ class DependencyGraph(Generic[T]):
             >>> graph = DependencyGraph.from_edges([("a", "b"), ("b", "c")])
             >>> graph.predecessors("b")
             frozenset({'a'})
+
         """
         predecessors: defaultdict[T, set[T]] = defaultdict(set)
         successors: defaultdict[T, set[T]] = defaultdict(set)
@@ -74,6 +73,7 @@ class DependencyGraph(Generic[T]):
 
         Returns:
             Set of nodes that this node directly depends on.
+
         """
         return self._predecessors.get(node, frozenset())
 
@@ -85,6 +85,7 @@ class DependencyGraph(Generic[T]):
 
         Returns:
             Set of nodes that directly depend on this node.
+
         """
         return self._successors.get(node, frozenset())
 
@@ -93,6 +94,7 @@ class DependencyGraph(Generic[T]):
 
         Returns:
             Set of nodes that have no dependencies.
+
         """
         return frozenset(n for n in self.nodes if not self._predecessors.get(n))
 
@@ -101,6 +103,7 @@ class DependencyGraph(Generic[T]):
 
         Returns:
             Set of nodes that nothing depends on.
+
         """
         return frozenset(n for n in self.nodes if not self._successors.get(n))
 
@@ -112,6 +115,7 @@ class DependencyGraph(Generic[T]):
 
         Returns:
             Set of all nodes that this node transitively depends on.
+
         """
         visited: set[T] = set()
         stack = list(self.predecessors(node))
@@ -130,6 +134,7 @@ class DependencyGraph(Generic[T]):
 
         Returns:
             Set of all nodes that transitively depend on this node.
+
         """
         visited: set[T] = set()
         stack = list(self.successors(node))
@@ -148,6 +153,7 @@ class DependencyGraph(Generic[T]):
 
         Raises:
             ValueError: If the graph contains a cycle.
+
         """
         return topological_sort(dict(self._successors))
 
@@ -156,6 +162,7 @@ class DependencyGraph(Generic[T]):
 
         Returns:
             True if the graph has a cycle, False otherwise.
+
         """
         try:
             self.topological_order()
@@ -163,7 +170,7 @@ class DependencyGraph(Generic[T]):
             return True
         return False
 
-    def subgraph(self, nodes: frozenset[T]) -> "DependencyGraph[T]":
+    def subgraph(self, nodes: frozenset[T]) -> DependencyGraph[T]:
         """Create a subgraph containing only the specified nodes.
 
         Edges are kept only if both endpoints are in the node set.
@@ -173,6 +180,7 @@ class DependencyGraph(Generic[T]):
 
         Returns:
             A new DependencyGraph containing only the specified nodes.
+
         """
         return DependencyGraph(
             _predecessors={n: self._predecessors.get(n, frozenset()) & nodes for n in nodes},
@@ -188,6 +196,7 @@ class DependencyGraph(Generic[T]):
 
         Returns:
             List of error messages. Empty list if graph is valid.
+
         """
         errors: list[str] = []
 

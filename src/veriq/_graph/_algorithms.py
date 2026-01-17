@@ -25,6 +25,7 @@ def topological_sort[T: Hashable](successors: Mapping[T, Collection[T]]) -> list
         >>> # a -> b -> c means c depends on b, b depends on a
         >>> topological_sort({"a": ["b"], "b": ["c"], "c": []})
         ['a', 'b', 'c']
+
     """
     # Calculate in-degree for each node
     indegree: defaultdict[T, int] = defaultdict(int)
