@@ -19,6 +19,7 @@ from veriq._build import build_dependencies_graph
 from veriq._default import default
 from veriq._eval import evaluate_project
 from veriq._io import export_to_toml, load_model_data_from_toml
+from veriq._ir import build_graph_spec
 from veriq._models import Project
 from veriq._path import VerificationPath
 from veriq._update import update_input_data
@@ -392,7 +393,7 @@ def init(
 
 
 @app.command()
-def update(
+def update(  # noqa: PLR0913, PLR0915
     path: Annotated[
         str,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
@@ -413,6 +414,10 @@ def update(
     dry_run: Annotated[
         bool,
         typer.Option("--dry-run", help="Preview changes without writing to file"),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("-y", "--yes", help="Skip confirmation prompt"),
     ] = False,
 ) -> None:
     """Update an existing input TOML file with new schema defaults.
@@ -482,6 +487,14 @@ def update(
         err_console.print()
         err_console.print("[yellow]i Run without --dry-run to write changes[/yellow]")
     else:
+        # Confirm before writing (comments will be lost)
+        if not yes:
+            err_console.print()
+            err_console.print(
+                "[yellow]Warning: TOML comments in the input file will NOT be preserved.[/yellow]",
+            )
+            typer.confirm("Do you want to continue?", abort=True)
+
         # Write the updated data
         err_console.print(f"[cyan]Writing updated input to:[/cyan] {output}")
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -534,6 +547,10 @@ def edit(
         str | None,
         typer.Option("--project", help="Name of the project variable (for script paths only)"),
     ] = None,
+    yes: Annotated[
+        bool,
+        typer.Option("-y", "--yes", help="Skip confirmation prompt"),
+    ] = False,
 ) -> None:
     """Edit input TOML file with interactive TUI.
 
@@ -563,6 +580,14 @@ def edit(
     if not input.exists():
         err_console.print(f"[red]Error: Input file not found: {input}[/red]")
         raise typer.Exit(code=1)
+
+    # Confirm before editing (comments will be lost when saving)
+    if not yes:
+        err_console.print()
+        err_console.print(
+            "[yellow]Warning: TOML comments in the input file will NOT be preserved when saving.[/yellow]",
+        )
+        typer.confirm("Do you want to continue?", abort=True)
 
     # Launch the TUI
     tui_app = VeriqEditApp(input, project)
