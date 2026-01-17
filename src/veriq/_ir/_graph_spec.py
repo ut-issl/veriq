@@ -1,12 +1,14 @@
 """Graph specification containing all node specs."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from ._node_spec import NodeKind, NodeSpec
-
 if TYPE_CHECKING:
     from veriq._path import ProjectPath
+
+    from ._node_spec import NodeKind, NodeSpec
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,13 +36,14 @@ class GraphSpec:
         ... )
         >>> spec.get_nodes_by_kind(NodeKind.CALCULATION)
         [node1]
+
     """
 
-    nodes: dict["ProjectPath", NodeSpec] = field(default_factory=dict)
+    nodes: dict[ProjectPath, NodeSpec] = field(default_factory=dict)
     scope_names: tuple[str, ...] = field(default_factory=tuple)
-    type_registry: dict["ProjectPath", type] = field(default_factory=dict)
+    type_registry: dict[ProjectPath, type] = field(default_factory=dict)
 
-    def get_node(self, path: "ProjectPath") -> NodeSpec:
+    def get_node(self, path: ProjectPath) -> NodeSpec:
         """Get a node by its path.
 
         Args:
@@ -51,6 +54,7 @@ class GraphSpec:
 
         Raises:
             KeyError: If no node exists at the given path.
+
         """
         return self.nodes[path]
 
@@ -62,6 +66,7 @@ class GraphSpec:
 
         Returns:
             List of NodeSpecs with the specified kind.
+
         """
         return [node for node in self.nodes.values() if node.kind == kind]
 
@@ -73,10 +78,11 @@ class GraphSpec:
 
         Returns:
             List of NodeSpecs in the specified scope.
+
         """
         return [node for node in self.nodes.values() if node.id.scope == scope_name]
 
-    def get_type(self, path: "ProjectPath") -> type:
+    def get_type(self, path: ProjectPath) -> type:
         """Get the type at a specific path.
 
         Args:
@@ -87,6 +93,7 @@ class GraphSpec:
 
         Raises:
             KeyError: If the path is not in the type registry.
+
         """
         return self.type_registry[path]
 
@@ -94,6 +101,6 @@ class GraphSpec:
         """Return the number of nodes in the graph."""
         return len(self.nodes)
 
-    def __contains__(self, path: "ProjectPath") -> bool:
+    def __contains__(self, path: ProjectPath) -> bool:
         """Check if a node exists at the given path."""
         return path in self.nodes

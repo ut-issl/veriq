@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 def hydrate_inputs(
     param_mapping: dict[str, ProjectPath],
     values: dict[ProjectPath, Any],
-    graph_spec: "GraphSpec",
+    graph_spec: GraphSpec,
 ) -> dict[str, Any]:
     """Hydrate function inputs from leaf values.
 
@@ -35,6 +35,7 @@ def hydrate_inputs(
 
     Raises:
         KeyError: If a required leaf value is missing.
+
     """
     input_values: dict[str, Any] = {}
 

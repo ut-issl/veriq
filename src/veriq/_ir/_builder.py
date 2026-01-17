@@ -14,12 +14,10 @@ from ._graph_spec import GraphSpec
 from ._node_spec import NodeKind, NodeSpec
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from veriq._models import Project
 
 
-def _get_leaf_type(project: "Project", ppath: ProjectPath) -> type:
+def _get_leaf_type(project: Project, ppath: ProjectPath) -> type:
     """Get the type at a specific leaf path.
 
     Args:
@@ -28,13 +26,14 @@ def _get_leaf_type(project: "Project", ppath: ProjectPath) -> type:
 
     Returns:
         The type at the given path.
+
     """
     return project.get_type(ppath)
 
 
 def _collect_input_leaf_paths(
     dep_ppaths: dict[str, ProjectPath],
-    project: "Project",
+    project: Project,
 ) -> set[ProjectPath]:
     """Collect all leaf paths from a set of dependency paths.
 
@@ -47,6 +46,7 @@ def _collect_input_leaf_paths(
 
     Returns:
         Set of all leaf ProjectPaths that the dependencies expand to.
+
     """
     leaf_paths: set[ProjectPath] = set()
 
@@ -69,7 +69,7 @@ def _collect_input_leaf_paths(
     return leaf_paths
 
 
-def build_graph_spec(project: "Project") -> GraphSpec:
+def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901
     """Build a GraphSpec from a user-facing Project.
 
     This is the bridge between the user-facing layer and the core layer.
@@ -94,6 +94,7 @@ def build_graph_spec(project: "Project") -> GraphSpec:
         >>> spec = build_graph_spec(project)
         >>> len(spec.nodes)
         42
+
     """
     nodes: dict[ProjectPath, NodeSpec] = {}
     type_registry: dict[ProjectPath, type] = {}

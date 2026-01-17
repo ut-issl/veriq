@@ -53,14 +53,15 @@ class NodeSpec:
         ...         "current": ProjectPath("Power", ModelPath("$", (AttributePart("current"),))),
         ...     },
         ... )
+
     """
 
-    id: "ProjectPath"
+    id: ProjectPath
     kind: NodeKind
-    dependencies: frozenset["ProjectPath"]
+    dependencies: frozenset[ProjectPath]
     output_type: type
-    compute_fn: "Callable[..., Any] | None" = None
-    param_mapping: dict[str, "ProjectPath"] = field(default_factory=dict)
+    compute_fn: Callable[..., Any] | None = None
+    param_mapping: dict[str, ProjectPath] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def is_input(self) -> bool:

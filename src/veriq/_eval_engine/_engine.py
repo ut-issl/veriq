@@ -33,6 +33,7 @@ class EvaluationResult:
     Attributes:
         values: Mapping from node path to computed value.
         errors: List of (node_path, error_message) for any failed evaluations.
+
     """
 
     values: dict[ProjectPath, Any] = field(default_factory=dict)
@@ -54,6 +55,7 @@ class EvaluationResult:
 
         Raises:
             KeyError: If no value exists at the given path.
+
         """
         return self.values[path]
 
@@ -83,8 +85,8 @@ def _make_output_leaf_path(
     return ProjectPath(scope=base_path.scope, path=leaf_path)
 
 
-def evaluate_graph(
-    graph_spec: "GraphSpec",
+def evaluate_graph(  # noqa: C901
+    graph_spec: GraphSpec,
     initial_values: dict[ProjectPath, Any],
 ) -> EvaluationResult:
     """Evaluate the computation graph with given initial values.
@@ -108,12 +110,12 @@ def evaluate_graph(
         >>> result = evaluate_graph(spec, initial)
         >>> if result.success:
         ...     print(result.values)
+
     """
     # Build the dependency graph from node specs
     edges: list[tuple[ProjectPath, ProjectPath]] = []
     for node in graph_spec.nodes.values():
-        for dep in node.dependencies:
-            edges.append((dep, node.id))
+        edges.extend((dep, node.id) for dep in node.dependencies)
 
     graph = DependencyGraph.from_edges(edges)
 
@@ -150,7 +152,7 @@ def evaluate_graph(
                         path=ModelPath(root="$", parts=()),
                     ),
                     str(e),
-                )
+                ),
             ],
         )
 
@@ -206,7 +208,7 @@ def evaluate_graph(
         # Call the function
         try:
             result = spec.compute_fn(**input_values)
-        except Exception as e:
+        except (TypeError, ValueError, AttributeError, KeyError, RuntimeError) as e:
             errors.append((node_path, f"Evaluation error: {e}"))
             continue
 
