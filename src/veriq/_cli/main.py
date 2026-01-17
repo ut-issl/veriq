@@ -403,9 +403,9 @@ def update(  # noqa: PLR0913, PLR0915
         typer.Option("-i", "--input", help="Path to existing input TOML file"),
     ],
     output: Annotated[
-        Path,
-        typer.Option("-o", "--output", help="Path to output TOML file"),
-    ],
+        Path | None,
+        typer.Option("-o", "--output", help="Path to output TOML file (defaults to input file)"),
+    ] = None,
     project_var: Annotated[
         str | None,
         typer.Option("--project", help="Name of the project variable (for script paths only)"),
@@ -425,6 +425,10 @@ def update(  # noqa: PLR0913, PLR0915
     project schema. It preserves all your existing values while adding new fields
     with default values and warning about removed fields.
     """
+    # Default output to input if not specified
+    if output is None:
+        output = input
+
     err_console.print()
 
     # Load the project
