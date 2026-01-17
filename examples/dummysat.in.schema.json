@@ -68,9 +68,55 @@
         },
         "solar_panel": {
           "$ref": "#/$defs/SolarPanelModel"
+        },
+        "power_generation": {
+          "additionalProperties": false,
+          "properties": {
+            "nominal": {
+              "title": "Nominal",
+              "type": "number"
+            },
+            "safe": {
+              "title": "Safe",
+              "type": "number"
+            },
+            "mission": {
+              "title": "Mission",
+              "type": "number"
+            }
+          },
+          "required": ["nominal", "safe", "mission"],
+          "title": "Power Generation",
+          "type": "object"
+        },
+        "power_consumption": {
+          "additionalProperties": false,
+          "properties": {
+            "nominal": {
+              "title": "Nominal",
+              "type": "number"
+            },
+            "safe": {
+              "title": "Safe",
+              "type": "number"
+            },
+            "mission": {
+              "title": "Mission",
+              "type": "number"
+            }
+          },
+          "required": ["nominal", "safe", "mission"],
+          "title": "Power Consumption",
+          "type": "object"
         }
       },
-      "required": ["battery_a", "battery_b", "solar_panel"],
+      "required": [
+        "battery_a",
+        "battery_b",
+        "solar_panel",
+        "power_generation",
+        "power_consumption"
+      ],
       "title": "PowerSubsystemDesign",
       "type": "object"
     },

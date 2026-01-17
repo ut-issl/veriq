@@ -224,6 +224,37 @@ class TableData:
         return dict(self.flat_data)
 
 
+def _resolve_forward_ref(
+    field_type: Any,
+    model_cls: type[BaseModel],
+) -> Any:
+    """Resolve a ForwardRef to its actual type.
+
+    Args:
+        field_type: The type annotation, possibly a ForwardRef
+        model_cls: The model class where the field is defined (for module context)
+
+    Returns:
+        The resolved type, or the original type if not a ForwardRef
+
+    """
+    import sys
+    from typing import ForwardRef
+
+    if not isinstance(field_type, ForwardRef):
+        return field_type
+
+    # Get the module where the model is defined for resolution context
+    module = sys.modules.get(model_cls.__module__)
+    if module is None:
+        return field_type
+
+    try:
+        return field_type.evaluate(globals=vars(module))
+    except Exception:  # noqa: BLE001
+        return field_type
+
+
 def extract_table_fields_from_model(
     model_cls: type[BaseModel],
     prefix: str = "",
@@ -244,6 +275,9 @@ def extract_table_fields_from_model(
         field_type = field_info.annotation
         if field_type is None:
             continue
+
+        # Resolve ForwardRef if present
+        field_type = _resolve_forward_ref(field_type, model_cls)
 
         field_path = f"{prefix}.{field_name}" if prefix else field_name
         origin = get_origin(field_type)

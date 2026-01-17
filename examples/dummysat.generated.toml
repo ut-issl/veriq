@@ -12,9 +12,24 @@ efficiency = 0.3
 max_temperature = 85.0
 thermal_coefficient = 0.5
 
+[Power.model.design.power_generation]
+nominal = 120.0
+safe = 60.0
+mission = 150.0
+
+[Power.model.design.power_consumption]
+nominal = 85.0
+safe = 35.0
+mission = 140.0
+
 [Power.verification]
 verify_battery = true
 solar_panel_max_temperature = true
+
+[Power.verification.verify_power_budget]
+nominal = true
+safe = true
+mission = true
 
 [Power.calc.calculate_solar_panel_heat]
 heat_generation = 100.0
