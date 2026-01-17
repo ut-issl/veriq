@@ -15,8 +15,8 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 
-from veriq._build import build_dependencies_graph
 from veriq._default import default
+from veriq._ir import build_graph_spec
 from veriq._eval import evaluate_project
 from veriq._io import export_to_toml, load_model_data_from_toml
 from veriq._models import Project
@@ -258,9 +258,9 @@ def check(
     err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
     err_console.print()
 
-    # Check if building the dependencies graph raises any errors
+    # Check if building the graph spec raises any errors
     err_console.print("[cyan]Validating dependencies...[/cyan]")
-    build_dependencies_graph(project)
+    build_graph_spec(project)
     err_console.print()
 
     # Create a table for project information

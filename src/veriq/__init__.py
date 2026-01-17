@@ -12,7 +12,6 @@ __all__ = [
     "Scope",
     "Table",
     "assume",
-    "build_dependencies_graph",
     "build_graph_spec",
     "depends",
     "evaluate_graph",
@@ -22,7 +21,6 @@ __all__ = [
     "load_model_data_from_toml",
 ]
 
-from ._build import build_dependencies_graph
 from ._decorators import assume
 from ._eval import evaluate_project
 from ._eval_engine import EvaluationResult, evaluate_graph
