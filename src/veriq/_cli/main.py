@@ -17,6 +17,7 @@ from rich.table import Table
 
 from veriq._default import default
 from veriq._eval import evaluate_project
+from veriq._external_data import validate_external_data
 from veriq._io import export_to_toml, load_model_data_from_toml
 from veriq._ir import build_graph_spec
 from veriq._models import Project
@@ -168,6 +169,40 @@ def calc(  # noqa: C901, PLR0912, PLR0915
     # Load model data
     err_console.print(f"[cyan]Loading input from:[/cyan] {input}")
     model_data = load_model_data_from_toml(project, input)
+
+    # Validate external data checksums
+    validation_result = validate_external_data(model_data)
+    if validation_result.entries:
+        err_console.print("[cyan]Validating external data checksums...[/cyan]")
+
+        # Report new checksums (first run)
+        if validation_result.has_new_checksums:
+            err_console.print()
+            err_console.print("[yellow]⚠ New external data references detected (no stored checksum):[/yellow]")
+            for entry in validation_result.new_entries:
+                err_console.print(f"  [yellow]•[/yellow] {entry.scope}::{entry.path}")
+                err_console.print(f"    [dim]Computed: {entry.computed_checksum}[/dim]")
+            err_console.print()
+            err_console.print("[yellow]  Add checksums to your input TOML to track data changes.[/yellow]")
+
+        # Report and abort on mismatches
+        if validation_result.has_mismatches:
+            err_console.print()
+            err_console.print("[red]✗ External data checksum mismatch detected:[/red]")
+            for entry in validation_result.mismatched_entries:
+                err_console.print(f"  [red]•[/red] {entry.scope}::{entry.path}")
+                err_console.print(f"    [dim]Stored:   {entry.stored_checksum}[/dim]")
+                err_console.print(f"    [dim]Computed: {entry.computed_checksum}[/dim]")
+            err_console.print()
+            err_console.print("[red]  External data has changed since last run. Update checksums to continue.[/red]")
+            raise typer.Exit(code=1)
+
+        # Report valid checksums
+        if validation_result.valid_entries:
+            n_valid = len(validation_result.valid_entries)
+            err_console.print(f"[green]✓ {n_valid} external data checksum(s) verified[/green]")
+
+        err_console.print()
 
     # Evaluate the project
     err_console.print("[cyan]Evaluating project...[/cyan]")
