@@ -90,6 +90,63 @@ def _format_verification_results(entry: RequirementTraceEntry) -> str:
     return "\n".join(parts)
 
 
+def _build_tree_prefixes(
+    entries: tuple[RequirementTraceEntry, ...],
+    index: int,
+) -> tuple[str, str]:
+    """Build tree prefixes with unicode box-drawing characters.
+
+    Args:
+        entries: All entries in the report.
+        index: Index of the current entry.
+
+    Returns:
+        Tuple of (first_line_prefix, continuation_prefix).
+        First line uses ├── or └──, continuation uses │ or spaces.
+
+    """
+    entry = entries[index]
+    if entry.depth == 0:
+        return "", ""
+
+    # Build prefix from left to right for each depth level
+    first_line_parts: list[str] = []
+    continuation_parts: list[str] = []
+
+    for level in range(1, entry.depth + 1):
+        if level == entry.depth:
+            # Current level: determine if this is the last sibling
+            is_last = True
+            for future_idx in range(index + 1, len(entries)):
+                future_entry = entries[future_idx]
+                if future_entry.depth < level:
+                    # Exited to a shallower level, so this was the last at this level
+                    break
+                if future_entry.depth == level:
+                    # Found another sibling at the same level
+                    is_last = False
+                    break
+            first_line_parts.append("└── " if is_last else "├── ")
+            # Continuation: if last sibling, use spaces; otherwise use vertical line
+            continuation_parts.append("    " if is_last else "│   ")
+        else:
+            # Ancestor level: check if there are more siblings at this level after current entry
+            has_more_at_level = False
+            for future_idx in range(index + 1, len(entries)):
+                future_entry = entries[future_idx]
+                if future_entry.depth < level:
+                    # Exited to shallower level
+                    break
+                if future_entry.depth == level:
+                    # Found a sibling at this ancestor level
+                    has_more_at_level = True
+                    break
+            first_line_parts.append("│   " if has_more_at_level else "    ")
+            continuation_parts.append("│   " if has_more_at_level else "    ")
+
+    return "".join(first_line_parts), "".join(continuation_parts)
+
+
 def render_traceability_table(
     report: TraceabilityReport,
     console: Console,
@@ -112,16 +169,31 @@ def render_traceability_table(
 
     # Create table
     table = Table(show_header=True, header_style="bold cyan", box=None)
-    table.add_column("Requirement", style="dim")
+    table.add_column("Requirement", style="dim", no_wrap=True)
     table.add_column("Description")
     if has_evaluation:
-        table.add_column("Status")
-    table.add_column("Verifications")
+        table.add_column("Status", no_wrap=True)
+    table.add_column("Verifications", no_wrap=True)
 
-    for entry in entries:
-        # Indent requirement ID based on depth
-        indent = "  " * entry.depth
-        req_id = f"{indent}{escape(entry.requirement_id)}"
+    for i, entry in enumerate(entries):
+        # Build tree prefixes with unicode symbols
+        first_prefix, cont_prefix = _build_tree_prefixes(entries, i)
+
+        # Get verification content (may be multi-line)
+        if has_evaluation:
+            verif_content = _format_verification_results(entry)
+        else:
+            verif_content = _format_linked_verifications(entry)
+
+        # Count lines in verification content to build matching requirement column
+        verif_lines = verif_content.count("\n") + 1
+
+        # Build requirement column with continuation prefixes for multi-line rows
+        req_first_line = f"{first_prefix}{escape(entry.requirement_id)}"
+        if verif_lines > 1:
+            req_id = req_first_line + "\n" + "\n".join([cont_prefix] * (verif_lines - 1))
+        else:
+            req_id = req_first_line
 
         # Truncate description if too long
         description = entry.description
@@ -134,13 +206,13 @@ def render_traceability_table(
                 req_id,
                 escape(description),
                 _format_status(entry),
-                _format_verification_results(entry),
+                verif_content,
             )
         else:
             table.add_row(
                 req_id,
                 escape(description),
-                _format_linked_verifications(entry),
+                verif_content,
             )
 
     console.print(table)
