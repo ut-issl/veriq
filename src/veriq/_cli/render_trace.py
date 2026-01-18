@@ -63,7 +63,7 @@ def _format_linked_verifications(entry: RequirementTraceEntry) -> str:
     """Format linked verification names for display (without results)."""
     if not entry.linked_verifications:
         return "[dim]-[/dim]"
-    return ", ".join(escape(name) for name in entry.linked_verifications)
+    return "\n".join(escape(name) for name in entry.linked_verifications)
 
 
 def _format_verification_results(entry: RequirementTraceEntry) -> str:
@@ -87,7 +87,7 @@ def _format_verification_results(entry: RequirementTraceEntry) -> str:
         else:
             parts.append(f"[red]✗[/red] {escape(name)}")
 
-    return ", ".join(parts)
+    return "\n".join(parts)
 
 
 def render_traceability_table(

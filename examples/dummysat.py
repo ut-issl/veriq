@@ -218,11 +218,11 @@ with system.requirement("REQ-SYS-001", "System-level requirement (status propaga
     system.requirement("REQ-SYS-002", "Thermal subsystem requirements.")
     # REQ-SYS-003: Will be SATISFIED because all children pass (no direct verifications)
     with power.requirement("REQ-SYS-003", "Power subsystem requirements."):
-        # REQ-PWR-001: Will be VERIFIED because verify_battery passes
+        # REQ-PWR-001: Will be VERIFIED because both verifications pass
         power.requirement(
             "REQ-PWR-001",
-            "Battery capacity must exceed minimum.",
-            verified_by=[verify_battery],
+            "Battery and power budget requirements.",
+            verified_by=[verify_battery, verify_power_budget],
         )
     # REQ-SYS-004: Will be NOT_VERIFIED (no verifications attached)
     system.requirement("REQ-SYS-004", "Future requirement (not yet verified).")
