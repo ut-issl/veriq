@@ -1,0 +1,12 @@
+[Power.model]
+battery_capacity = 100.0
+
+[Power.model.power_consumption]
+nominal = 50.0
+safe = 20.0
+mission = 80.0
+
+[Power.model.power_generation]
+nominal = 60.0
+safe = 30.0
+mission = 100.0

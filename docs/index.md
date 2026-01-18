@@ -1,16 +1,8 @@
-# veriq
+---
+icon: material/home
+---
 
-[![PyPI](https://img.shields.io/pypi/v/veriq)](https://pypi.org/project/veriq/)
-![PyPI - License](https://img.shields.io/pypi/l/veriq)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/veriq)
-[![Test Status](https://github.com/ut-issl/veriq/actions/workflows/ci.yaml/badge.svg)](https://github.com/ut-issl/veriq/actions)
-[![codecov](https://codecov.io/gh/ut-issl/veriq/graph/badge.svg?token=to2H6ZCztP)](https://codecov.io/gh/ut-issl/veriq)
-[![Documentation](https://img.shields.io/badge/docs-veriq-blue)](https://www.space.t.u-tokyo.ac.jp/veriq/)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-
-> [!WARNING]
-> This project is in early development. The API may change in future releases.
+# Welcome to veriq
 
 veriq is a Python library for requirements verification and design calculation management in engineering projects. Think of it as a smart spreadsheet that tracks dependencies between calculations and automatically verifies that requirements are met.
 
@@ -47,13 +39,6 @@ def verify_capacity(
     return capacity >= 100.0  # Minimum 100 Wh
 ```
 
-Create an input file `input.toml`:
-
-```toml
-[Power.model]
-battery_capacity = 150.0
-```
-
 Run verification:
 
 ```bash
@@ -67,10 +52,40 @@ veriq calc my_project.py -i input.toml -o output.toml --verify
 - **Requirement Traceability** - Link verifications to engineering requirements
 - **Reproducibility** - TOML-based input/output for version control
 
-## License
+## Getting Started
 
-MIT License
+<div class="grid cards" markdown>
 
-## Acknowledgement
+- :material-download:{ .lg .middle } **Installation**
 
-veriq originated in the `shunichironomura/veriq` repository, and its early development up to version v0.0.1 was supported by ArkEdge Space Inc.
+    ---
+
+    Install veriq using pip or uv.
+
+    [:octicons-arrow-right-24: Install veriq](installation.md)
+
+- :material-rocket-launch:{ .lg .middle } **Tutorial**
+
+    ---
+
+    Learn veriq step by step with hands-on examples.
+
+    [:octicons-arrow-right-24: Start the tutorial](tutorial/index.md)
+
+- :material-book-open-variant:{ .lg .middle } **Concepts**
+
+    ---
+
+    Understand the core concepts behind veriq.
+
+    [:octicons-arrow-right-24: Core concepts](concepts.md)
+
+- :material-console:{ .lg .middle } **CLI Reference**
+
+    ---
+
+    Complete command-line interface documentation.
+
+    [:octicons-arrow-right-24: CLI commands](cli-reference.md)
+
+</div>

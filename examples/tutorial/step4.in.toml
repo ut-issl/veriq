@@ -1,0 +1,7 @@
+[Power.model]
+solar_panel_area = 2.0
+solar_panel_efficiency = 0.40
+max_temperature = 85.0
+
+[Thermal.model]
+thermal_coefficient = 0.05

@@ -11,3 +11,5 @@ wheels/
 
 .coverage
 coverage.xml
+
+site/

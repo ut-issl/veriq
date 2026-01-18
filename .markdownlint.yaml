@@ -3,8 +3,7 @@ default: true
 line-length: false
 # first-line-heading/first-line-h1
 # MD041: false
-# no-inline-html
-# MD033: false
+no-inline-html: false
 # no-alt-text
 # MD045: false
 # link-fragments
@@ -19,5 +18,5 @@ fenced-code-language: false
 # MD029: false
 # no-trailing-punctuation
 # MD026: false
-table-column-style:
-  style: aligned
+# table-column-style - disabled as strict alignment is hard to maintain
+table-column-style: false
