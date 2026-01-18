@@ -215,19 +215,6 @@ mission = true
 - **Multi-dimensional tables**: Use tuple keys (like pivot tables)
 - **TOML format**: How to specify table data in input files
 
-## Tutorial Complete
+## Next Step
 
-Congratulations! You've learned the core concepts of veriq:
-
-1. **Projects and Scopes** - Organize your analysis (like workbooks and sheets)
-2. **Models** - Define input parameters (like input cells)
-3. **Calculations** - Compute derived values (like formula cells)
-4. **Cross-Scope References** - Connect scopes with dependencies
-5. **Verifications** - Check requirements (like conditional formatting)
-6. **Tables** - Handle category-indexed data (like spreadsheet rows/columns)
-
-## Next Steps
-
-- See [Concepts](../concepts.md) for a deeper understanding
-- Check the [CLI Reference](../cli-reference.md) for all command options
-- Explore the complete example in `examples/dummysat.py`
+Continue to [Step 6: External Files](step6-external-files.md) to learn how to reference data files with automatic checksum tracking.
