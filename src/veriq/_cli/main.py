@@ -22,9 +22,11 @@ from veriq._ir import build_graph_spec
 from veriq._models import Project
 from veriq._path import VerificationPath
 from veriq._toml_edit import dumps_toml, merge_into_document, parse_toml_preserving
+from veriq._traceability import RequirementStatus, build_traceability_report
 from veriq._update import update_input_data
 
 from .discover import get_module_data_from_path
+from .render_trace import render_traceability_summary, render_traceability_table
 
 
 def _get_version() -> str:
@@ -634,6 +636,98 @@ def edit(
     # Launch the TUI (comments are now preserved when saving)
     tui_app = VeriqEditApp(input, project)
     tui_app.run()
+
+
+@app.command()
+def trace(
+    path: Annotated[
+        str,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ],
+    *,
+    input: Annotated[  # noqa: A002
+        Path | None,
+        typer.Option("-i", "--input", help="Path to input TOML file (optional, enables verification evaluation)"),
+    ] = None,
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+    gaps: Annotated[
+        bool,
+        typer.Option("--gaps", help="Show only requirements without verifications (coverage gaps)"),
+    ] = False,
+) -> None:
+    """Display requirement-verification traceability.
+
+    Shows the requirement tree with verification status for each requirement.
+
+    Without --input: Shows requirement tree structure only.
+    With --input: Runs evaluation and shows pass/fail status.
+
+    Exit codes:
+    - 0: All requirements pass (or only expected failures)
+    - 1: Some requirements failed unexpectedly
+    """
+    err_console.print()
+
+    # Load the project
+    if ":" in path:
+        # Module path format
+        err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
+        project = _load_project_from_module_path(path)
+    else:
+        # Script path format
+        script_path = Path(path)
+        err_console.print(f"[cyan]Loading project from script:[/cyan] {script_path}")
+        project = _load_project_from_script(script_path, project_var)
+
+    err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
+    err_console.print()
+
+    # Load model data and evaluate if input provided
+    evaluation_results = None
+    if input is not None:
+        err_console.print(f"[cyan]Loading input from:[/cyan] {input}")
+        model_data = load_model_data_from_toml(project, input)
+
+        err_console.print("[cyan]Evaluating project...[/cyan]")
+        evaluation_results = evaluate_project(project, model_data)
+        err_console.print()
+
+    # Build traceability report
+    try:
+        report = build_traceability_report(project, evaluation_results)
+    except ValueError as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    # Render the report
+    render_traceability_table(report, err_console, show_gaps_only=gaps)
+    err_console.print()
+    render_traceability_summary(report, err_console)
+    err_console.print()
+
+    # Determine exit code
+    exit_as_err = False
+    if evaluation_results is not None:
+        for entry in report.entries:
+            # Failed requirement that is not xfail -> error
+            if entry.status == RequirementStatus.FAILED and not entry.xfail:
+                exit_as_err = True
+                break
+
+    if exit_as_err:
+        err_console.print("[red]✗ Some requirements failed[/red]")
+        raise typer.Exit(code=1)
+
+    if evaluation_results is not None:
+        err_console.print("[green]✓ All requirements satisfied[/green]")
+    else:
+        err_console.print("[dim]Run with --input to evaluate requirement status[/dim]")
+
+    err_console.print()
+    raise typer.Exit(code=0)
 
 
 def main() -> None:
