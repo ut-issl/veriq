@@ -1,0 +1,5 @@
+[Power.model]
+battery_capacity = 300.0
+
+[Power.model.power_profile]
+path = "power_profile.csv"
