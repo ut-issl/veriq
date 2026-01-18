@@ -59,8 +59,15 @@ def _format_status(entry: RequirementTraceEntry) -> str:
     return status_text
 
 
-def _format_verifications(entry: RequirementTraceEntry) -> str:
-    """Format verification results for display."""
+def _format_linked_verifications(entry: RequirementTraceEntry) -> str:
+    """Format linked verification names for display (without results)."""
+    if not entry.linked_verifications:
+        return "[dim]-[/dim]"
+    return ", ".join(escape(name) for name in entry.linked_verifications)
+
+
+def _format_verification_results(entry: RequirementTraceEntry) -> str:
+    """Format verification results with pass/fail status for display."""
     if not entry.verification_results:
         return "[dim]-[/dim]"
 
@@ -87,6 +94,7 @@ def render_traceability_table(
     console: Console,
     *,
     show_gaps_only: bool = False,
+    has_evaluation: bool = False,
 ) -> None:
     """Render traceability report as a Rich table.
 
@@ -94,6 +102,7 @@ def render_traceability_table(
         report: The traceability report to render.
         console: Rich console to print to.
         show_gaps_only: If True, only show requirements with NOT_VERIFIED status.
+        has_evaluation: If True, show Status and Verifications columns.
 
     """
     # Filter entries if needed
@@ -112,7 +121,8 @@ def render_traceability_table(
     table = Table(show_header=True, header_style="bold cyan", box=None)
     table.add_column("Requirement", style="dim")
     table.add_column("Description")
-    table.add_column("Status")
+    if has_evaluation:
+        table.add_column("Status")
     table.add_column("Verifications")
 
     for entry in entries:
@@ -126,12 +136,19 @@ def render_traceability_table(
         if len(description) > max_desc_len:
             description = description[: max_desc_len - 3] + "..."
 
-        table.add_row(
-            req_id,
-            escape(description),
-            _format_status(entry),
-            _format_verifications(entry),
-        )
+        if has_evaluation:
+            table.add_row(
+                req_id,
+                escape(description),
+                _format_status(entry),
+                _format_verification_results(entry),
+            )
+        else:
+            table.add_row(
+                req_id,
+                escape(description),
+                _format_linked_verifications(entry),
+            )
 
     console.print(table)
 
@@ -139,21 +156,26 @@ def render_traceability_table(
 def render_traceability_summary(
     report: TraceabilityReport,
     console: Console,
+    *,
+    has_evaluation: bool = False,
 ) -> None:
     """Render summary statistics panel.
 
     Args:
         report: The traceability report to render.
         console: Rich console to print to.
+        has_evaluation: If True, show status counts.
 
     """
-    summary_lines = [
-        f"Total requirements: {report.total_requirements}",
-        f"[green]✓ Verified:[/green] {report.verified_count}",
-        f"[cyan]○ Satisfied:[/cyan] {report.satisfied_count}",
-        f"[red]✗ Failed:[/red] {report.failed_count}",
-        f"[yellow]? Not verified:[/yellow] {report.not_verified_count}",
-    ]
+    summary_lines = [f"Total requirements: {report.total_requirements}"]
+
+    if has_evaluation:
+        summary_lines.extend([
+            f"[green]✓ Verified:[/green] {report.verified_count}",
+            f"[cyan]○ Satisfied:[/cyan] {report.satisfied_count}",
+            f"[red]✗ Failed:[/red] {report.failed_count}",
+            f"[yellow]? Not verified:[/yellow] {report.not_verified_count}",
+        ])
 
     console.print(Panel("\n".join(summary_lines), title="Summary", border_style="cyan"))
 

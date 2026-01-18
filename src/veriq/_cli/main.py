@@ -703,9 +703,10 @@ def trace(
         raise typer.Exit(code=1) from e
 
     # Render the report
-    render_traceability_table(report, err_console, show_gaps_only=gaps)
+    has_evaluation = evaluation_results is not None
+    render_traceability_table(report, err_console, show_gaps_only=gaps, has_evaluation=has_evaluation)
     err_console.print()
-    render_traceability_summary(report, err_console)
+    render_traceability_summary(report, err_console, has_evaluation=has_evaluation)
     err_console.print()
 
     # Determine exit code

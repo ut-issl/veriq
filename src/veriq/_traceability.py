@@ -8,7 +8,7 @@ all logic is pure functions operating on immutable data structures.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum, auto
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, get_args, get_origin
 
 from ._path import ItemPart, ProjectPath, VerificationPath
@@ -21,12 +21,30 @@ if TYPE_CHECKING:
 
 
 class RequirementStatus(StrEnum):
-    """Status of a requirement based on its verifications and children."""
+    """Status of a requirement based on its verifications and children.
 
-    VERIFIED = auto()  # Has direct verifications, all passed
-    SATISFIED = auto()  # No direct verifications, but all children/deps pass
-    FAILED = auto()  # Something failed (verification, child, or dependency)
-    NOT_VERIFIED = auto()  # Leaf requirement with no verifications (coverage gap)
+    Status values are ordered by severity for propagation:
+    VERIFIED/SATISFIED (0) < NOT_VERIFIED (1) < FAILED (2)
+
+    Parent requirement status is the maximum of its children's statuses.
+    """
+
+    # Order matters for severity comparison (worst status propagates up)
+    VERIFIED = "verified"  # Has direct verifications, all passed (severity 0)
+    SATISFIED = "satisfied"  # No direct verifications, but all children/deps pass (severity 0)
+    NOT_VERIFIED = "not_verified"  # Leaf requirement with no verifications (severity 1)
+    FAILED = "failed"  # Something failed (verification, child, or dependency) (severity 2)
+
+    @property
+    def severity(self) -> int:
+        """Return severity level for status propagation."""
+        match self:
+            case RequirementStatus.VERIFIED | RequirementStatus.SATISFIED:
+                return 0
+            case RequirementStatus.NOT_VERIFIED:
+                return 1
+            case RequirementStatus.FAILED:
+                return 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +71,7 @@ class RequirementTraceEntry:
     status: RequirementStatus
     xfail: bool
     verification_results: tuple[VerificationResult, ...]
+    linked_verifications: tuple[str, ...]  # Names of linked verification functions
     child_ids: tuple[str, ...]
     depends_on_ids: tuple[str, ...]
     depth: int
@@ -71,6 +90,13 @@ class TraceabilityReport:
     not_verified_count: int
 
 
+def _worst_status(statuses: Sequence[RequirementStatus]) -> RequirementStatus | None:
+    """Return the status with highest severity, or None if empty."""
+    if not statuses:
+        return None
+    return max(statuses, key=lambda s: s.severity)
+
+
 def compute_requirement_status(
     *,
     verification_results: Sequence[VerificationResult],
@@ -84,13 +110,18 @@ def compute_requirement_status(
     2. Child requirement statuses
     3. Dependency (depends_on) requirement statuses
 
-    Rules (evaluated in order):
-    1. If any depends_on requirement is FAILED → FAILED
-    2. If any child requirement is FAILED → FAILED
-    3. If any direct verification failed → FAILED
-    4. If has direct verifications and all passed → VERIFIED
-    5. If has children or depends_on (all passed) but no direct verifications → SATISFIED
-    6. If leaf requirement with no verifications → NOT_VERIFIED (coverage gap)
+    Status propagation uses max-severity logic:
+    - VERIFIED/SATISFIED have severity 0
+    - NOT_VERIFIED has severity 1
+    - FAILED has severity 2
+
+    The parent's status is the maximum severity among:
+    - Its own verification status (VERIFIED if all pass, FAILED if any fail)
+    - All child statuses
+    - All depends_on statuses
+
+    If a requirement has no verifications, children, or dependencies,
+    it's a coverage gap (NOT_VERIFIED).
 
     Note: Verification xfail is ignored for status computation.
     A failed verification means FAILED, regardless of xfail flag.
@@ -104,28 +135,24 @@ def compute_requirement_status(
         The computed RequirementStatus.
 
     """
-    # Rule 1: If any depends_on requirement is FAILED → FAILED
-    if any(status == RequirementStatus.FAILED for status in depends_on_statuses):
-        return RequirementStatus.FAILED
-
-    # Rule 2: If any child requirement is FAILED → FAILED
-    if any(status == RequirementStatus.FAILED for status in child_statuses):
-        return RequirementStatus.FAILED
-
-    # Rule 3: If any direct verification failed → FAILED
-    if any(not result.passed for result in verification_results):
-        return RequirementStatus.FAILED
-
-    # Rule 4: If has direct verifications and all passed → VERIFIED
+    # Determine this requirement's own status from direct verifications
     if verification_results:
-        return RequirementStatus.VERIFIED
+        if any(not result.passed for result in verification_results):
+            own_status = RequirementStatus.FAILED
+        else:
+            own_status = RequirementStatus.VERIFIED
+    elif child_statuses or depends_on_statuses:
+        # Has children or deps but no direct verifications
+        own_status = RequirementStatus.SATISFIED
+    else:
+        # Leaf with no verifications - coverage gap
+        own_status = RequirementStatus.NOT_VERIFIED
 
-    # Rule 5: If has children or depends_on (all passed) but no direct verifications → SATISFIED
-    if child_statuses or depends_on_statuses:
-        return RequirementStatus.SATISFIED
+    # Collect all statuses to propagate (children and dependencies)
+    all_statuses = [own_status, *child_statuses, *depends_on_statuses]
 
-    # Rule 6: Leaf requirement with no verifications → NOT_VERIFIED (coverage gap)
-    return RequirementStatus.NOT_VERIFIED
+    # Return the worst (highest severity) status
+    return _worst_status(all_statuses) or RequirementStatus.NOT_VERIFIED
 
 
 def collect_all_requirements(
@@ -356,6 +383,9 @@ def _build_entry(
         else:
             status = RequirementStatus.NOT_VERIFIED
 
+    # Get linked verification names
+    linked_verifications = tuple(verif.name for verif in requirement.verified_by)
+
     return RequirementTraceEntry(
         requirement_id=requirement.id,
         scope_name=scope_name,
@@ -363,6 +393,7 @@ def _build_entry(
         status=status,
         xfail=requirement.xfail,
         verification_results=tuple(verification_results),
+        linked_verifications=linked_verifications,
         child_ids=tuple(child.id for child in requirement.decomposed_requirements),
         depends_on_ids=tuple(dep.id for dep in requirement.depends_on),
         depth=depth,
@@ -521,7 +552,7 @@ def build_traceability_report(
     )
 
 
-def _compute_statuses_recursive(  # noqa: PLR0912, PLR0913, C901
+def _compute_statuses_recursive(  # noqa: PLR0913
     requirement: Requirement,
     scope_name: str,
     evaluation_results: dict[ProjectPath, Any] | None,
@@ -588,25 +619,14 @@ def _compute_statuses_recursive(  # noqa: PLR0912, PLR0913, C901
     child_statuses = [computed_statuses[child.id] for child in requirement.decomposed_requirements]
     depends_on_statuses = [computed_statuses[dep.id] for dep in requirement.depends_on]
 
-    # Compute status
-    if evaluation_results is not None:
-        status = compute_requirement_status(
-            verification_results=verification_results,
-            child_statuses=child_statuses,
-            depends_on_statuses=depends_on_statuses,
-        )
-    else:
-        # Without evaluation results, we can't determine verification status
-        has_children = bool(requirement.decomposed_requirements)
-        has_deps = bool(requirement.depends_on)
-        has_verifications = bool(requirement.verified_by)
-
-        if has_children or has_deps:
-            status = RequirementStatus.SATISFIED
-        elif has_verifications:
-            status = RequirementStatus.NOT_VERIFIED
-        else:
-            status = RequirementStatus.NOT_VERIFIED
+    # Compute status using max-severity propagation
+    # When evaluation_results is None, verification_results will be empty,
+    # so compute_requirement_status will correctly handle the case
+    status = compute_requirement_status(
+        verification_results=verification_results,
+        child_statuses=child_statuses,
+        depends_on_statuses=depends_on_statuses,
+    )
 
     computed_statuses[requirement.id] = status
     in_progress.discard(requirement.id)

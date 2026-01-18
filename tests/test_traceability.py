@@ -112,14 +112,14 @@ class TestComputeRequirementStatus:
         )
         assert status == RequirementStatus.FAILED
 
-    def test_child_not_verified_does_not_fail_parent(self) -> None:
-        """NOT_VERIFIED child does not fail parent (it's a coverage gap, not failure)."""
+    def test_child_not_verified_propagates_to_parent(self) -> None:
+        """NOT_VERIFIED child propagates to parent (max-severity logic)."""
         status = compute_requirement_status(
             verification_results=[],
             child_statuses=[RequirementStatus.VERIFIED, RequirementStatus.NOT_VERIFIED],
             depends_on_statuses=[],
         )
-        assert status == RequirementStatus.SATISFIED
+        assert status == RequirementStatus.NOT_VERIFIED
 
     def test_depends_on_failed_returns_failed(self) -> None:
         """Requirement with failed dependency is FAILED."""
@@ -139,14 +139,14 @@ class TestComputeRequirementStatus:
         )
         assert status == RequirementStatus.SATISFIED
 
-    def test_depends_on_not_verified_does_not_fail(self) -> None:
-        """NOT_VERIFIED dependency does not fail requirement."""
+    def test_depends_on_not_verified_propagates(self) -> None:
+        """NOT_VERIFIED dependency propagates to requirement (max-severity logic)."""
         status = compute_requirement_status(
             verification_results=[],
             child_statuses=[],
             depends_on_statuses=[RequirementStatus.NOT_VERIFIED],
         )
-        assert status == RequirementStatus.SATISFIED
+        assert status == RequirementStatus.NOT_VERIFIED
 
     def test_both_children_and_deps_all_passed_returns_satisfied(self) -> None:
         """Requirement with both children and deps all passed is SATISFIED."""
