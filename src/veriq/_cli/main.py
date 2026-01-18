@@ -1,5 +1,4 @@
 import importlib
-import io
 import json
 import logging
 import sys
@@ -7,7 +6,6 @@ import tomllib
 from pathlib import Path
 from typing import Annotated
 
-import tomli_w
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
@@ -22,6 +20,7 @@ from veriq._io import export_to_toml, load_model_data_from_toml
 from veriq._ir import build_graph_spec
 from veriq._models import Project
 from veriq._path import VerificationPath
+from veriq._toml_edit import dumps_toml, merge_into_document, parse_toml_preserving
 from veriq._update import update_input_data
 
 from .discover import get_module_data_from_path
@@ -414,7 +413,9 @@ def init(
     input_data_model = project.input_model()
     input_default_data = default(input_data_model)
 
-    # Write to TOML file
+    # Write to TOML file (new file, no comments to preserve)
+    import tomli_w  # noqa: PLC0415
+
     err_console.print(f"[cyan]Writing sample input to:[/cyan] {output}")
     output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -427,7 +428,7 @@ def init(
 
 
 @app.command()
-def update(  # noqa: PLR0913, PLR0915
+def update(  # noqa: PLR0915
     path: Annotated[
         str,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
@@ -448,10 +449,6 @@ def update(  # noqa: PLR0913, PLR0915
     dry_run: Annotated[
         bool,
         typer.Option("--dry-run", help="Preview changes without writing to file"),
-    ] = False,
-    yes: Annotated[
-        bool,
-        typer.Option("-y", "--yes", help="Skip confirmation prompt"),
     ] = False,
 ) -> None:
     """Update an existing input TOML file with new schema defaults.
@@ -480,8 +477,11 @@ def update(  # noqa: PLR0913, PLR0915
     err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
     err_console.print()
 
-    # Load existing input file
+    # Load existing input file (preserving comments with tomlkit)
     err_console.print(f"[cyan]Loading existing input from:[/cyan] {input}")
+    original_content = input.read_text()
+    toml_doc = parse_toml_preserving(original_content)
+    # Also parse with tomllib for the update logic (dict-based)
     with input.open("rb") as f:
         existing_data = tomllib.load(f)
 
@@ -490,9 +490,13 @@ def update(  # noqa: PLR0913, PLR0915
     project_input_model = project.input_model()
     new_default_data = default(project_input_model)
 
-    # Perform the update (functional core)
+    # Perform the update (functional core for warnings/logic)
     err_console.print("[cyan]Merging existing data with new defaults...[/cyan]")
-    result = update_input_data(new_default_data.model_dump(), existing_data)
+    new_default_dict = new_default_data.model_dump()
+    result = update_input_data(new_default_dict, existing_data)
+
+    # Also merge into the TOML document to preserve comments
+    merge_into_document(toml_doc, new_default_dict, existing_data)
 
     # Display warnings if any
     if result.warnings:
@@ -508,10 +512,8 @@ def update(  # noqa: PLR0913, PLR0915
         err_console.print()
         err_console.print("[cyan]Preview of updated data:[/cyan]")
 
-        # Show a preview using TOML format
-        preview_buffer = io.BytesIO()
-        tomli_w.dump(result.updated_data, preview_buffer)
-        preview_text = preview_buffer.getvalue().decode("utf-8")
+        # Show a preview using TOML format (with comments preserved)
+        preview_text = dumps_toml(toml_doc)
 
         # Display first 50 lines
         max_preview_lines = 50
@@ -525,20 +527,11 @@ def update(  # noqa: PLR0913, PLR0915
         err_console.print()
         err_console.print("[yellow]i Run without --dry-run to write changes[/yellow]")
     else:
-        # Confirm before writing (comments will be lost)
-        if not yes:
-            err_console.print()
-            err_console.print(
-                "[yellow]Warning: TOML comments in the input file will NOT be preserved.[/yellow]",
-            )
-            typer.confirm("Do you want to continue?", abort=True)
-
-        # Write the updated data
+        # Write the updated data (comments are now preserved)
         err_console.print(f"[cyan]Writing updated input to:[/cyan] {output}")
         output.parent.mkdir(parents=True, exist_ok=True)
 
-        with output.open("wb") as f:
-            tomli_w.dump(result.updated_data, f)
+        output.write_text(dumps_toml(toml_doc))
 
         err_console.print()
         err_console.print("[green]✓ Input file updated successfully[/green]")
@@ -585,10 +578,6 @@ def edit(
         str | None,
         typer.Option("--project", help="Name of the project variable (for script paths only)"),
     ] = None,
-    yes: Annotated[
-        bool,
-        typer.Option("-y", "--yes", help="Skip confirmation prompt"),
-    ] = False,
 ) -> None:
     """Edit input TOML file with interactive TUI.
 
@@ -619,15 +608,7 @@ def edit(
         err_console.print(f"[red]Error: Input file not found: {input}[/red]")
         raise typer.Exit(code=1)
 
-    # Confirm before editing (comments will be lost when saving)
-    if not yes:
-        err_console.print()
-        err_console.print(
-            "[yellow]Warning: TOML comments in the input file will NOT be preserved when saving.[/yellow]",
-        )
-        typer.confirm("Do you want to continue?", abort=True)
-
-    # Launch the TUI
+    # Launch the TUI (comments are now preserved when saving)
     tui_app = VeriqEditApp(input, project)
     tui_app.run()
 

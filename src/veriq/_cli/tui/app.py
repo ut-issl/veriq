@@ -5,12 +5,13 @@ from __future__ import annotations
 import tomllib
 from typing import TYPE_CHECKING, Any, ClassVar
 
-import tomli_w
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Vertical
 from textual.widgets import Footer, Header, Label, TabbedContent, TabPane
+
+from veriq._toml_edit import dumps_toml, parse_toml_preserving, update_toml_document
 
 from .data import TableData, load_tables_from_toml, save_tables_to_toml
 from .screens import ConfirmQuitScreen
@@ -18,6 +19,8 @@ from .widgets import DimensionSelector, InlineCellInput, TableEditor, TableSelec
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from tomlkit import TOMLDocument
 
     from veriq._models import Project
 
@@ -100,6 +103,7 @@ class VeriqEditApp(App[None]):
         self.toml_path = toml_path
         self.project = project
         self.toml_data: dict[str, Any] = {}
+        self.toml_doc: TOMLDocument | None = None  # Preserves comments
         self.tables: dict[str, dict[str, TableData]] = {}
         self._current_scope: str | None = None
         self._current_table_path: str | None = None
@@ -139,6 +143,11 @@ class VeriqEditApp(App[None]):
 
     def _load_data(self) -> None:
         """Load TOML data and extract tables."""
+        # Load with tomlkit to preserve comments
+        original_content = self.toml_path.read_text()
+        self.toml_doc = parse_toml_preserving(original_content)
+
+        # Also load with tomllib for dict-based operations
         with self.toml_path.open("rb") as f:
             self.toml_data = tomllib.load(f)
 
@@ -324,10 +333,19 @@ class VeriqEditApp(App[None]):
 
     def _save_changes(self) -> None:
         """Save all modified tables back to the TOML file."""
+        # Update the dict-based data structure
         save_tables_to_toml(self.tables, self.toml_data)
 
-        with self.toml_path.open("wb") as f:
-            tomli_w.dump(self.toml_data, f)
+        # Update the TOML document (preserves comments)
+        if self.toml_doc is not None:
+            update_toml_document(self.toml_doc, self.toml_data)
+            self.toml_path.write_text(dumps_toml(self.toml_doc))
+        else:
+            # Fallback: write without comment preservation
+            import tomli_w  # noqa: PLC0415
+
+            with self.toml_path.open("wb") as f:
+                tomli_w.dump(self.toml_data, f)
 
         # Clear modified flags
         for scope_tables in self.tables.values():
