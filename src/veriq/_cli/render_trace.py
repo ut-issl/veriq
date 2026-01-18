@@ -93,7 +93,6 @@ def render_traceability_table(
     report: TraceabilityReport,
     console: Console,
     *,
-    show_gaps_only: bool = False,
     has_evaluation: bool = False,
 ) -> None:
     """Render traceability report as a Rich table.
@@ -101,20 +100,13 @@ def render_traceability_table(
     Args:
         report: The traceability report to render.
         console: Rich console to print to.
-        show_gaps_only: If True, only show requirements with NOT_VERIFIED status.
         has_evaluation: If True, show Status and Verifications columns.
 
     """
-    # Filter entries if needed
     entries = report.entries
-    if show_gaps_only:
-        entries = tuple(e for e in entries if e.status == RequirementStatus.NOT_VERIFIED)
 
     if not entries:
-        if show_gaps_only:
-            console.print("[green]✓ No coverage gaps found[/green]")
-        else:
-            console.print("[dim]No requirements defined[/dim]")
+        console.print("[dim]No requirements defined[/dim]")
         return
 
     # Create table

@@ -653,10 +653,6 @@ def trace(
         str | None,
         typer.Option("--project", help="Name of the project variable (for script paths only)"),
     ] = None,
-    gaps: Annotated[
-        bool,
-        typer.Option("--gaps", help="Show only requirements without verifications (coverage gaps)"),
-    ] = False,
 ) -> None:
     """Display requirement-verification traceability.
 
@@ -704,7 +700,7 @@ def trace(
 
     # Render the report
     has_evaluation = evaluation_results is not None
-    render_traceability_table(report, err_console, show_gaps_only=gaps, has_evaluation=has_evaluation)
+    render_traceability_table(report, err_console, has_evaluation=has_evaluation)
     err_console.print()
     render_traceability_summary(report, err_console, has_evaluation=has_evaluation)
     err_console.print()
