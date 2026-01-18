@@ -166,6 +166,39 @@ class ProjectPath:
         return f"{self.scope}::{self.path}"
 
 
+def parse_project_path(path_str: str) -> ProjectPath:
+    """Parse a 'Scope::path' format string into a ProjectPath.
+
+    Args:
+        path_str: Path in format "Scope::path" (e.g., "Power::$.design.battery_a",
+                  "Power::@calculate_heat", "Power::?verify_battery")
+
+    Returns:
+        ProjectPath with scope and parsed path
+
+    Raises:
+        ValueError: If path format is invalid
+
+    Examples:
+        >>> parse_project_path("Power::$.design.battery_a")
+        ProjectPath(scope='Power', path=ModelPath(...))
+        >>> parse_project_path("Thermal::@calculate_temperature")
+        ProjectPath(scope='Thermal', path=CalcPath(...))
+
+    """
+    if "::" not in path_str:
+        msg = f"Invalid path format: '{path_str}'. Expected 'Scope::path' (e.g., 'Power::$.design')"
+        raise ValueError(msg)
+    scope, path = path_str.split("::", 1)
+    if not scope:
+        msg = f"Invalid path format: '{path_str}'. Scope name cannot be empty"
+        raise ValueError(msg)
+    if not path:
+        msg = f"Invalid path format: '{path_str}'. Path cannot be empty"
+        raise ValueError(msg)
+    return ProjectPath(scope=scope, path=parse_path(path))
+
+
 def iter_leaf_path_parts(  # noqa: PLR0912, C901
     model: Any,
     *,
