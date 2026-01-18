@@ -632,3 +632,177 @@ class TestMultiDimensionalTable:
                 assert matrix_table.column_labels({}) == ["initial", "cruise"]
         finally:
             toml_path.unlink()
+
+
+def create_multi_scope_project() -> vq.Project:
+    """Create a test project with multiple scopes, each having table fields."""
+    project = vq.Project("MultiScopeProject")
+
+    # First scope
+    scope1 = vq.Scope("Power")
+    project.add_scope(scope1)
+
+    @scope1.root_model()
+    class PowerModel(BaseModel):
+        consumption: vq.Table[Mode, float]
+
+    # Second scope
+    scope2 = vq.Scope("Thermal")
+    project.add_scope(scope2)
+
+    @scope2.root_model()
+    class ThermalModel(BaseModel):
+        temperature: vq.Table[Phase, float]
+
+    return project
+
+
+class TestMultiScopeNavigation:
+    """Tests for switching between scope tabs (multiple scopes)."""
+
+    async def test_switch_scope_tab_loads_table(self):
+        """Test that switching to another scope tab loads the table correctly.
+
+        This test reproduces an issue where switching tabs results in a blank screen
+        because the tab ID was incorrectly extracted from event.tab.id instead of
+        event.pane.id.
+        """
+        project = create_multi_scope_project()
+        toml_data = {
+            "Power": {
+                "model": {
+                    "consumption": {"nominal": 100.0, "safe": 50.0},
+                },
+            },
+            "Thermal": {
+                "model": {
+                    "temperature": {"initial": 20.0, "cruise": 25.0},
+                },
+            },
+        }
+        toml_path = create_toml_file(toml_data)
+
+        try:
+            app = VeriqEditApp(toml_path, project)
+            async with app.run_test(size=(120, 40)) as pilot:
+                # Initial scope should be "Power"
+                assert app._current_scope == "Power"
+
+                # The editor for Power scope should have data loaded
+                power_editor = app.query_one("#editor-Power", TableEditor)
+                assert power_editor.table_data is not None
+                assert power_editor._row_labels == ["nominal", "safe"]
+
+                # Switch to Thermal tab by clicking on it
+                # Use the TabbedContent to switch tabs
+                from textual.widgets import TabbedContent
+
+                tabbed_content = app.query_one(TabbedContent)
+                tabbed_content.active = "scope-Thermal"
+                await pilot.pause()
+
+                # After switching, current scope should be "Thermal"
+                assert app._current_scope == "Thermal"
+
+                # The Thermal editor should have data loaded (not blank)
+                thermal_editor = app.query_one("#editor-Thermal", TableEditor)
+                assert thermal_editor.table_data is not None
+                assert thermal_editor._row_labels == ["initial", "cruise"]
+                assert thermal_editor._col_labels == ["Value"]
+
+        finally:
+            toml_path.unlink()
+
+    async def test_switch_scope_tab_and_edit_table(self):
+        """Test that switching scope tabs and editing a table works correctly."""
+        project = create_multi_scope_project()
+        toml_data = {
+            "Power": {
+                "model": {
+                    "consumption": {"nominal": 100.0, "safe": 50.0},
+                },
+            },
+            "Thermal": {
+                "model": {
+                    "temperature": {"initial": 20.0, "cruise": 25.0},
+                },
+            },
+        }
+        toml_path = create_toml_file(toml_data)
+
+        try:
+            app = VeriqEditApp(toml_path, project)
+            async with app.run_test(size=(120, 40)) as pilot:
+                # Switch to Thermal tab
+                from textual.widgets import TabbedContent
+
+                tabbed_content = app.query_one(TabbedContent)
+                tabbed_content.active = "scope-Thermal"
+                await pilot.pause()
+
+                # Verify we switched
+                assert app._current_scope == "Thermal"
+
+                # Edit a cell in the Thermal scope
+                thermal_editor = app.query_one("#editor-Thermal", TableEditor)
+                thermal_editor.update_cell_value("initial", "Value", 30.0)
+                await pilot.pause()
+
+                # Verify the data was updated
+                thermal_table = app.tables["Thermal"]["temperature"]
+                assert thermal_table.flat_data["initial"] == 30.0
+                assert thermal_table.modified is True
+
+        finally:
+            toml_path.unlink()
+
+    async def test_switch_scope_tab_back_and_forth(self):
+        """Test switching between scope tabs multiple times."""
+        project = create_multi_scope_project()
+        toml_data = {
+            "Power": {
+                "model": {
+                    "consumption": {"nominal": 100.0, "safe": 50.0},
+                },
+            },
+            "Thermal": {
+                "model": {
+                    "temperature": {"initial": 20.0, "cruise": 25.0},
+                },
+            },
+        }
+        toml_path = create_toml_file(toml_data)
+
+        try:
+            app = VeriqEditApp(toml_path, project)
+            async with app.run_test(size=(120, 40)) as pilot:
+                from textual.widgets import TabbedContent
+
+                tabbed_content = app.query_one(TabbedContent)
+
+                # Start at Power
+                assert app._current_scope == "Power"
+
+                # Switch to Thermal
+                tabbed_content.active = "scope-Thermal"
+                await pilot.pause()
+                assert app._current_scope == "Thermal"
+
+                thermal_editor = app.query_one("#editor-Thermal", TableEditor)
+                assert thermal_editor.table_data is not None
+
+                # Switch back to Power
+                tabbed_content.active = "scope-Power"
+                await pilot.pause()
+                assert app._current_scope == "Power"
+
+                power_editor = app.query_one("#editor-Power", TableEditor)
+                assert power_editor.table_data is not None
+
+                # Switch to Thermal again
+                tabbed_content.active = "scope-Thermal"
+                await pilot.pause()
+                assert app._current_scope == "Thermal"
+
+        finally:
+            toml_path.unlink()

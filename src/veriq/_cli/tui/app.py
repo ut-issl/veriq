@@ -163,9 +163,11 @@ class VeriqEditApp(App[None]):
         event: TabbedContent.TabActivated,
     ) -> None:
         """Handle scope tab changes."""
-        # Extract scope name from tab ID
-        if event.tab.id and event.tab.id.startswith("scope-"):
-            scope_name = event.tab.id[6:]  # Remove "scope-" prefix
+        # Extract scope name from pane ID (not tab ID)
+        # The pane ID is what we set (e.g., "scope-Power"), while tab ID has
+        # a different format (e.g., "--content-tab-scope-Power")
+        if event.pane.id and event.pane.id.startswith("scope-"):
+            scope_name = event.pane.id[6:]  # Remove "scope-" prefix
             self._current_scope = scope_name
 
             # Load the first table in the new scope if not already loaded
