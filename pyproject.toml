@@ -23,6 +23,7 @@ dependencies = [
   "scoped-context>=0.0.1",
   "textual>=7.3.0",
   "tomli-w>=1.1.0",
+  "tomlkit>=0.14.0",
   "typer>=0.16.1",
 ]
 
