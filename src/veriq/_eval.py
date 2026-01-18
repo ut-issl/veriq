@@ -7,7 +7,7 @@ It delegates to the new evaluation engine internally.
 import logging
 from typing import TYPE_CHECKING, Any
 
-from ._eval_engine import evaluate_graph
+from ._eval_engine import EvaluationResult, evaluate_graph
 from ._ir import build_graph_spec
 from ._path import ModelPath, ProjectPath, get_value_by_parts, iter_leaf_path_parts
 
@@ -20,22 +20,28 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Re-export EvaluationResult for public API
+__all__ = ["EvaluationResult", "evaluate_project"]
 
-def evaluate_project(project: Project, model_data: Mapping[str, BaseModel]) -> dict[ProjectPath, Any]:
+
+def evaluate_project(project: Project, model_data: Mapping[str, BaseModel]) -> EvaluationResult:
     """Evaluate a project with the given model data.
 
     This function:
     1. Extracts leaf values from model data as initial values
     2. Builds a graph specification from the project
     3. Evaluates the graph using the new evaluation engine
-    4. Returns the computed values
+    4. Returns the evaluation result with values and validity tracking
 
     Args:
         project: The project to evaluate.
         model_data: Mapping from scope name to the model data for that scope.
 
     Returns:
-        A dictionary mapping ProjectPaths to their computed values.
+        EvaluationResult containing:
+        - values: Dictionary mapping ProjectPaths to computed values
+        - validity: Dictionary mapping ProjectPaths to validity status
+        - errors: List of any errors that occurred
 
     Raises:
         RuntimeError: If evaluation fails with errors.
@@ -67,4 +73,4 @@ def evaluate_project(project: Project, model_data: Mapping[str, BaseModel]) -> d
         msg = "Evaluation failed with errors:\n" + "\n".join(error_messages)
         raise RuntimeError(msg)
 
-    return result.values
+    return result

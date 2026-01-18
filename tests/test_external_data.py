@@ -280,9 +280,9 @@ def test_fileref_in_veriq_model(tmp_path: Path) -> None:
         scope="TestScope",
         path=ModelPath(root="$", parts=(AttributePart("data_file"),)),
     )
-    assert file_path in result
-    assert isinstance(result[file_path], FileRef)
-    assert result[file_path].path == test_file
+    assert file_path in result.values
+    assert isinstance(result.values[file_path], FileRef)
+    assert result.values[file_path].path == test_file
 
 
 def test_fileref_in_calculation(tmp_path: Path) -> None:
@@ -317,7 +317,7 @@ def test_fileref_in_calculation(tmp_path: Path) -> None:
         scope="TestScope",
         path=CalcPath(root="@sum_numbers", parts=()),
     )
-    assert result[calc_path] == 60.0
+    assert result.values[calc_path] == 60.0
 
 
 def test_fileref_toml_roundtrip(tmp_path: Path) -> None:

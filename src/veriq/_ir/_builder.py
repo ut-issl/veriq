@@ -8,6 +8,7 @@ from veriq._path import (
     ProjectPath,
     VerificationPath,
     iter_leaf_path_parts,
+    parse_path,
 )
 
 from ._graph_spec import GraphSpec
@@ -69,7 +70,7 @@ def _collect_input_leaf_paths(
     return leaf_paths
 
 
-def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901
+def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
     """Build a GraphSpec from a user-facing Project.
 
     This is the bridge between the user-facing layer and the core layer.
@@ -144,8 +145,18 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901
                     # Store the full output type for decomposition during evaluation
                     "root_output_type": calc.output_type,
                 }
-                if calc.assumed_verifications:
-                    metadata["assumed_verifications"] = calc.assumed_verifications
+                # Convert assumed_refs to ProjectPaths for the evaluation engine
+                if calc.assumed_refs:
+                    assumed_paths = []
+                    for ref in calc.assumed_refs:
+                        # Use the scope from Ref, or default to the calculation's scope
+                        ref_scope = ref.scope if ref.scope is not None else scope_name
+                        verif_ppath = ProjectPath(
+                            scope=ref_scope,
+                            path=parse_path(ref.path),
+                        )
+                        assumed_paths.append(verif_ppath)
+                    metadata["assumed_verification_paths"] = assumed_paths
 
                 nodes[leaf_ppath] = NodeSpec(
                     id=leaf_ppath,
@@ -182,8 +193,18 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901
                     # Store the full output type for decomposition during evaluation
                     "root_output_type": verif.output_type,
                 }
-                if verif.assumed_verifications:
-                    metadata["assumed_verifications"] = verif.assumed_verifications
+                # Convert assumed_refs to ProjectPaths for the evaluation engine
+                if verif.assumed_refs:
+                    assumed_paths = []
+                    for ref in verif.assumed_refs:
+                        # Use the scope from Ref, or default to the verification's scope
+                        ref_scope = ref.scope if ref.scope is not None else scope_name
+                        verif_ppath = ProjectPath(
+                            scope=ref_scope,
+                            path=parse_path(ref.path),
+                        )
+                        assumed_paths.append(verif_ppath)
+                    metadata["assumed_verification_paths"] = assumed_paths
 
                 nodes[leaf_ppath] = NodeSpec(
                     id=leaf_ppath,

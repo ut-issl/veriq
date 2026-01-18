@@ -228,15 +228,15 @@ def calc(  # noqa: C901, PLR0912, PLR0915
 
     # Evaluate the project
     err_console.print("[cyan]Evaluating project...[/cyan]")
-    results = evaluate_project(project, model_data)
+    result = evaluate_project(project, model_data)
     err_console.print()
 
     # Check verifications if requested
     exit_as_err = False
     if verify:
-        verification_results: list[tuple[str, bool, bool]] = []
+        verification_results: list[tuple[str, bool, bool, bool]] = []
 
-        for ppath, value in results.items():
+        for ppath, value in result.values.items():
             if isinstance(ppath.path, VerificationPath):
                 verification_name = ppath.path.verification_name
                 scope_name = ppath.scope
@@ -246,8 +246,11 @@ def calc(  # noqa: C901, PLR0912, PLR0915
                 display_name = f"{scope_name}::?{verification_name}"
                 if ppath.path.parts:
                     display_name += str(ppath.path)[len(f"?{verification_name}") :]
-                verification_results.append((display_name, value, verification.xfail))
-                if (not value) ^ verification.xfail:
+                is_valid = result.is_valid(ppath)
+                verification_results.append((display_name, value, verification.xfail, is_valid))
+                # Invalid verifications don't count as failures (they're already False in values)
+                # but we exit with error if a valid verification fails (accounting for xfail)
+                if is_valid and (not value) ^ verification.xfail:
                     exit_as_err = True
 
         # Create a table for verification results
@@ -256,25 +259,31 @@ def calc(  # noqa: C901, PLR0912, PLR0915
             table.add_column("Verification", style="dim")
             table.add_column("Result")
 
-            for verif_name, passed, xfail in verification_results:
+            for verif_name, passed, xfail, valid in verification_results:
                 # Escape markup characters in verification name to display literally
                 escaped_verif_name = escape(verif_name)
-                status = "[green]✓ PASS[/green]" if passed else "[red]✗ FAIL[/red]"
-                if xfail and not passed:
+                if not valid:
+                    # Invalid verifications are shown differently
+                    status = "[yellow]? INVALID[/yellow]"
+                elif passed:
+                    status = "[green]✓ PASS[/green]"
+                else:
+                    status = "[red]✗ FAIL[/red]"
+                if valid and xfail and not passed:
                     status += " [yellow](expected failure)[/yellow]"
-                elif xfail and passed:
+                elif valid and xfail and passed:
                     status += " [red](unexpected pass)[/red]"
                 table.add_row(escaped_verif_name, status)
 
             err_console.print(Panel(table, title="[bold]Verification Results[/bold]", border_style="cyan"))
             err_console.print()
 
-        if any(not passed for _, passed, _ in verification_results):
+        if any(valid and not passed for _, passed, _, valid in verification_results):
             err_console.print("[red]✗ Some verifications failed[/red]")
 
     # Export results
     err_console.print(f"[cyan]Exporting results to:[/cyan] {output}")
-    export_to_toml(project, model_data, results, output)
+    export_to_toml(project, model_data, result.values, output)
 
     err_console.print()
     err_console.print("[green]✓ Calculation complete[/green]")

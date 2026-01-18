@@ -27,17 +27,20 @@ logger = logging.getLogger(__name__)
 class EvaluationResult:
     """Result of evaluating a computation graph.
 
-    This is an immutable data structure containing all computed values
-    and any errors that occurred during evaluation.
+    This is an immutable data structure containing all computed values,
+    validity tracking, and any errors that occurred during evaluation.
 
     Attributes:
         values: Mapping from node path to computed value.
         errors: List of (node_path, error_message) for any failed evaluations.
+        validity: Mapping from node path to validity status. True means the node's
+            assumptions hold, False means an assumed verification failed.
 
     """
 
     values: dict[ProjectPath, Any] = field(default_factory=dict)
     errors: list[tuple[ProjectPath, str]] = field(default_factory=list)
+    validity: dict[ProjectPath, bool] = field(default_factory=dict)
 
     @property
     def success(self) -> bool:
@@ -59,6 +62,19 @@ class EvaluationResult:
         """
         return self.values[path]
 
+    def is_valid(self, path: ProjectPath) -> bool:
+        """Check if a value at path is valid (all assumptions hold).
+
+        Args:
+            path: The ProjectPath to check.
+
+        Returns:
+            True if the value is valid (assumptions hold), False otherwise.
+            Returns True if the path is not in the validity dict (no assumptions).
+
+        """
+        return self.validity.get(path, True)
+
 
 def _get_function_key(path: ProjectPath) -> str:
     """Get a unique key for the function associated with a path.
@@ -67,6 +83,90 @@ def _get_function_key(path: ProjectPath) -> str:
     This key identifies the function so we only call it once.
     """
     return f"{path.scope}::{path.path.root}"
+
+
+def _check_validity(  # noqa: C901, PLR0912
+    graph_spec: GraphSpec,
+    values: dict[ProjectPath, Any],
+    eval_order: list[ProjectPath],
+) -> dict[ProjectPath, bool]:
+    """Check validity based on assumed verifications.
+
+    A node is invalid if:
+    1. It assumes a verification that returned False (or was not evaluated)
+    2. It depends on a node that is invalid (transitive invalidity)
+
+    IMPORTANT: This function modifies `values` in place - invalid verification
+    values are overridden to False to ensure consistent behavior for all API users.
+
+    Args:
+        graph_spec: The specification of nodes and their dependencies.
+        values: The computed values dict (will be modified in place for invalid verifications).
+        eval_order: The topological order of evaluation.
+
+    Returns:
+        Dictionary mapping paths to validity status (True = valid).
+
+    """
+    validity: dict[ProjectPath, bool] = dict.fromkeys(values, True)
+
+    # First pass: Check direct assumptions
+    # Group nodes by function key to handle multiple leaf paths from same function
+    func_assumptions: dict[str, list[ProjectPath]] = {}
+    func_nodes: dict[str, list[ProjectPath]] = {}
+
+    for path, spec in graph_spec.nodes.items():
+        if spec.kind in (NodeKind.CALCULATION, NodeKind.VERIFICATION):
+            func_key = _get_function_key(path)
+            func_nodes.setdefault(func_key, []).append(path)
+            assumed_paths = spec.metadata.get("assumed_verification_paths", [])
+            if assumed_paths and func_key not in func_assumptions:
+                func_assumptions[func_key] = assumed_paths
+
+    # Mark nodes invalid if their assumed verifications failed
+    for func_key, assumed_paths in func_assumptions.items():
+        assumption_holds = True
+        for assumed_path in assumed_paths:
+            # Check ALL leaf paths of the verification (for Table[K, bool])
+            # The assumed_path is the root verification path, we need to find all leaves
+            verif_results = [
+                values.get(p)
+                for p in values
+                if p.scope == assumed_path.scope and p.path.root == assumed_path.path.root
+            ]
+            # Assumption holds only if ALL verification results are True
+            if not all(v is True for v in verif_results if v is not None):
+                assumption_holds = False
+                break
+
+        if not assumption_holds:
+            for output_path in func_nodes.get(func_key, []):
+                validity[output_path] = False
+
+    # Second pass: Propagate invalidity through dependencies (in topological order)
+    for path in eval_order:
+        if path not in validity:
+            continue
+        if not validity[path]:
+            continue  # Already invalid
+
+        spec = graph_spec.nodes.get(path)
+        if spec is None:
+            continue
+
+        # Check if any dependency is invalid
+        for dep_path in spec.dependencies:
+            if not validity.get(dep_path, True):
+                validity[path] = False
+                break
+
+    # Override invalid verification values to False
+    # This ensures consistent behavior for both Python API and CLI users
+    for path, is_valid in validity.items():
+        if not is_valid and isinstance(path.path, VerificationPath):
+            values[path] = False
+
+    return validity
 
 
 def _make_output_leaf_path(
@@ -225,4 +325,8 @@ def evaluate_graph(  # noqa: C901
 
         evaluated_functions.add(func_key)
 
-    return EvaluationResult(values=values, errors=errors)
+    # Check validity based on assumed verifications
+    # Note: _check_validity modifies values in place for invalid verifications
+    validity = _check_validity(graph_spec, values, eval_order)
+
+    return EvaluationResult(values=values, errors=errors, validity=validity)

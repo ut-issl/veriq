@@ -400,11 +400,11 @@ class Calculation[T, **P]:
     func: Callable[P, T] = field(repr=False)
     default_scope_name: str = field()
     imported_scope_names: list[str] = field(default_factory=list)
-    assumed_verifications: list[Verification[Any, ...]] = field(default_factory=list)
 
     # Fields initialized in __post_init__
     dep_ppaths: dict[str, ProjectPath] = field(init=False)
     output_type: type[T] = field(init=False)
+    assumed_refs: list[Ref] = field(init=False)
 
     def __post_init__(self) -> None:
         sig = inspect.signature(self.func)
@@ -417,6 +417,12 @@ class Calculation[T, **P]:
             "calculation",
         )
         self.output_type = _get_return_type_from_signature(sig)  # ty: ignore[invalid-assignment]
+
+        # Extract assumed refs from function attribute (set by @vq.assume decorator)
+        if hasattr(self.func, "__veriq_assumed_refs__"):
+            self.assumed_refs = self.func.__veriq_assumed_refs__
+        else:
+            self.assumed_refs = []
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
         return self.func(*args, **kwargs)
@@ -433,12 +439,12 @@ class Verification[T, **P]:
     func: Callable[P, T] = field(repr=False)  # TODO: disallow positional-only arguments
     default_scope_name: str = field()
     imported_scope_names: list[str] = field(default_factory=list)
-    assumed_verifications: list[Verification[Any, ...]] = field(default_factory=list)
     xfail: bool = field(default=False, kw_only=True)
 
     # Fields initialized in __post_init__
     dep_ppaths: dict[str, ProjectPath] = field(init=False)
     output_type: type[T] = field(init=False)
+    assumed_refs: list[Ref] = field(init=False)
 
     def __post_init__(self) -> None:
         sig = inspect.signature(self.func)
@@ -459,6 +465,12 @@ class Verification[T, **P]:
                 "Return type must be 'bool' or 'Table[K, bool]'."
             )
             raise TypeError(msg)
+
+        # Extract assumed refs from function attribute (set by @vq.assume decorator)
+        if hasattr(self.func, "__veriq_assumed_refs__"):
+            self.assumed_refs = self.func.__veriq_assumed_refs__
+        else:
+            self.assumed_refs = []
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
         return self.func(*args, **kwargs)
@@ -553,15 +565,10 @@ class Scope:
             else:
                 verification_name = name
 
-            assumed_verifications: list[Verification[Any, ...]] = []
-            if hasattr(func, "__veriq_assumed_verifications__"):
-                assumed_verifications = func.__veriq_assumed_verifications__  # ty: ignore[invalid-assignment]
-
             verification = Verification(
                 name=verification_name,
                 func=func,
                 imported_scope_names=list(imports),
-                assumed_verifications=assumed_verifications,
                 default_scope_name=self.name,
                 xfail=xfail,
             )
@@ -589,15 +596,10 @@ class Scope:
             else:
                 calculation_name = name
 
-            assumed_verifications: list[Verification[Any, ...]] = []
-            if hasattr(func, "__veriq_assumed_verifications__"):
-                assumed_verifications = func.__veriq_assumed_verifications__  # ty: ignore[invalid-assignment]
-
             calculation = Calculation(
                 name=calculation_name,
                 func=func,
                 imported_scope_names=list(imports),
-                assumed_verifications=assumed_verifications,
                 default_scope_name=self.name,
             )
             if calculation_name in self._calculations:

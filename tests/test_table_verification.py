@@ -208,8 +208,8 @@ def test_table_verification_evaluation_stores_leaf_paths() -> None:
         path=VerificationPath(root="?verify_margins", parts=(ItemPart(key="safe"),)),
     )
 
-    assert results[nominal_path] is True
-    assert results[safe_path] is False
+    assert results.values[nominal_path] is True
+    assert results.values[safe_path] is False
 
 
 def test_bool_and_table_verifications_coexist() -> None:
@@ -256,7 +256,7 @@ def test_bool_and_table_verifications_coexist() -> None:
         scope="TestScope",
         path=VerificationPath(root="?verify_threshold", parts=()),
     )
-    assert results[bool_path] is True
+    assert results.values[bool_path] is True
 
     # Table verification: stored at leaf paths
     nominal_path = ProjectPath(
@@ -267,8 +267,8 @@ def test_bool_and_table_verifications_coexist() -> None:
         scope="TestScope",
         path=VerificationPath(root="?verify_margins", parts=(ItemPart(key="safe"),)),
     )
-    assert results[nominal_path] is True
-    assert results[safe_path] is False
+    assert results.values[nominal_path] is True
+    assert results.values[safe_path] is False
 
 
 def test_multidim_table_verification_evaluation() -> None:
@@ -315,10 +315,10 @@ def test_multidim_table_verification_evaluation() -> None:
             path=VerificationPath(root="?verify_matrix", parts=(ItemPart(key=(phase, mode)),)),
         )
 
-    assert results[make_path("initial", "nominal")] is True
-    assert results[make_path("initial", "safe")] is False
-    assert results[make_path("cruise", "nominal")] is True
-    assert results[make_path("cruise", "safe")] is True
+    assert results.values[make_path("initial", "nominal")] is True
+    assert results.values[make_path("initial", "safe")] is False
+    assert results.values[make_path("cruise", "nominal")] is True
+    assert results.values[make_path("cruise", "safe")] is True
 
 
 # =============================================================================
