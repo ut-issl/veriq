@@ -17,6 +17,7 @@ from ._table import Table
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from ._eval_engine import EvaluationResult
     from ._models import Project, Requirement, Verification
 
 
@@ -496,7 +497,7 @@ def _add_entries_in_order(  # noqa: PLR0913
 
 def build_traceability_report(
     project: Project,
-    evaluation_results: dict[ProjectPath, Any] | None = None,
+    evaluation_results: EvaluationResult | None = None,
 ) -> TraceabilityReport:
     """Build a complete traceability report for a project.
 
@@ -512,6 +513,10 @@ def build_traceability_report(
         ValueError: If circular dependencies are detected in depends_on.
 
     """
+    # Extract values dict from EvaluationResult
+    eval_values: dict[ProjectPath, Any] | None = (
+        evaluation_results.values if evaluation_results is not None else None
+    )
     # Collect all requirements
     requirements = collect_all_requirements(project)
 
@@ -531,11 +536,11 @@ def build_traceability_report(
 
     # First pass: compute all statuses (bottom-up)
     for scope_name, req in root_reqs:
-        _compute_statuses_recursive(req, scope_name, evaluation_results, computed_statuses, requirements)
+        _compute_statuses_recursive(req, scope_name, eval_values, computed_statuses, requirements)
 
     # Second pass: build entries in display order (top-down)
     for scope_name, req in root_reqs:
-        _add_entries_in_order(req, scope_name, evaluation_results, computed_statuses, 0, entries, requirements)
+        _add_entries_in_order(req, scope_name, eval_values, computed_statuses, 0, entries, requirements)
 
     # Count statistics
     verified_count = sum(1 for e in entries if e.status == RequirementStatus.VERIFIED)

@@ -6,6 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 import veriq as vq
+from veriq._eval_engine import EvaluationResult
 from veriq._path import ItemPart, ProjectPath, VerificationPath
 from veriq._traceability import (
     RequirementStatus,
@@ -653,7 +654,11 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = {ppath: True}
+        evaluation_results = EvaluationResult(
+            values={ppath: True},
+            errors=[],
+            validity={ppath: True},
+        )
 
         report = build_traceability_report(project, evaluation_results)
 
@@ -688,7 +693,11 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = {ppath: False}
+        evaluation_results = EvaluationResult(
+            values={ppath: False},
+            errors=[],
+            validity={ppath: True},
+        )
 
         report = build_traceability_report(project, evaluation_results)
 
@@ -721,7 +730,11 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = {ppath: False}
+        evaluation_results = EvaluationResult(
+            values={ppath: False},
+            errors=[],
+            validity={ppath: True},
+        )
 
         report = build_traceability_report(project, evaluation_results)
 
@@ -788,7 +801,11 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = {ppath: False}
+        evaluation_results = EvaluationResult(
+            values={ppath: False},
+            errors=[],
+            validity={ppath: True},
+        )
 
         report = build_traceability_report(project, evaluation_results)
 
@@ -797,3 +814,46 @@ class TestBuildTraceabilityReport:
 
         assert req1_entry.status == RequirementStatus.FAILED
         assert req2_entry.status == RequirementStatus.FAILED
+
+    def test_report_with_evaluation_result_object(self) -> None:
+        """Test report with EvaluationResult object (not just dict).
+
+        This is a regression test for the case when build_traceability_report
+        is called with the actual EvaluationResult from evaluate_project.
+        """
+        project = vq.Project("Test")
+        scope = vq.Scope("Power")
+        project.add_scope(scope)
+
+        class PowerModel(BaseModel):
+            capacity: float
+
+        @scope.root_model()
+        class RootModel(BaseModel):
+            power: PowerModel
+
+        @scope.verification()
+        def verify_capacity(
+            capacity: Annotated[float, vq.Ref("$.power.capacity")],
+        ) -> bool:
+            return capacity > 0
+
+        scope.requirement("REQ-001", "Capacity must be positive", verified_by=[verify_capacity])
+
+        # Use EvaluationResult object instead of plain dict
+        ppath = ProjectPath(
+            scope="Power",
+            path=VerificationPath(root="?verify_capacity", parts=()),
+        )
+        evaluation_results = EvaluationResult(
+            values={ppath: True},
+            errors=[],
+            validity={ppath: True},
+        )
+
+        report = build_traceability_report(project, evaluation_results)
+
+        assert len(report.entries) == 1
+        assert report.entries[0].status == RequirementStatus.VERIFIED
+        assert len(report.entries[0].verification_results) == 1
+        assert report.entries[0].verification_results[0].passed is True
