@@ -4,21 +4,25 @@ icon: material/numeric-5-circle
 
 # Step 5: Using Tables
 
-In this step, you'll use tables to handle multi-dimensional data like operating modes.
+In this step, you'll use tables to handle data indexed by categories - similar to how spreadsheets organize data in rows and columns.
 
 ## Why Tables?
 
-Engineering systems often have multiple operating modes:
+In spreadsheets, you often have data organized by categories:
 
-- **Nominal**: Normal operations
-- **Safe**: Low-power emergency mode
-- **Mission**: High-power payload operations
+| Mode    | Consumption | Generation |
+|---------|-------------|------------|
+| nominal | 50          | 60         |
+| safe    | 20          | 30         |
+| mission | 80          | 100        |
 
-Tables let you define values for each mode and verify requirements across all modes.
+You might then calculate margins for each row and verify that all margins are positive.
 
-## Define an Enum for Modes
+`vq.Table` lets you represent this pattern in veriq. Instead of repeating calculations manually for each row, you define the calculation once and veriq applies it across all categories.
 
-First, define an enum for your operating modes:
+## Define Categories with an Enum
+
+First, define your row categories using a `StrEnum`:
 
 ```python
 from enum import StrEnum
@@ -31,7 +35,7 @@ class OperationMode(StrEnum):
 
 ## Use Tables in Models
 
-Use `vq.Table[KeyType, ValueType]` in your model:
+Use `vq.Table[KeyType, ValueType]` to define a column of values indexed by category:
 
 ```python title="examples/tutorial/step5.py"
 import veriq as vq
@@ -52,10 +56,10 @@ class OperationMode(StrEnum):
 
 @power.root_model()
 class PowerModel(BaseModel):
-    # Single values
+    # Single value (like a single cell)
     battery_capacity: float
 
-    # Table indexed by operation mode
+    # Tables (like columns indexed by row category)
     power_consumption: vq.Table[OperationMode, float]
     power_generation: vq.Table[OperationMode, float]
 
@@ -69,7 +73,7 @@ def calculate_power_margin(
     consumption: Annotated[vq.Table[OperationMode, float], vq.Ref("$.power_consumption")],
     generation: Annotated[vq.Table[OperationMode, float], vq.Ref("$.power_generation")],
 ) -> PowerMarginOutput:
-    """Calculate power margin for each operation mode."""
+    """Calculate margin for each row."""
     margin = vq.Table({mode: generation[mode] - consumption[mode] for mode in OperationMode})
     return PowerMarginOutput(margin=margin)
 
@@ -78,19 +82,19 @@ def calculate_power_margin(
 def verify_positive_margin(
     margin: Annotated[vq.Table[OperationMode, float], vq.Ref("@calculate_power_margin.margin")],
 ) -> vq.Table[OperationMode, bool]:
-    """Verify positive power margin for each mode."""
+    """Verify positive margin for each row."""
     return vq.Table({mode: margin[mode] > 0 for mode in OperationMode})
 ```
 
 ## Table Verification Returns
 
-When a verification returns `vq.Table[K, bool]`, each entry is treated as a separate verification result:
+When a verification returns `vq.Table[K, bool]`, each entry becomes a separate verification result - like applying conditional formatting to each row:
 
 ```python
 @power.verification()
 def verify_positive_margin(
     margin: Annotated[vq.Table[OperationMode, float], vq.Ref("@calculate_power_margin.margin")],
-) -> vq.Table[OperationMode, bool]:  # Returns a table of booleans
+) -> vq.Table[OperationMode, bool]:
     return vq.Table({mode: margin[mode] > 0 for mode in OperationMode})
 ```
 
@@ -102,7 +106,7 @@ This creates three verification results:
 
 ## TOML Format for Tables
 
-Tables are defined as TOML tables:
+Tables are defined as TOML tables, where each key is a row category:
 
 ```toml title="examples/tutorial/step5.in.toml"
 [Power.model]
@@ -121,39 +125,40 @@ mission = 100.0
 
 ## Multi-Dimensional Tables
 
-For tables with multiple keys, use a tuple:
+For data indexed by two categories (like a pivot table), use a tuple key:
 
 ```python
-class OperationPhase(StrEnum):
-    LAUNCH = "launch"
-    CRUISE = "cruise"
+class Row(StrEnum):
+    A = "a"
+    B = "b"
+
+class Column(StrEnum):
+    X = "x"
+    Y = "y"
 
 
-class PowerModel(BaseModel):
-    # Table indexed by (phase, mode)
-    peak_power: vq.Table[tuple[OperationPhase, OperationMode], float]
+class MyModel(BaseModel):
+    values: vq.Table[tuple[Row, Column], float]
 ```
 
 In TOML, use comma-separated keys:
 
 ```toml
-[Power.model.peak_power]
-"launch,nominal" = 100.0
-"launch,safe" = 30.0
-"launch,mission" = 150.0
-"cruise,nominal" = 80.0
-"cruise,safe" = 25.0
-"cruise,mission" = 120.0
+[Scope.model.values]
+"a,x" = 100.0
+"a,y" = 200.0
+"b,x" = 150.0
+"b,y" = 250.0
 ```
 
 Reference individual table entries:
 
 ```python
-# Reference a specific entry
+# Single-key table entry
 vq.Ref("$.power_consumption[nominal]")
 
-# Reference multi-dimensional entry
-vq.Ref("$.peak_power[launch,nominal]")
+# Multi-key table entry
+vq.Ref("$.values[a,x]")
 ```
 
 ## Run the Example
@@ -204,22 +209,22 @@ mission = true
 
 ## What You Learned
 
-- **`vq.Table[K, V]`**: Define enum-indexed data
-- **Table calculations**: Compute values for each mode
-- **Table verifications**: Verify requirements across all modes
-- **Multi-dimensional tables**: Use tuple keys for complex indexing
+- **`vq.Table[K, V]`**: Define data indexed by category (like spreadsheet columns)
+- **Table calculations**: Compute values for each row
+- **Table verifications**: Check requirements across all rows (like conditional formatting)
+- **Multi-dimensional tables**: Use tuple keys (like pivot tables)
 - **TOML format**: How to specify table data in input files
 
 ## Tutorial Complete
 
 Congratulations! You've learned the core concepts of veriq:
 
-1. **Projects and Scopes** - Organize your engineering analysis
-2. **Models** - Define typed input parameters
-3. **Calculations** - Compute derived values with automatic dependency tracking
-4. **Cross-Scope References** - Connect subsystems
-5. **Verifications** - Check requirements
-6. **Tables** - Handle multi-mode analysis
+1. **Projects and Scopes** - Organize your analysis (like workbooks and sheets)
+2. **Models** - Define input parameters (like input cells)
+3. **Calculations** - Compute derived values (like formula cells)
+4. **Cross-Scope References** - Connect scopes with dependencies
+5. **Verifications** - Check requirements (like conditional formatting)
+6. **Tables** - Handle category-indexed data (like spreadsheet rows/columns)
 
 ## Next Steps
 
