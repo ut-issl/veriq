@@ -6,7 +6,7 @@ icon: material/download
 
 ## Requirements
 
-- Python 3.11 or later
+- Python 3.14 or later
 
 ## Using pip
 
@@ -20,12 +20,6 @@ If you're using [uv](https://docs.astral.sh/uv/), you can add veriq to your proj
 
 ```bash
 uv add veriq
-```
-
-Or run veriq directly without installing:
-
-```bash
-uvx veriq --help
 ```
 
 ## Verify Installation

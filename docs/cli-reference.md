@@ -15,6 +15,7 @@ veriq [OPTIONS] COMMAND
 | Option | Description |
 |--------|-------------|
 | `--verbose` / `--no-verbose` | Enable verbose output |
+| `--version` | Show version and exit |
 | `--install-completion` | Install shell completion |
 | `--show-completion` | Show shell completion script |
 | `--help` | Show help and exit |
