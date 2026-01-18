@@ -56,6 +56,15 @@ def calculate_solar_panel(
     return SolarPanelOutput(power_generated=power_out, heat_generated=heat_out)
 
 
+@power.verification()
+def verify_minimum_power(
+    power: Annotated[float, vq.Ref("@calculate_solar_panel.power_generated")],
+) -> bool:
+    """Verify minimum power generation requirement."""
+    min_power = 500.0  # Watts
+    return power >= min_power
+
+
 # --- Thermal Scope ---
 @thermal.root_model()
 class ThermalModel(BaseModel):
@@ -104,14 +113,14 @@ Key points:
 - Declare cross-scope dependencies with `imports=`
 - Return `True` for pass, `False` for fail
 
-## Update Your Input File
+## Input File
 
-Add the maximum temperature limit:
+Create an input file with the design parameters:
 
 ```toml title="examples/tutorial/step4.in.toml"
 [Power.model]
 solar_panel_area = 2.0
-solar_panel_efficiency = 0.3
+solar_panel_efficiency = 0.40
 max_temperature = 85.0
 
 [Thermal.model]
@@ -129,52 +138,41 @@ veriq calc examples/tutorial/step4.py -i examples/tutorial/step4.in.toml -o step
 Output:
 
 ```
-Loading project from script: examples/tutorial/step4.py
-Project: MySatellite
-
-Loading input from: examples/tutorial/step4.in.toml
-Evaluating project...
-
 ╭──────────────────── Verification Results ────────────────────╮
-│  Verification                        Result                  │
-│  Thermal::verify_temperature_limit   ✗ FAIL                  │
-╰───────────────────────────────────────────────────────────────╯
-
-✗ Verification failed
-```
-
-The verification fails because the calculated temperature (95.27°C) exceeds the limit (85°C).
-
-## Fix the Design
-
-Increase panel efficiency to reduce heat:
-
-```toml title="examples/tutorial/step4.in.toml (updated)"
-[Power.model]
-solar_panel_area = 2.0
-solar_panel_efficiency = 0.35  # Increased from 0.3
-max_temperature = 85.0
-
-[Thermal.model]
-thermal_coefficient = 0.05
-```
-
-Run again:
-
-```bash
-veriq calc examples/tutorial/step4.py -i examples/tutorial/step4.in.toml -o step4.out.toml --verify
-```
-
-Now it passes:
-
-```
-╭──────────────────── Verification Results ────────────────────╮
-│  Verification                        Result                  │
-│  Thermal::verify_temperature_limit   ✓ PASS                  │
+│  Verification                         Result                 │
+│  Power::?verify_minimum_power         ✓ PASS                 │
+│  Thermal::?verify_temperature_limit   ✓ PASS                 │
 ╰───────────────────────────────────────────────────────────────╯
 
 ✓ Calculation complete
 ```
+
+Both verifications pass:
+
+- Power generation (1088.8 W) exceeds minimum (500 W)
+- Temperature (81.66°C) is within limit (85°C)
+
+## When Verification Fails
+
+If you lower the efficiency to 0.30, the temperature will exceed the limit:
+
+```toml
+solar_panel_efficiency = 0.30  # Lower efficiency = more heat
+```
+
+Running verification shows:
+
+```
+╭──────────────────── Verification Results ────────────────────╮
+│  Verification                         Result                 │
+│  Power::?verify_minimum_power         ✓ PASS                 │
+│  Thermal::?verify_temperature_limit   ✗ FAIL                 │
+╰───────────────────────────────────────────────────────────────╯
+
+✗ Some verifications failed
+```
+
+The verification fails because the calculated temperature (95.27°C) exceeds the limit (85°C).
 
 ## Output File with Verification Results
 
@@ -183,43 +181,24 @@ The output TOML includes verification results:
 ```toml
 [Power.model]
 solar_panel_area = 2.0
-solar_panel_efficiency = 0.35
+solar_panel_efficiency = 0.4
 max_temperature = 85.0
 
 [Power.calc.calculate_solar_panel]
-power_generated = 952.7
-heat_generated = 1769.3
+power_generated = 1088.8
+heat_generated = 1633.2
+
+[Power.verification]
+verify_minimum_power = true
 
 [Thermal.model]
 thermal_coefficient = 0.05
 
 [Thermal.calc.calculate_temperature]
-solar_panel_temperature = 88.465
+solar_panel_temperature = 81.66
 
 [Thermal.verification]
 verify_temperature_limit = true
-```
-
-## Multiple Verifications
-
-You can add multiple verifications per scope:
-
-```python
-@power.verification()
-def verify_minimum_power(
-    power: Annotated[float, vq.Ref("@calculate_solar_panel.power_generated")],
-) -> bool:
-    """Verify minimum power generation requirement."""
-    min_power = 500.0  # Watts
-    return power >= min_power
-
-
-@power.verification()
-def verify_efficiency_reasonable(
-    efficiency: Annotated[float, vq.Ref("$.solar_panel_efficiency")],
-) -> bool:
-    """Verify efficiency is within realistic bounds."""
-    return 0.1 <= efficiency <= 0.5
 ```
 
 ## What You Learned

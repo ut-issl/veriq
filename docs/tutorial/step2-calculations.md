@@ -105,6 +105,9 @@ solar_panel_efficiency = 0.3
 [Power.calc.calculate_solar_panel]
 power_generated = 816.6
 heat_generated = 1905.4
+
+[Power.calc.calculate_battery_charge]
+charge_time = 0.122
 ```
 
 Calculation outputs appear under `[ScopeName.calc.calculation_name]`.

@@ -210,7 +210,7 @@ mission = true
 - **Multi-dimensional tables**: Use tuple keys for complex indexing
 - **TOML format**: How to specify table data in input files
 
-## Tutorial Complete!
+## Tutorial Complete
 
 Congratulations! You've learned the core concepts of veriq:
 
