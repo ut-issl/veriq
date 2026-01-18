@@ -1,4 +1,5 @@
 import importlib
+import importlib.metadata
 import json
 import logging
 import sys
@@ -25,6 +26,15 @@ from veriq._update import update_input_data
 
 from .discover import get_module_data_from_path
 
+
+def _get_version() -> str:
+    """Get the package version."""
+    try:
+        return importlib.metadata.version("veriq")
+    except importlib.metadata.PackageNotFoundError:
+        return "unknown"
+
+
 app = typer.Typer()
 
 logger = logging.getLogger(__name__)
@@ -34,10 +44,23 @@ err_console = Console(stderr=True)
 out_console = Console()
 
 
+def _version_callback(value: bool) -> None:  # noqa: FBT001
+    """Print version and exit."""
+    if value:
+        print(f"veriq {_get_version()}")  # noqa: T201
+        raise typer.Exit(code=0)
+
+
 @app.callback()
 def callback(
     *,
     verbose: bool = typer.Option(default=False, help="Enable verbose output"),
+    version: bool = typer.Option(  # noqa: ARG001
+        default=False,
+        help="Show version and exit",
+        callback=_version_callback,
+        is_eager=True,
+    ),
 ) -> None:
     """Veriq CLI."""
     log_level = logging.DEBUG if verbose else logging.INFO
