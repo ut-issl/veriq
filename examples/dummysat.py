@@ -207,16 +207,30 @@ def calculate_solar_panel_heat(
 
 
 # The following requirement definitions are in a different module in practice.
-with system.requirement("REQ-SYS-001", "Some system-level requirement."):
-    system.requirement("REQ-SYS-002", "Thermal requirement for solar panel temperature.")
-    system.requirement("REQ-SYS-003", "Power requirement for battery performance.")
+# This example demonstrates various requirement statuses in `veriq trace` output:
+#   - VERIFIED: Requirement has direct verifications, all passed
+#   - SATISFIED: No direct verifications, but all children pass
+#   - FAILED: Some verification or child failed
+#   - NOT_VERIFIED: Leaf requirement with no verifications (coverage gap)
+
+with system.requirement("REQ-SYS-001", "System-level requirement (status propagates from children)."):
+    # REQ-SYS-002: Will be FAILED because child REQ-TH-001 fails
+    system.requirement("REQ-SYS-002", "Thermal subsystem requirements.")
+    # REQ-SYS-003: Will be SATISFIED because all children pass (no direct verifications)
+    with power.requirement("REQ-SYS-003", "Power subsystem requirements."):
+        # REQ-PWR-001: Will be VERIFIED because verify_battery passes
+        power.requirement(
+            "REQ-PWR-001",
+            "Battery capacity must exceed minimum.",
+            verified_by=[verify_battery],
+        )
+    # REQ-SYS-004: Will be NOT_VERIFIED (no verifications attached)
+    system.requirement("REQ-SYS-004", "Future requirement (not yet verified).")
 
 with system.fetch_requirement("REQ-SYS-002"):
+    # REQ-TH-001: Will be FAILED because solar_panel_max_temperature fails
     thermal.requirement(
-        "REQ-TH-001-1",
-        "Sub-requirement for thermal model accuracy.",
-        verified_by=[
-            solar_panel_max_temperature,
-        ],
+        "REQ-TH-001",
+        "Solar panel temperature must be within limits.",
+        verified_by=[solar_panel_max_temperature],
     )
-    vq.depends(system.fetch_requirement("REQ-SYS-001"))
