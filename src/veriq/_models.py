@@ -420,7 +420,7 @@ class Calculation[T, **P]:
 
         # Extract assumed refs from function attribute (set by @vq.assume decorator)
         if hasattr(self.func, "__veriq_assumed_refs__"):
-            self.assumed_refs = self.func.__veriq_assumed_refs__
+            self.assumed_refs = self.func.__veriq_assumed_refs__  # ty: ignore[invalid-assignment]
         else:
             self.assumed_refs = []
 
@@ -468,7 +468,7 @@ class Verification[T, **P]:
 
         # Extract assumed refs from function attribute (set by @vq.assume decorator)
         if hasattr(self.func, "__veriq_assumed_refs__"):
-            self.assumed_refs = self.func.__veriq_assumed_refs__
+            self.assumed_refs = self.func.__veriq_assumed_refs__  # ty: ignore[invalid-assignment]
         else:
             self.assumed_refs = []
 
