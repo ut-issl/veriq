@@ -234,7 +234,7 @@ def calc(  # noqa: C901, PLR0912, PLR0915
     # Check verifications if requested
     exit_as_err = False
     if verify:
-        verification_results: list[tuple[str, bool, bool, bool]] = []
+        verification_results: list[tuple[str, bool, bool]] = []
 
         for ppath, value in result.values.items():
             if isinstance(ppath.path, VerificationPath):
@@ -246,11 +246,8 @@ def calc(  # noqa: C901, PLR0912, PLR0915
                 display_name = f"{scope_name}::?{verification_name}"
                 if ppath.path.parts:
                     display_name += str(ppath.path)[len(f"?{verification_name}") :]
-                is_valid = result.is_valid(ppath)
-                verification_results.append((display_name, value, verification.xfail, is_valid))
-                # Invalid verifications don't count as failures (they're already False in values)
-                # but we exit with error if a valid verification fails (accounting for xfail)
-                if is_valid and (not value) ^ verification.xfail:
+                verification_results.append((display_name, value, verification.xfail))
+                if (not value) ^ verification.xfail:
                     exit_as_err = True
 
         # Create a table for verification results
@@ -259,26 +256,20 @@ def calc(  # noqa: C901, PLR0912, PLR0915
             table.add_column("Verification", style="dim")
             table.add_column("Result")
 
-            for verif_name, passed, xfail, valid in verification_results:
+            for verif_name, passed, xfail in verification_results:
                 # Escape markup characters in verification name to display literally
                 escaped_verif_name = escape(verif_name)
-                if not valid:
-                    # Invalid verifications are shown differently
-                    status = "[yellow]? INVALID[/yellow]"
-                elif passed:
-                    status = "[green]✓ PASS[/green]"
-                else:
-                    status = "[red]✗ FAIL[/red]"
-                if valid and xfail and not passed:
+                status = "[green]✓ PASS[/green]" if passed else "[red]✗ FAIL[/red]"
+                if xfail and not passed:
                     status += " [yellow](expected failure)[/yellow]"
-                elif valid and xfail and passed:
+                elif xfail and passed:
                     status += " [red](unexpected pass)[/red]"
                 table.add_row(escaped_verif_name, status)
 
             err_console.print(Panel(table, title="[bold]Verification Results[/bold]", border_style="cyan"))
             err_console.print()
 
-        if any(valid and not passed for _, passed, _, valid in verification_results):
+        if any(not passed for _, passed, _ in verification_results):
             err_console.print("[red]✗ Some verifications failed[/red]")
 
     # Export results

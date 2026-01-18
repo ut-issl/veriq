@@ -31,7 +31,8 @@ class EvaluationResult:
     validity tracking, and any errors that occurred during evaluation.
 
     Attributes:
-        values: Mapping from node path to computed value.
+        values: Mapping from node path to computed value. Invalid verifications
+            are overridden to False in this dict.
         errors: List of (node_path, error_message) for any failed evaluations.
         validity: Mapping from node path to validity status. True means the node's
             assumptions hold, False means an assumed verification failed.
@@ -327,6 +328,7 @@ def evaluate_graph(  # noqa: C901
 
     # Check validity based on assumed verifications
     # Note: _check_validity modifies values in place for invalid verifications
+    # (invalid verifications are overridden to False)
     validity = _check_validity(graph_spec, values, eval_order)
 
     return EvaluationResult(values=values, errors=errors, validity=validity)
