@@ -6,6 +6,7 @@ import tomllib
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import tomli_w
+from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Vertical
@@ -335,6 +336,7 @@ class VeriqEditApp(App[None]):
 
         self._update_title()
 
+    @work
     async def action_quit(self) -> None:
         """Quit the application, prompting to save if needed."""
         if self._has_unsaved_changes():

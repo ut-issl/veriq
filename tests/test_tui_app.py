@@ -508,6 +508,195 @@ class TestSaveAndQuit:
         finally:
             toml_path.unlink()
 
+    async def test_quit_with_unsaved_changes_shows_dialog(self):
+        """Test that pressing 'q' with unsaved changes shows the confirmation dialog.
+
+        This test reproduces an issue where pressing 'q' after editing a cell
+        caused a NoActiveWorker crash because push_screen_wait was called
+        without the @work decorator.
+        """
+        project = create_test_project()
+        toml_data = {
+            "TestScope": {
+                "model": {
+                    "power": {"nominal": 10.0, "safe": 5.0},
+                    "matrix": {
+                        "nominal,initial": 1.0,
+                        "nominal,cruise": 2.0,
+                        "safe,initial": 3.0,
+                        "safe,cruise": 4.0,
+                    },
+                },
+            },
+        }
+        toml_path = create_toml_file(toml_data)
+
+        try:
+            app = VeriqEditApp(toml_path, project)
+            async with app.run_test(size=(120, 40)) as pilot:
+                # Modify a cell to create unsaved changes
+                editor = app.query_one("#editor-TestScope", TableEditor)
+                editor.update_cell_value("nominal", "Value", 99.0)
+                await pilot.pause()
+
+                assert app._has_unsaved_changes() is True
+
+                # Press 'q' to quit - this should show the confirmation dialog
+                # without crashing with NoActiveWorker error
+                await pilot.press("q")
+                # Give time for the worker to start and push the screen
+                await pilot.pause()
+                await pilot.pause()
+
+                # The ConfirmQuitScreen should be shown
+                assert isinstance(app.screen, ConfirmQuitScreen)
+
+        finally:
+            toml_path.unlink()
+
+    async def test_quit_with_unsaved_changes_save_and_quit(self):
+        """Test that 'Save & Quit' button works correctly."""
+        project = create_test_project()
+        toml_data = {
+            "TestScope": {
+                "model": {
+                    "power": {"nominal": 10.0, "safe": 5.0},
+                    "matrix": {
+                        "nominal,initial": 1.0,
+                        "nominal,cruise": 2.0,
+                        "safe,initial": 3.0,
+                        "safe,cruise": 4.0,
+                    },
+                },
+            },
+        }
+        toml_path = create_toml_file(toml_data)
+
+        try:
+            app = VeriqEditApp(toml_path, project)
+            async with app.run_test(size=(120, 40)) as pilot:
+                # Modify a cell
+                editor = app.query_one("#editor-TestScope", TableEditor)
+                editor.update_cell_value("nominal", "Value", 99.0)
+                await pilot.pause()
+
+                # Press 'q' to quit
+                await pilot.press("q")
+                # Give time for the worker to start and push the screen
+                await pilot.pause()
+                await pilot.pause()
+
+                # Click 'Save & Quit' button (query from the active screen)
+                save_button = app.screen.query_one("#save")
+                save_button.press()
+                await pilot.pause()
+
+                # Verify the file was saved
+                import tomllib
+
+                with toml_path.open("rb") as f:
+                    saved_data = tomllib.load(f)
+                assert saved_data["TestScope"]["model"]["power"]["nominal"] == 99.0
+
+        finally:
+            toml_path.unlink()
+
+    async def test_quit_with_unsaved_changes_quit_without_saving(self):
+        """Test that 'Quit without saving' button works correctly."""
+        project = create_test_project()
+        toml_data = {
+            "TestScope": {
+                "model": {
+                    "power": {"nominal": 10.0, "safe": 5.0},
+                    "matrix": {
+                        "nominal,initial": 1.0,
+                        "nominal,cruise": 2.0,
+                        "safe,initial": 3.0,
+                        "safe,cruise": 4.0,
+                    },
+                },
+            },
+        }
+        toml_path = create_toml_file(toml_data)
+
+        try:
+            app = VeriqEditApp(toml_path, project)
+            async with app.run_test(size=(120, 40)) as pilot:
+                # Modify a cell
+                editor = app.query_one("#editor-TestScope", TableEditor)
+                editor.update_cell_value("nominal", "Value", 99.0)
+                await pilot.pause()
+
+                # Press 'q' to quit
+                await pilot.press("q")
+                # Give time for the worker to start and push the screen
+                await pilot.pause()
+                await pilot.pause()
+
+                # Click 'Quit without saving' button (query from the active screen)
+                quit_button = app.screen.query_one("#quit")
+                quit_button.press()
+                await pilot.pause()
+
+                # Verify the file was NOT modified (still has original value)
+                import tomllib
+
+                with toml_path.open("rb") as f:
+                    saved_data = tomllib.load(f)
+                assert saved_data["TestScope"]["model"]["power"]["nominal"] == 10.0
+
+        finally:
+            toml_path.unlink()
+
+    async def test_quit_with_unsaved_changes_cancel(self):
+        """Test that 'Cancel' button returns to the editor."""
+        project = create_test_project()
+        toml_data = {
+            "TestScope": {
+                "model": {
+                    "power": {"nominal": 10.0, "safe": 5.0},
+                    "matrix": {
+                        "nominal,initial": 1.0,
+                        "nominal,cruise": 2.0,
+                        "safe,initial": 3.0,
+                        "safe,cruise": 4.0,
+                    },
+                },
+            },
+        }
+        toml_path = create_toml_file(toml_data)
+
+        try:
+            app = VeriqEditApp(toml_path, project)
+            async with app.run_test(size=(120, 40)) as pilot:
+                # Modify a cell
+                editor = app.query_one("#editor-TestScope", TableEditor)
+                editor.update_cell_value("nominal", "Value", 99.0)
+                await pilot.pause()
+
+                # Press 'q' to quit
+                await pilot.press("q")
+                # Give time for the worker to start and push the screen
+                await pilot.pause()
+                await pilot.pause()
+
+                # Confirm the dialog is shown
+                assert isinstance(app.screen, ConfirmQuitScreen)
+
+                # Click 'Cancel' button (query from the active screen)
+                cancel_button = app.screen.query_one("#cancel")
+                cancel_button.press()
+                await pilot.pause()
+
+                # Should return to the main screen (not ConfirmQuitScreen)
+                assert not isinstance(app.screen, ConfirmQuitScreen)
+
+                # Unsaved changes should still be there
+                assert app._has_unsaved_changes() is True
+
+        finally:
+            toml_path.unlink()
+
 
 class TestTableEditor:
     """Tests for TableEditor widget."""
