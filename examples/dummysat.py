@@ -191,7 +191,7 @@ def solar_panel_max_temperature(
 
 
 @power.calculation()
-@vq.assume(solar_panel_max_temperature)
+@vq.assume(vq.Ref("?solar_panel_max_temperature"))
 def calculate_solar_panel_heat(
     solar_panel: Annotated[SolarPanelModel, vq.Ref("$.design.solar_panel")],
     config_file: Annotated[vq.FileRef, vq.Ref("$.design.config_file")],

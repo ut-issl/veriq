@@ -228,7 +228,7 @@ def calc(  # noqa: C901, PLR0912, PLR0915
 
     # Evaluate the project
     err_console.print("[cyan]Evaluating project...[/cyan]")
-    results = evaluate_project(project, model_data)
+    result = evaluate_project(project, model_data)
     err_console.print()
 
     # Check verifications if requested
@@ -236,7 +236,7 @@ def calc(  # noqa: C901, PLR0912, PLR0915
     if verify:
         verification_results: list[tuple[str, bool, bool]] = []
 
-        for ppath, value in results.items():
+        for ppath, value in result.values.items():
             if isinstance(ppath.path, VerificationPath):
                 verification_name = ppath.path.verification_name
                 scope_name = ppath.scope
@@ -274,7 +274,7 @@ def calc(  # noqa: C901, PLR0912, PLR0915
 
     # Export results
     err_console.print(f"[cyan]Exporting results to:[/cyan] {output}")
-    export_to_toml(project, model_data, results, output)
+    export_to_toml(project, model_data, result.values, output)
 
     err_console.print()
     err_console.print("[green]✓ Calculation complete[/green]")

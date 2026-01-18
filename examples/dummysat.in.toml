@@ -17,7 +17,7 @@ min_capacity = 50.0
 [Power.model.design.solar_panel]
 area = 2.0
 efficiency = 0.3
-max_temperature = 85.0
+max_temperature = 45.0
 thermal_coefficient = 0.5
 
 [Power.model.design.power_generation]

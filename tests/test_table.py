@@ -61,7 +61,7 @@ def test_table_as_calc_output() -> None:
 
     # Check that the calculation was evaluated correctly
     # Get the whole Table output
-    calc_output = result[
+    calc_output = result.values[
         ProjectPath(
             scope="Test Scope",
             path=CalcPath(root="@output_table", parts=()),
@@ -123,7 +123,7 @@ def test_table_as_calc_output_with_calc_input() -> None:
 
     # Check that the calculation was evaluated correctly
     # Get the whole Table output
-    calc_output = result[
+    calc_output = result.values[
         ProjectPath(
             scope="Test Scope",
             path=CalcPath(root="@output_table", parts=()),
@@ -178,7 +178,7 @@ def test_table_with_tuple_index_as_calc_output() -> None:
 
     # Check that the calculation was evaluated correctly
     # Get the whole Table output
-    calc_output = result[
+    calc_output = result.values[
         ProjectPath(
             scope="Test Scope",
             path=CalcPath(root="@output_table", parts=()),
@@ -249,7 +249,7 @@ def test_table_with_tuple_index_as_calc_output_with_calc_input() -> None:
 
     # Check that the calculation was evaluated correctly
     # Get the whole Table output
-    calc_output = result[
+    calc_output = result.values[
         ProjectPath(
             scope="Test Scope",
             path=CalcPath(root="@output_table", parts=()),
@@ -337,7 +337,7 @@ def test_table_with_triple_tuple_index() -> None:
     result = evaluate_project(project, model_data)
 
     # Check that the calculation was evaluated correctly
-    calc_output = result[
+    calc_output = result.values[
         ProjectPath(
             scope="Test Scope",
             path=CalcPath(root="@output_table", parts=()),

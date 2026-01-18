@@ -408,11 +408,11 @@ def test_evaluate_graph_matches_existing_evaluation() -> None:
         scope="TestScope",
         path=CalcPath(root="@sum_xy", parts=()),
     )
-    assert new_result.values[calc_path] == old_result[calc_path]
+    assert new_result.values[calc_path] == old_result.values[calc_path]
 
     # Compare results for verification
     verif_path = ProjectPath(
         scope="TestScope",
         path=VerificationPath(root="?sum_positive", parts=()),
     )
-    assert new_result.values[verif_path] == old_result[verif_path]
+    assert new_result.values[verif_path] == old_result.values[verif_path]
