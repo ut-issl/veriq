@@ -274,6 +274,8 @@ veriq edit PROJECT_PATH -i INPUT [OPTIONS]
 
 Opens a spreadsheet-like interface for editing Table fields in the input file. Supports 2D and 3D tables with dimension slicing.
 
+![veriq edit TUI](https://github.com/user-attachments/assets/5218825e-9046-44fa-8f98-e67250872030)
+
 **Arguments:**
 
 | Argument | Description |

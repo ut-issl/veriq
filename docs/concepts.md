@@ -210,6 +210,71 @@ def verify_margin(
     return vq.Table({mode: margin[mode] > 0 for mode in Mode})
 ```
 
+## External Data (FileRef)
+
+**FileRef** allows you to reference external files in your models with automatic checksum tracking for reproducibility:
+
+```python
+from veriq import FileRef
+
+class DataModel(BaseModel):
+    config_file: FileRef
+    calibration_data: FileRef
+```
+
+### Why Use FileRef?
+
+- **Reproducibility** - Checksums ensure the same file content is used across runs
+- **Change Detection** - veriq warns when referenced files change
+- **Clean Separation** - Keep large data files (CSV, binary) separate from TOML input
+
+### Using FileRef in TOML
+
+```toml
+[Scope.model.config_file]
+path = "data/config.json"
+checksum = "sha256:abc123..."  # Added by veriq after first run
+
+[Scope.model.calibration_data]
+path = "calibration/sensor_data.csv"
+```
+
+On the first run, veriq computes and stores the checksum. On subsequent runs, it validates that the file hasn't changed.
+
+### Accessing File Content in Calculations
+
+In calculations, you receive the `FileRef` object and access data via its `path` attribute:
+
+```python
+@scope.calculation()
+def process_config(
+    config_file: Annotated[FileRef, vq.Ref("$.config_file")],
+) -> ConfigResult:
+    # Read file content via path
+    content = config_file.path.read_text()
+    data = json.loads(content)
+    return ConfigResult(...)
+```
+
+### Relative Paths
+
+Relative paths in TOML are resolved relative to the TOML file's directory:
+
+```
+project/
+├── input.toml           # Contains path = "data/config.json"
+└── data/
+    └── config.json      # This file is referenced
+```
+
+### Checksum Validation
+
+| Scenario | Behavior |
+|----------|----------|
+| First run (no checksum) | Computes and stores checksum |
+| Checksum matches | Proceeds normally |
+| Checksum mismatch | Warns user that file changed |
+
 ## Cross-Scope Dependencies
 
 When a calculation or verification references another scope, declare it with `imports`:
