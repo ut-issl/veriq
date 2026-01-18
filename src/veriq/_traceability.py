@@ -7,6 +7,7 @@ all logic is pure functions operating on immutable data structures.
 
 from __future__ import annotations
 
+import itertools
 from dataclasses import dataclass
 from enum import Enum, StrEnum
 from typing import TYPE_CHECKING, Any, get_args, get_origin
@@ -299,8 +300,7 @@ def _expand_verification_names(verification: Verification[Any, ...]) -> list[str
 
     # Handle Enum key types
     if isinstance(key_type, type) and issubclass(key_type, Enum):
-        for member in key_type:
-            names.append(f"{base_name}[{member.value}]")
+        names.extend(f"{base_name}[{member.value}]" for member in key_type)
     else:
         # Handle tuple of enums (multi-dimensional Table)
         origin = get_origin(key_type)
@@ -308,8 +308,6 @@ def _expand_verification_names(verification: Verification[Any, ...]) -> list[str
             enum_types = get_args(key_type)
             if all(isinstance(t, type) and issubclass(t, Enum) for t in enum_types):
                 # Generate all combinations
-                import itertools
-
                 all_values = [list(enum_type) for enum_type in enum_types]
                 for combo in itertools.product(*all_values):
                     key_str = ",".join(m.value for m in combo)

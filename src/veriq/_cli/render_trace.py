@@ -180,10 +180,11 @@ def render_traceability_table(
         first_prefix, cont_prefix = _build_tree_prefixes(entries, i)
 
         # Get verification content (may be multi-line)
-        if has_evaluation:
-            verif_content = _format_verification_results(entry)
-        else:
-            verif_content = _format_linked_verifications(entry)
+        verif_content = (
+            _format_verification_results(entry)
+            if has_evaluation
+            else _format_linked_verifications(entry)
+        )
 
         # Count lines in verification content to build matching requirement column
         verif_lines = verif_content.count("\n") + 1
