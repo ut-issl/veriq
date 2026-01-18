@@ -93,7 +93,7 @@ def _update_container(
         if key in container:
             existing = container[key]
             # If both are dict-like, recurse
-            if isinstance(existing, (Table, dict)) and isinstance(value, dict):
+            if isinstance(existing, Table) and isinstance(value, dict):
                 _update_container(existing, value)
             else:
                 # Replace the value
@@ -136,11 +136,15 @@ def set_nested_value(
         if key not in current:
             current[key] = tomlkit.table()
         next_val = current[key]
-        if not isinstance(next_val, (Table, TOMLDocument)):
+        if not isinstance(next_val, Table):
             # Overwrite non-table value with a table
             current[key] = tomlkit.table()
-            next_val = current[key]
-        current = next_val
+        # After creating/getting the table, get it again and assert type
+        table_val = current[key]
+        if not isinstance(table_val, Table):
+            msg = f"Expected Table at key {key}, got {type(table_val)}"
+            raise TypeError(msg)
+        current = table_val
 
     # Set the final value
     final_key = keys[-1]
@@ -202,7 +206,7 @@ def _merge_recursive(
             if isinstance(new_value, dict) and isinstance(existing_value, dict):
                 # Both are dicts, recurse
                 existing_container = container[key]
-                if isinstance(existing_container, (Table, dict)):
+                if isinstance(existing_container, Table):
                     _merge_recursive(
                         existing_container,
                         new_value,

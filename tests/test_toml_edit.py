@@ -1,6 +1,7 @@
 """Tests for TOML editing with comment preservation."""
 
-import tomlkit
+from typing import Any
+
 import pytest
 
 from veriq._toml_edit import (
@@ -499,7 +500,7 @@ c = 3
         ("hello", '"hello"'),
     ],
 )
-def test_value_types(value, expected_str):
+def test_value_types(value: Any, expected_str: str) -> None:
     """Various value types should be serialized correctly."""
     doc = parse_toml_preserving("")
     update_toml_document(doc, {"key": value})
