@@ -111,6 +111,38 @@ def get_scope_summaries(project: Project) -> list[ScopeSummary]:
     ]
 
 
+def _filter_non_leaf_table_paths(spec: GraphSpec) -> set[ProjectPath]:
+    """Find all non-leaf Table paths that should be excluded from listings.
+
+    Table types are stored both as the whole table and as individual items.
+    This function identifies the non-leaf paths (the whole table entries)
+    that have children (individual items).
+
+    Args:
+        spec: The GraphSpec to analyze.
+
+    Returns:
+        Set of ProjectPath that are non-leaf Table paths.
+
+    """
+    all_paths = {str(p) for p in spec.nodes}
+    non_leaf_paths: set[ProjectPath] = set()
+
+    for path in spec.nodes:
+        path_str = str(path)
+        # Check if any other path starts with this one (making this a non-leaf)
+        for other_str in all_paths:
+            if other_str != path_str and other_str.startswith(path_str):
+                next_char_pos = len(path_str)
+                if next_char_pos < len(other_str):
+                    next_char = other_str[next_char_pos]
+                    if next_char in (".", "["):
+                        non_leaf_paths.add(path)
+                        break
+
+    return non_leaf_paths
+
+
 def list_nodes(
     project: Project,
     *,
@@ -133,7 +165,10 @@ def list_nodes(
     spec = build_graph_spec(project)
     graph = _build_dependency_graph(spec)
 
-    nodes = list(spec.nodes.values())
+    # Filter out non-leaf Table paths (e.g., $.power_consumption when
+    # $.power_consumption[mission] etc. exist)
+    non_leaf_table_paths = _filter_non_leaf_table_paths(spec)
+    nodes = [n for n in spec.nodes.values() if n.id not in non_leaf_table_paths]
 
     # Filter by kind
     if kinds:
