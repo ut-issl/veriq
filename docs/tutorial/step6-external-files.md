@@ -25,9 +25,12 @@ Embedding this data directly in TOML would be impractical. `FileRef` lets you:
 Use `vq.FileRef` as a field type in your Pydantic model:
 
 ```python title="examples/tutorial/step6.py"
-import veriq as vq
-from pydantic import BaseModel
+import csv
 from typing import Annotated
+
+from pydantic import BaseModel
+
+import veriq as vq
 
 project = vq.Project("MySatellite")
 power = vq.Scope("Power")
@@ -55,15 +58,10 @@ def analyze_power_profile(
     battery_capacity: Annotated[float, vq.Ref("$.battery_capacity")],
 ) -> PowerAnalysisOutput:
     """Analyze power profile from external CSV file."""
-    # Read file content via the path attribute
-    content = power_profile.path.read_text()
-
-    # Parse CSV (time, power pairs)
-    lines = content.strip().split("\n")
-    powers = []
-    for line in lines[1:]:  # Skip header
-        _time, power = line.split(",")
-        powers.append(float(power))
+    # Read CSV file via the path attribute
+    with power_profile.path.open() as f:
+        reader = csv.DictReader(f)
+        powers = [float(row["power"]) for row in reader]
 
     peak = max(powers)
     average = sum(powers) / len(powers)
