@@ -236,7 +236,8 @@ def calc(  # noqa: C901, PLR0912, PLR0915
     # Check verifications if requested
     exit_as_err = False
     if verify:
-        verification_results: list[tuple[str, bool, bool]] = []
+        # Group verification results by scope
+        grouped_results: dict[str, list[tuple[str, bool, bool]]] = {}
 
         for ppath, value in result.values.items():
             if isinstance(ppath.path, VerificationPath):
@@ -244,34 +245,74 @@ def calc(  # noqa: C901, PLR0912, PLR0915
                 scope_name = ppath.scope
                 scope = project.scopes[scope_name]
                 verification = scope.verifications[verification_name]
-                # Build display name including path parts for Table[K, bool] verifications
-                display_name = f"{scope_name}::?{verification_name}"
+                # Build display name WITHOUT scope prefix
+                display_name = f"?{verification_name}"
                 if ppath.path.parts:
                     display_name += str(ppath.path)[len(f"?{verification_name}") :]
-                verification_results.append((display_name, value, verification.xfail))
+
+                if scope_name not in grouped_results:
+                    grouped_results[scope_name] = []
+                grouped_results[scope_name].append((display_name, value, verification.xfail))
+
                 if (not value) ^ verification.xfail:
                     exit_as_err = True
 
-        # Create a table for verification results
-        if verification_results:
-            table = Table(show_header=True, header_style="bold cyan", box=None)
-            table.add_column("Verification", style="dim")
+        # Create a table for verification results grouped by scope
+        if grouped_results:
+            table = Table(show_header=False, box=None)
+            table.add_column("Verification")
             table.add_column("Result")
 
-            for verif_name, passed, xfail in verification_results:
-                # Escape markup characters in verification name to display literally
-                escaped_verif_name = escape(verif_name)
-                status = "[green]✓ PASS[/green]" if passed else "[red]✗ FAIL[/red]"
-                if xfail and not passed:
-                    status += " [yellow](expected failure)[/yellow]"
-                elif xfail and passed:
-                    status += " [red](unexpected pass)[/red]"
-                table.add_row(escaped_verif_name, status)
+            total_passed = 0
+            total_count = 0
+            total_xfail_failed = 0
+
+            # Iterate scopes in project order for consistent display
+            for scope_name in project.scopes:
+                if scope_name not in grouped_results:
+                    continue
+
+                results = grouped_results[scope_name]
+
+                # Calculate per-scope statistics
+                scope_passed = sum(1 for _, passed, _ in results if passed)
+                scope_total = len(results)
+                scope_xfail_failed = sum(1 for _, passed, xfail in results if xfail and not passed)
+
+                total_passed += scope_passed
+                total_count += scope_total
+                total_xfail_failed += scope_xfail_failed
+
+                # Add scope header row
+                scope_header = f"[bold]{scope_name}[/bold] [dim]({scope_passed}/{scope_total} passed)[/dim]"
+                table.add_row(scope_header, "")
+
+                # Add verification rows with indentation
+                for verif_name, passed, xfail in results:
+                    escaped_verif_name = f"[dim]  {escape(verif_name)}[/dim]"
+                    status = "[green]✓ PASS[/green]" if passed else "[red]✗ FAIL[/red]"
+                    if xfail and not passed:
+                        status += " [yellow](expected failure)[/yellow]"
+                    elif xfail and passed:
+                        status += " [red](unexpected pass)[/red]"
+                    table.add_row(escaped_verif_name, status)
 
             err_console.print(Panel(table, title="[bold]Verification Results[/bold]", border_style="cyan"))
+
+            # Summary line
+            if total_xfail_failed > 0:
+                err_console.print(
+                    f"[dim]Summary: {total_passed}/{total_count} passed, "
+                    f"{total_xfail_failed} expected failure(s)[/dim]",
+                )
+            else:
+                err_console.print(f"[dim]Summary: {total_passed}/{total_count} passed[/dim]")
             err_console.print()
 
-        if any(not passed for _, passed, _ in verification_results):
+        has_failures = any(
+            not passed for results in grouped_results.values() for _, passed, _ in results
+        )
+        if has_failures:
             err_console.print("[red]✗ Some verifications failed[/red]")
 
     # Export results
