@@ -13,10 +13,15 @@ __all__ = [
     "Project",
     "Ref",
     "Requirement",
+    "RequirementStatus",
+    "RequirementTraceEntry",
     "Scope",
     "Table",
+    "TraceabilityReport",
+    "VerificationResult",
     "assume",
     "build_graph_spec",
+    "build_traceability_report",
     "depends",
     "evaluate_graph",
     "evaluate_project",
@@ -43,3 +48,10 @@ from ._ir import GraphSpec, NodeKind, NodeSpec, build_graph_spec
 from ._models import Project, Ref, Requirement, Scope, is_valid_verification_return_type
 from ._relations import depends
 from ._table import Table
+from ._traceability import (
+    RequirementStatus,
+    RequirementTraceEntry,
+    TraceabilityReport,
+    VerificationResult,
+    build_traceability_report,
+)

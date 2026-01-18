@@ -491,6 +491,7 @@ class Requirement(ScopedContext):
     decomposed_requirements: list[Requirement] = field(default_factory=list, repr=False)
     verified_by: list[Verification[Any, ...]] = field(default_factory=list, repr=False)
     depends_on: list[Requirement] = field(default_factory=list, repr=False)
+    xfail: bool = field(default=False, kw_only=True)
 
     def iter_requirements(self, *, depth: int | None = None, leaf_only: bool = False) -> Iterable[Requirement]:
         """Iterate over requirements under the current requirement."""
@@ -616,9 +617,11 @@ class Scope:
         /,
         description: str,
         verified_by: Iterable[Verification[Any, ...]] = (),
+        *,
+        xfail: bool = False,
     ) -> Requirement:
         """Create and add a requirement to the scope."""
-        requirement = Requirement(description=description, verified_by=list(verified_by), id=id_)
+        requirement = Requirement(description=description, verified_by=list(verified_by), id=id_, xfail=xfail)
         if id_ in self._requirements:
             msg = f"Requirement with ID '{id_}' already exists in scope '{self.name}'."
             raise KeyError(msg)
