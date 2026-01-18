@@ -383,8 +383,10 @@ def _build_entry(
         else:
             status = RequirementStatus.NOT_VERIFIED
 
-    # Get linked verification names
-    linked_verifications = tuple(verif.name for verif in requirement.verified_by)
+    # Get linked verification names in Scope::?verification_name format
+    linked_verifications = tuple(
+        f"{verif.default_scope_name}::?{verif.name}" for verif in requirement.verified_by
+    )
 
     return RequirementTraceEntry(
         requirement_id=requirement.id,
