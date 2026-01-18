@@ -73,7 +73,8 @@ def _format_verification_results(entry: RequirementTraceEntry) -> str:
 
     parts = []
     for result in entry.verification_results:
-        name = result.verification_name
+        # Format as Scope::?verification_name
+        name = f"{result.scope_name}::?{result.verification_name}"
         if result.table_key is not None:
             if isinstance(result.table_key, tuple):
                 key_str = ",".join(str(k) for k in result.table_key)
