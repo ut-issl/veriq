@@ -920,7 +920,7 @@ def show(
     """View detailed information about a specific node."""
     from veriq._path import parse_project_path  # noqa: PLC0415
 
-    from .graph_query import get_available_scopes, get_node_detail  # noqa: PLC0415
+    from .graph_query import NonLeafPathError, get_available_scopes, get_node_detail  # noqa: PLC0415
     from .graph_render import render_node_detail  # noqa: PLC0415
 
     # Load the project
@@ -947,6 +947,17 @@ def show(
     # Get node detail
     try:
         detail = get_node_detail(project, ppath)
+    except NonLeafPathError as e:
+        from veriq._path import format_for_display  # noqa: PLC0415
+
+        err_console.print(f"[red]Error: '{node_path}' is not a leaf node[/red]")
+        err_console.print()
+        err_console.print(f"[cyan]This path has {len(e.leaf_paths)} leaf output(s):[/cyan]")
+        for leaf_path in e.leaf_paths:
+            err_console.print(f"  {format_for_display(leaf_path, escape_markup=True)}")
+        err_console.print()
+        err_console.print("[dim]Use one of the leaf paths above with 'veriq show'[/dim]")
+        raise typer.Exit(code=1) from None
     except KeyError:
         err_console.print(f"[red]Error: Node not found: {node_path}[/red]")
         err_console.print("[dim]Use 'veriq list' to see available nodes[/dim]")

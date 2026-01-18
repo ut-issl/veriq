@@ -43,7 +43,10 @@ class Path:
                 case AttributePart(name):
                     result += f".{name}"
                 case ItemPart(key):
-                    result += f"[{key}]"
+                    if isinstance(key, tuple):
+                        result += f"[{','.join(key)}]"
+                    else:
+                        result += f"[{key}]"
                 case _:
                     msg = f"Unknown part type: {type(part)}"
                     raise TypeError(msg)
@@ -308,6 +311,59 @@ def get_value_by_parts(data: BaseModel, parts: tuple[PartBase, ...]) -> Any:
                 msg = f"Unknown part type: {type(part)}"
                 raise TypeError(msg)
     return current
+
+
+def format_for_display(value: object, *, escape_markup: bool = False) -> str:
+    """Format a value for user-facing display.
+
+    This is the centralized display function for CLI output. It handles:
+    - ProjectPath: Returns string representation (e.g., "Power::$.design")
+    - type (class): Returns the class name (e.g., "SolarPanelResult")
+    - list/frozenset: Recursively formats items as "[item1, item2]"
+    - Other values: Returns str(value)
+
+    Args:
+        value: The value to format for display.
+        escape_markup: If True, escape Rich markup characters (brackets).
+            Use this when the output will be printed with Rich console.
+
+    Returns:
+        A human-readable string representation.
+
+    """
+    result: str
+
+    # Handle type (class) objects
+    if isinstance(value, type):
+        result = value.__name__ if hasattr(value, "__name__") else str(value)
+
+    # Handle ProjectPath
+    elif isinstance(value, ProjectPath):
+        result = str(value)
+
+    # Handle lists
+    elif isinstance(value, list):
+        if not value:
+            result = "[]"
+        else:
+            formatted_items = [format_for_display(item, escape_markup=escape_markup) for item in value]
+            result = f"[{', '.join(formatted_items)}]"
+
+    # Handle frozenset (convert to sorted list for consistent output)
+    elif isinstance(value, frozenset):
+        result = format_for_display(sorted(value, key=str), escape_markup=escape_markup)
+
+    # Default: use str() for simple values like bool, str, int
+    else:
+        result = str(value)
+
+    # Escape Rich markup if requested
+    if escape_markup and "[" in result:
+        from rich.markup import escape  # noqa: PLC0415
+
+        result = escape(result)
+
+    return result
 
 
 def hydrate_value_by_leaf_values[T](model: type[T], leaf_values: Mapping[tuple[PartBase, ...], Any]) -> T:  # noqa: PLR0912, C901, PLR0915

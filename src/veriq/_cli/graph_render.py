@@ -6,6 +6,7 @@ from rich.table import Table
 from rich.tree import Tree
 
 from veriq._ir import NodeKind
+from veriq._path import format_for_display
 
 if TYPE_CHECKING:
     from rich.console import Console
@@ -56,7 +57,7 @@ def render_node_table(nodes: list[NodeInfo], console: Console) -> None:
     table.add_column("Deps", justify="right")
 
     for node in nodes:
-        path_str = str(node.path)
+        path_str = format_for_display(node.path, escape_markup=True)
         # Truncate long paths
         if len(path_str) > 60:
             path_str = path_str[:57] + "..."
@@ -88,7 +89,7 @@ def render_node_detail(detail: NodeDetail, console: Console) -> None:
     console.print(f"[cyan]Scope:[/cyan]        {detail.path.scope}")
 
     # Get type name
-    type_name = _get_type_name(detail.output_type)
+    type_name = format_for_display(detail.output_type, escape_markup=True)
     console.print(f"[cyan]Output Type:[/cyan]  {type_name}")
     console.print()
 
@@ -96,7 +97,7 @@ def render_node_detail(detail: NodeDetail, console: Console) -> None:
     if detail.direct_dependencies:
         console.print(f"[cyan]Dependencies ({len(detail.direct_dependencies)} direct):[/cyan]")
         for dep in sorted(detail.direct_dependencies, key=str):
-            console.print(f"  {dep}")
+            console.print(f"  {format_for_display(dep, escape_markup=True)}")
         console.print()
     else:
         console.print("[cyan]Dependencies:[/cyan] [dim]None[/dim]")
@@ -106,7 +107,7 @@ def render_node_detail(detail: NodeDetail, console: Console) -> None:
     if detail.direct_dependents:
         console.print(f"[cyan]Dependents ({len(detail.direct_dependents)} direct):[/cyan]")
         for dep in sorted(detail.direct_dependents, key=str):
-            console.print(f"  {dep}")
+            console.print(f"  {format_for_display(dep, escape_markup=True)}")
         console.print()
     else:
         console.print("[cyan]Dependents:[/cyan] [dim]None[/dim]")
@@ -116,7 +117,8 @@ def render_node_detail(detail: NodeDetail, console: Console) -> None:
     if detail.metadata:
         console.print("[cyan]Metadata:[/cyan]")
         for key, value in detail.metadata.items():
-            console.print(f"  {key}: {value}")
+            formatted_value = format_for_display(value, escape_markup=True)
+            console.print(f"  {key}: {formatted_value}")
 
 
 def render_tree(tree_node: TreeNode, console: Console) -> None:
@@ -127,7 +129,8 @@ def render_tree(tree_node: TreeNode, console: Console) -> None:
         console: Rich Console to output to.
 
     """
-    rich_tree = Tree(f"[bold]{tree_node.path}[/bold]")
+    root_path = format_for_display(tree_node.path, escape_markup=True)
+    rich_tree = Tree(f"[bold]{root_path}[/bold]")
     _add_tree_children(rich_tree, tree_node.children)
     console.print(rich_tree)
 
@@ -141,7 +144,8 @@ def _add_tree_children(parent: Tree, children: list[TreeNode]) -> None:
 
     """
     for child in children:
-        child_tree = parent.add(str(child.path))
+        child_path = format_for_display(child.path, escape_markup=True)
+        child_tree = parent.add(child_path)
         _add_tree_children(child_tree, child.children)
 
 
@@ -162,18 +166,3 @@ def _get_kind_style(kind: NodeKind) -> str:
             return "green"
         case NodeKind.VERIFICATION:
             return "yellow"
-
-
-def _get_type_name(t: type) -> str:
-    """Get a human-readable type name.
-
-    Args:
-        t: The type.
-
-    Returns:
-        Type name string.
-
-    """
-    if hasattr(t, "__name__"):
-        return t.__name__
-    return str(t)

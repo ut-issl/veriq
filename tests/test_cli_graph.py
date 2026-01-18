@@ -8,6 +8,7 @@ from pydantic import BaseModel
 import veriq as vq
 from veriq._cli.graph_query import (
     NodeInfo,
+    NonLeafPathError,
     ScopeSummary,
     get_available_scopes,
     get_dependency_tree,
@@ -207,6 +208,18 @@ class TestGetNodeDetail:
         path = ProjectPath("ScopeA", ModelPath.parse("$.nonexistent"))
         with pytest.raises(KeyError, match="Node not found"):
             get_node_detail(simple_project, path)
+
+    def test_non_leaf_path_raises_error(self, simple_project: vq.Project) -> None:
+        # $.value exists but $ (root) is a non-leaf path with multiple outputs
+        path = ProjectPath("ScopeA", ModelPath.parse("$"))
+        with pytest.raises(NonLeafPathError) as exc_info:
+            get_node_detail(simple_project, path)
+
+        # Should contain the leaf paths
+        assert len(exc_info.value.leaf_paths) == 2  # value and factor
+        leaf_strs = [str(p) for p in exc_info.value.leaf_paths]
+        assert "ScopeA::$.value" in leaf_strs
+        assert "ScopeA::$.factor" in leaf_strs
 
 
 # --- get_dependency_tree tests ---

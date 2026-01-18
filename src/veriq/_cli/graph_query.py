@@ -15,6 +15,15 @@ if TYPE_CHECKING:
     from veriq._path import ProjectPath
 
 
+class NonLeafPathError(Exception):
+    """Raised when a path refers to a non-leaf node with multiple leaf outputs."""
+
+    def __init__(self, path: ProjectPath, leaf_paths: list[ProjectPath]) -> None:
+        self.path = path
+        self.leaf_paths = leaf_paths
+        super().__init__(f"Path '{path}' is a non-leaf node with {len(leaf_paths)} outputs")
+
+
 @dataclass(frozen=True, slots=True)
 class ScopeSummary:
     """Summary of a scope's contents."""
@@ -164,12 +173,17 @@ def get_node_detail(project: Project, path: ProjectPath) -> NodeDetail:
 
     Raises:
         KeyError: If the node is not found.
+        NonLeafPathError: If the path refers to a non-leaf node with multiple outputs.
 
     """
     spec = build_graph_spec(project)
     graph = _build_dependency_graph(spec)
 
     if path not in spec:
+        # Check if this is a non-leaf path (prefix of leaf paths)
+        leaf_paths = _find_matching_leaf_paths(spec, path)
+        if leaf_paths:
+            raise NonLeafPathError(path, leaf_paths)
         msg = f"Node not found: {path}"
         raise KeyError(msg)
 
@@ -183,6 +197,54 @@ def get_node_detail(project: Project, path: ProjectPath) -> NodeDetail:
         direct_dependents=graph.successors(path),
         metadata=dict(node.metadata),
     )
+
+
+def _find_matching_leaf_paths(spec: GraphSpec, prefix_path: ProjectPath) -> list[ProjectPath]:
+    """Find all leaf paths that start with the given prefix path.
+
+    Only returns true leaf paths (those that don't have any children).
+    This filters out intermediate Table paths that are also stored in the graph.
+
+    Args:
+        spec: The GraphSpec to search.
+        prefix_path: The prefix path to match.
+
+    Returns:
+        List of matching leaf paths, sorted by string representation.
+
+    """
+    prefix_str = str(prefix_path)
+    matching: list[ProjectPath] = []
+
+    for node_path in spec.nodes:
+        node_str = str(node_path)
+        # Check if the node path starts with the prefix and has additional parts
+        if node_str.startswith(prefix_str) and len(node_str) > len(prefix_str):
+            # Ensure it's actually a sub-path (not just a string prefix match)
+            next_char = node_str[len(prefix_str)]
+            if next_char in (".", "["):
+                matching.append(node_path)
+
+    # Filter out non-leaf paths (paths that are prefixes of other paths)
+    # This handles the case where Table paths are stored both as the whole table
+    # and as individual items (e.g., $.power_consumption and $.power_consumption[mission])
+    leaf_paths: list[ProjectPath] = []
+    matching_strs = {str(p) for p in matching}
+
+    for path in matching:
+        path_str = str(path)
+        is_leaf = True
+        # Check if any other path starts with this one (making this a non-leaf)
+        for other_str in matching_strs:
+            if other_str != path_str and other_str.startswith(path_str):
+                next_char = other_str[len(path_str)]
+                if next_char in (".", "["):
+                    is_leaf = False
+                    break
+        if is_leaf:
+            leaf_paths.append(path)
+
+    return sorted(leaf_paths, key=str)
 
 
 def get_dependency_tree(
