@@ -8,7 +8,7 @@ all logic is pure functions operating on immutable data structures.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum, StrEnum
 from typing import TYPE_CHECKING, Any, get_args, get_origin
 
 from ._path import ItemPart, ProjectPath, VerificationPath
@@ -258,6 +258,66 @@ def extract_verification_results(
     return results
 
 
+def _get_table_key_type(output_type: type) -> type | None:
+    """Extract the key type from a Table[K, bool] type annotation.
+
+    Returns None if not a Table type.
+    """
+    origin = get_origin(output_type)
+    is_table = origin is Table or (isinstance(origin, type) and issubclass(origin, Table))
+    if not is_table:
+        return None
+
+    type_args = get_args(output_type)
+    if len(type_args) >= 1:
+        return type_args[0]
+    return None
+
+
+def _expand_verification_names(verification: Verification[Any, ...]) -> list[str]:
+    """Expand a verification into all its names, including Table keys.
+
+    For a simple bool verification, returns a single name.
+    For a Table[K, bool] verification, returns names for the base and each key.
+
+    Args:
+        verification: The verification to expand.
+
+    Returns:
+        List of verification names in Scope::?name[key] format.
+
+    """
+    base_name = f"{verification.default_scope_name}::?{verification.name}"
+    key_type = _get_table_key_type(verification.output_type)
+
+    if key_type is None:
+        # Simple bool verification
+        return [base_name]
+
+    # Table[K, bool] verification - expand to include base and all keys
+    names = [base_name]
+
+    # Handle Enum key types
+    if isinstance(key_type, type) and issubclass(key_type, Enum):
+        for member in key_type:
+            names.append(f"{base_name}[{member.value}]")
+    else:
+        # Handle tuple of enums (multi-dimensional Table)
+        origin = get_origin(key_type)
+        if origin is tuple:
+            enum_types = get_args(key_type)
+            if all(isinstance(t, type) and issubclass(t, Enum) for t in enum_types):
+                # Generate all combinations
+                import itertools
+
+                all_values = [list(enum_type) for enum_type in enum_types]
+                for combo in itertools.product(*all_values):
+                    key_str = ",".join(m.value for m in combo)
+                    names.append(f"{base_name}[{key_str}]")
+
+    return names
+
+
 def detect_circular_dependencies(
     requirements: dict[str, tuple[str, Requirement]],
 ) -> list[tuple[str, ...]]:
@@ -385,9 +445,11 @@ def _build_entry(
             status = RequirementStatus.NOT_VERIFIED
 
     # Get linked verification names in Scope::?verification_name format
-    linked_verifications = tuple(
-        f"{verif.default_scope_name}::?{verif.name}" for verif in requirement.verified_by
-    )
+    # Expand Table verifications to include all keys
+    linked_verifications_list: list[str] = []
+    for verif in requirement.verified_by:
+        linked_verifications_list.extend(_expand_verification_names(verif))
+    linked_verifications = tuple(linked_verifications_list)
 
     return RequirementTraceEntry(
         requirement_id=requirement.id,
