@@ -119,8 +119,8 @@ value = 42.0
     model_data = load_model_data_from_toml(project, toml_file)
 
     assert "TestScope" in model_data
-    assert model_data["TestScope"].mode == OperationMode.SAFE
-    assert model_data["TestScope"].value == 42.0
+    assert model_data["TestScope"].mode == OperationMode.SAFE  # ty: ignore[unresolved-attribute]
+    assert model_data["TestScope"].value == 42.0  # ty: ignore[unresolved-attribute]
 
 
 # =============================================================================
@@ -200,8 +200,8 @@ value = 42.0
     model_data = load_model_data_from_toml(project, toml_file)
 
     assert "TestScope" in model_data
-    assert model_data["TestScope"].priority == Priority.HIGH
-    assert model_data["TestScope"].value == 42.0
+    assert model_data["TestScope"].priority == Priority.HIGH  # ty: ignore[unresolved-attribute]
+    assert model_data["TestScope"].value == 42.0  # ty: ignore[unresolved-attribute]
 
 
 # =============================================================================
@@ -332,8 +332,8 @@ value = 42.0
     model_data = load_model_data_from_toml(project, toml_file)
 
     assert "TestScope" in model_data
-    assert model_data["TestScope"].timestamp == datetime(2025, 6, 15, 12, 30, 45, tzinfo=UTC)
-    assert model_data["TestScope"].value == 42.0
+    assert model_data["TestScope"].timestamp == datetime(2025, 6, 15, 12, 30, 45, tzinfo=UTC)  # ty: ignore[unresolved-attribute]
+    assert model_data["TestScope"].value == 42.0  # ty: ignore[unresolved-attribute]
 
 
 def test_date_field_toml_roundtrip(tmp_path: Path) -> None:
@@ -358,8 +358,8 @@ value = 42.0
     model_data = load_model_data_from_toml(project, toml_file)
 
     assert "TestScope" in model_data
-    assert model_data["TestScope"].launch_date == date(2025, 12, 25)
-    assert model_data["TestScope"].value == 42.0
+    assert model_data["TestScope"].launch_date == date(2025, 12, 25)  # ty: ignore[unresolved-attribute]
+    assert model_data["TestScope"].value == 42.0  # ty: ignore[unresolved-attribute]
 
 
 def test_time_field_toml_roundtrip(tmp_path: Path) -> None:
@@ -384,8 +384,8 @@ value = 42.0
     model_data = load_model_data_from_toml(project, toml_file)
 
     assert "TestScope" in model_data
-    assert model_data["TestScope"].event_time == time(14, 30, 0)
-    assert model_data["TestScope"].value == 42.0
+    assert model_data["TestScope"].event_time == time(14, 30, 0)  # ty: ignore[unresolved-attribute]
+    assert model_data["TestScope"].value == 42.0  # ty: ignore[unresolved-attribute]
 
 
 # =============================================================================
@@ -493,8 +493,8 @@ optional_value = 2.0
     model_data = load_model_data_from_toml(project, toml_file)
 
     assert "TestScope" in model_data
-    assert model_data["TestScope"].required_value == 1.0
-    assert model_data["TestScope"].optional_value == 2.0
+    assert model_data["TestScope"].required_value == 1.0  # ty: ignore[unresolved-attribute]
+    assert model_data["TestScope"].optional_value == 2.0  # ty: ignore[unresolved-attribute]
 
 
 def test_optional_field_toml_omitted(tmp_path: Path) -> None:
@@ -518,8 +518,8 @@ required_value = 1.0
     model_data = load_model_data_from_toml(project, toml_file)
 
     assert "TestScope" in model_data
-    assert model_data["TestScope"].required_value == 1.0
-    assert model_data["TestScope"].optional_value is None
+    assert model_data["TestScope"].required_value == 1.0  # ty: ignore[unresolved-attribute]
+    assert model_data["TestScope"].optional_value is None  # ty: ignore[unresolved-attribute]
 
 
 def test_optional_field_with_non_none_default() -> None:

@@ -18,7 +18,7 @@ class TestAssumeDecorator:
             return 42.0
 
         assert hasattr(some_function, "__veriq_assumed_refs__")
-        assert ref in some_function.__veriq_assumed_refs__
+        assert ref in some_function.__veriq_assumed_refs__  # ty: ignore[unsupported-operator]
 
     def test_assume_multiple_refs(self):
         """Test that @assume can attach multiple refs."""
@@ -31,8 +31,8 @@ class TestAssumeDecorator:
             return 42.0
 
         assert hasattr(some_function, "__veriq_assumed_refs__")
-        assert ref1 in some_function.__veriq_assumed_refs__
-        assert ref2 in some_function.__veriq_assumed_refs__
+        assert ref1 in some_function.__veriq_assumed_refs__  # ty: ignore[unsupported-operator]
+        assert ref2 in some_function.__veriq_assumed_refs__  # ty: ignore[unsupported-operator]
 
     def test_assume_with_calculation_decorator(self):
         """Test that @assume works with @calculation decorator."""
@@ -86,5 +86,5 @@ class TestAssumeDecorator:
             return 100.0
 
         assert hasattr(calculate_power, "__veriq_assumed_refs__")
-        assert ref in calculate_power.__veriq_assumed_refs__
-        assert calculate_power.__veriq_assumed_refs__[0].scope == "Thermal"
+        assert ref in calculate_power.__veriq_assumed_refs__  # ty: ignore[unsupported-operator]
+        assert calculate_power.__veriq_assumed_refs__[0].scope == "Thermal"  # ty: ignore[not-subscriptable]

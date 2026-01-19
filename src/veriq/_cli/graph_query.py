@@ -291,9 +291,10 @@ def _find_matching_leaf_paths(spec: GraphSpec, prefix_path: ProjectPath) -> list
     # Filter out non-leaf paths using the shared helper
     matching_strs = {str(p) for p in matching}
     non_leaf_strs = _find_non_leaf_paths(matching_strs)
-    leaf_paths = [p for p in matching if str(p) not in non_leaf_strs]
+    leaf_paths: list[ProjectPath] = [p for p in matching if str(p) not in non_leaf_strs]
 
-    return sorted(leaf_paths, key=str)
+    leaf_paths.sort(key=str)
+    return leaf_paths
 
 
 def get_dependency_tree(
@@ -336,7 +337,9 @@ def get_dependency_tree(
         neighbors = graph.successors(node_path) if invert else graph.predecessors(node_path)
 
         # Sort for consistent output
-        for neighbor in sorted(neighbors, key=str):
+        sorted_neighbors: list[ProjectPath] = list(neighbors)
+        sorted_neighbors.sort(key=str)
+        for neighbor in sorted_neighbors:
             if neighbor not in visited:
                 visited.add(neighbor)
                 child_tree = build_tree(neighbor, depth + 1, visited)

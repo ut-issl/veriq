@@ -96,7 +96,9 @@ def render_node_detail(detail: NodeDetail, console: Console) -> None:
     # Dependencies
     if detail.direct_dependencies:
         console.print(f"[cyan]Dependencies ({len(detail.direct_dependencies)} direct):[/cyan]")
-        for dep in sorted(detail.direct_dependencies, key=str):
+        deps_list = list(detail.direct_dependencies)
+        deps_list.sort(key=str)
+        for dep in deps_list:
             console.print(f"  {format_for_display(dep, escape_markup=True)}")
         console.print()
     else:
@@ -106,7 +108,9 @@ def render_node_detail(detail: NodeDetail, console: Console) -> None:
     # Dependents
     if detail.direct_dependents:
         console.print(f"[cyan]Dependents ({len(detail.direct_dependents)} direct):[/cyan]")
-        for dep in sorted(detail.direct_dependents, key=str):
+        dependents_list = list(detail.direct_dependents)
+        dependents_list.sort(key=str)
+        for dep in dependents_list:
             console.print(f"  {format_for_display(dep, escape_markup=True)}")
         console.print()
     else:

@@ -33,7 +33,7 @@ def test_external_data_is_abstract() -> None:
     import pytest
 
     with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-        ExternalData()  # type: ignore[abstract]
+        ExternalData()
 
 
 def test_external_data_subclass_must_implement_compute_checksum() -> None:
@@ -44,7 +44,7 @@ def test_external_data_subclass_must_implement_compute_checksum() -> None:
         path: str
 
     with pytest.raises(TypeError, match="_compute_checksum"):
-        IncompleteRef(path="test.txt")  # type: ignore[abstract]
+        IncompleteRef(path="test.txt")
 
 
 def test_external_data_subclass_with_compute_checksum() -> None:
@@ -349,9 +349,9 @@ path = "{data_file}"
     model_data = load_model_data_from_toml(project, toml_file)
 
     assert "TestScope" in model_data
-    assert isinstance(model_data["TestScope"].config_file, FileRef)
-    assert model_data["TestScope"].config_file.path == data_file
-    assert model_data["TestScope"].value == 42.0
+    assert isinstance(model_data["TestScope"].config_file, FileRef)  # ty: ignore[unresolved-attribute]
+    assert model_data["TestScope"].config_file.path == data_file  # ty: ignore[unresolved-attribute]
+    assert model_data["TestScope"].value == 42.0  # ty: ignore[unresolved-attribute]
 
 
 def test_fileref_toml_with_checksum(tmp_path: Path) -> None:
@@ -383,7 +383,7 @@ checksum = "{checksum}"
 
     model_data = load_model_data_from_toml(project, toml_file)
 
-    assert model_data["TestScope"].config_file.checksum == checksum
+    assert model_data["TestScope"].config_file.checksum == checksum  # ty: ignore[unresolved-attribute]
 
 
 # =============================================================================
