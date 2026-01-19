@@ -137,6 +137,15 @@ def _load_project(
             return load_project_from_module_path(module_path)
 
 
+def _get_effective_input(cli_input: Path | None, config: VeriqConfig | None) -> Path | None:
+    """Get effective input path from CLI argument or config default."""
+    if cli_input is not None:
+        return cli_input
+    if config is not None and config.input is not None:
+        return config.input
+    return None
+
+
 @app.command()
 def calc(  # noqa: C901, PLR0912, PLR0915
     path: Annotated[
@@ -750,11 +759,14 @@ def trace(
     err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
     err_console.print()
 
+    # Determine effective input path (CLI argument or config default)
+    effective_input = _get_effective_input(input, config)
+
     # Load model data and evaluate if input provided
     evaluation_results = None
-    if input is not None:
-        err_console.print(f"[cyan]Loading input from:[/cyan] {input}")
-        model_data = load_model_data_from_toml(project, input)
+    if effective_input is not None:
+        err_console.print(f"[cyan]Loading input from:[/cyan] {effective_input}")
+        model_data = load_model_data_from_toml(project, effective_input)
 
         err_console.print("[cyan]Evaluating project...[/cyan]")
         evaluation_results = evaluate_project(project, model_data)
