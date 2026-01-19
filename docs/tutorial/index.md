@@ -25,6 +25,7 @@ By the end of this tutorial, you'll have built a satellite power-thermal analysi
 | [Step 4](step4-verifications.md) | Verifications | Add requirement checks to your calculations |
 | [Step 5](step5-tables.md) | Using Tables | Handle multi-dimensional data with enum-indexed tables |
 | [Step 6](step6-external-files.md) | External Files | Reference data files with automatic checksum tracking |
+| [Step 7](step7-requirements.md) | Requirements Traceability | Define requirements and link them to verifications |
 
 ## Running the Examples
 

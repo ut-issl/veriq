@@ -19,6 +19,7 @@ nav = [
     { "Step 4: Verifications" = "tutorial/step4-verifications.md" },
     { "Step 5: Using Tables" = "tutorial/step5-tables.md" },
     { "Step 6: External Files" = "tutorial/step6-external-files.md" },
+    { "Step 7: Requirements Traceability" = "tutorial/step7-requirements.md" },
   ] },
   { "Concepts" = "concepts.md" },
   { "CLI Reference" = "cli-reference.md" },
