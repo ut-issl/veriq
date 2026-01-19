@@ -1,11 +1,14 @@
-import importlib
+from __future__ import annotations
+
 import importlib.metadata
 import json
 import logging
-import sys
 import tomllib
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
+
+if TYPE_CHECKING:
+    from veriq._models import Project
 
 import typer
 from rich.console import Console
@@ -19,13 +22,13 @@ from veriq._eval import evaluate_project
 from veriq._external_data import validate_external_data
 from veriq._io import export_to_toml, load_model_data_from_toml
 from veriq._ir import build_graph_spec
-from veriq._models import Project
 from veriq._path import VerificationPath
 from veriq._toml_edit import dumps_toml, merge_into_document, parse_toml_preserving
 from veriq._traceability import RequirementStatus, build_traceability_report
 from veriq._update import update_input_data
 
-from .discover import get_module_data_from_path
+from .config import ConfigError, VeriqConfig, get_config
+from .discover import load_project_from_module_path, load_project_from_script
 from .render_trace import render_traceability_summary, render_traceability_table
 
 
@@ -82,88 +85,73 @@ def callback(
     )
 
 
-def _load_project_from_script(script_path: Path, project_name: str | None = None) -> Project:
-    """Load a project from a Python script path.
+def _load_project(
+    path: str | None,
+    config: VeriqConfig,
+    project_var: str | None = None,
+) -> Project:
+    """Load project from CLI path or config.
 
     Args:
-        script_path: Path to the Python script containing the project
-        project_name: Name of the project variable. If None, infers from the script
+        path: CLI-provided path (script path or module path), or None to use config
+        config: VeriqConfig instance
+        project_var: Optional variable name (for script paths only)
 
     Returns:
         The loaded Project instance
 
-    """
-    module_data = get_module_data_from_path(script_path)
-    sys.path.insert(0, str(module_data.extra_sys_path))
-
-    try:
-        module = importlib.import_module(module_data.module_import_str)
-    except (ImportError, ValueError):
-        logger.exception("Import error")
-        logger.warning("Ensure all the package directories have an __init__.py file")
-        raise
-
-    if project_name:
-        if not hasattr(module, project_name):
-            msg = f"Could not find project '{project_name}' in {module_data.module_import_str}"
-            raise ValueError(msg)
-        project = getattr(module, project_name)
-        if not isinstance(project, Project):
-            msg = f"'{project_name}' in {module_data.module_import_str} is not a Project instance"
-            raise TypeError(msg)
-        return project
-
-    # Infer project from module
-    for name in dir(module):
-        obj = getattr(module, name)
-        if isinstance(obj, Project):
-            logger.debug(f"Found project: {name}")
-            return obj
-
-    msg = "Could not find Project in module, try using --project"
-    raise ValueError(msg)
-
-
-def _load_project_from_module_path(module_path: str) -> Project:
-    """Load a project from a module path (e.g., 'examples.dummysat:project').
-
-    Args:
-        module_path: Module path in format 'module.path:variable_name'
-
-    Returns:
-        The loaded Project instance
+    Raises:
+        typer.BadParameter: If no project is specified and no default in config
 
     """
-    if ":" not in module_path:
-        msg = "Module path must be in format 'module.path:variable_name'"
-        raise ValueError(msg)
+    if path is not None:
+        # CLI path provided - use it
+        if ":" in path:
+            # Module path format
+            err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
+            return load_project_from_module_path(path)
+        # Script path format
+        script_path = Path(path)
+        err_console.print(f"[cyan]Loading project from script:[/cyan] {script_path}")
+        return load_project_from_script(script_path, project_var)
 
-    module_name, project_name = module_path.split(":", 1)
-    module = importlib.import_module(module_name)
-    project = getattr(module, project_name)
+    # No CLI path - try config
+    if config.project is None:
+        msg = (
+            "No project specified. Provide a path argument or configure "
+            "[tool.veriq].project in pyproject.toml."
+        )
+        raise typer.BadParameter(msg)
 
-    if not isinstance(project, Project):
-        msg = f"'{project_name}' in module '{module_name}' is not a Project instance"
-        raise TypeError(msg)
+    # Load from config
+    from .config import ModuleSource, ScriptSource  # noqa: PLC0415
 
-    return project
+    match config.project:
+        case ScriptSource(script=script, name=name):
+            err_console.print(f"[cyan]Loading project from script:[/cyan] {script}")
+            # CLI --project overrides config name
+            effective_name = project_var if project_var else name
+            return load_project_from_script(script, effective_name)
+        case ModuleSource(module_path=module_path):
+            err_console.print(f"[cyan]Loading project from module:[/cyan] {module_path}")
+            return load_project_from_module_path(module_path)
 
 
 @app.command()
 def calc(  # noqa: C901, PLR0912, PLR0915
     path: Annotated[
-        str,
+        str | None,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
-    ],
+    ] = None,
     *,
     input: Annotated[  # noqa: A002
-        Path,
+        Path | None,
         typer.Option("-i", "--input", help="Path to input TOML file"),
-    ],
+    ] = None,
     output: Annotated[
-        Path,
+        Path | None,
         typer.Option("-o", "--output", help="Path to output TOML file"),
-    ],
+    ] = None,
     project_var: Annotated[
         str | None,
         typer.Option("--project", help="Name of the project variable (for script paths only)"),
@@ -176,23 +164,37 @@ def calc(  # noqa: C901, PLR0912, PLR0915
     """Perform calculations on a project and export results."""
     err_console.print()
 
+    # Load config
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    # Resolve input/output from config if not provided
+    effective_input = input if input is not None else config.input
+    effective_output = output if output is not None else config.output
+
+    if effective_input is None:
+        err_console.print("[red]Error: Input file required. Use -i/--input or configure [tool.veriq].input[/red]")
+        raise typer.Exit(code=1)
+    if effective_output is None:
+        err_console.print("[red]Error: Output file required. Use -o/--output or configure [tool.veriq].output[/red]")
+        raise typer.Exit(code=1)
+
     # Load the project
-    if ":" in path:
-        # Module path format
-        err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
-        project = _load_project_from_module_path(path)
-    else:
-        # Script path format
-        script_path = Path(path)
-        err_console.print(f"[cyan]Loading project from script:[/cyan] {script_path}")
-        project = _load_project_from_script(script_path, project_var)
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
     err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
     err_console.print()
 
     # Load model data
-    err_console.print(f"[cyan]Loading input from:[/cyan] {input}")
-    model_data = load_model_data_from_toml(project, input)
+    err_console.print(f"[cyan]Loading input from:[/cyan] {effective_input}")
+    model_data = load_model_data_from_toml(project, effective_input)
 
     # Validate external data checksums
     validation_result = validate_external_data(model_data)
@@ -316,8 +318,8 @@ def calc(  # noqa: C901, PLR0912, PLR0915
             err_console.print("[red]✗ Some verifications failed[/red]")
 
     # Export results
-    err_console.print(f"[cyan]Exporting results to:[/cyan] {output}")
-    export_to_toml(project, model_data, result.values, output)
+    err_console.print(f"[cyan]Exporting results to:[/cyan] {effective_output}")
+    export_to_toml(project, model_data, result.values, effective_output)
 
     err_console.print()
     err_console.print("[green]✓ Calculation complete[/green]")
@@ -332,9 +334,9 @@ def calc(  # noqa: C901, PLR0912, PLR0915
 @app.command()
 def check(
     path: Annotated[
-        str,
+        str | None,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
-    ],
+    ] = None,
     *,
     project_var: Annotated[
         str | None,
@@ -344,16 +346,19 @@ def check(
     """Check the validity of a project without performing calculations."""
     err_console.print()
 
+    # Load config
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
     # Load the project
-    if ":" in path:
-        # Module path format
-        err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
-        project = _load_project_from_module_path(path)
-    else:
-        # Script path format
-        script_path = Path(path)
-        err_console.print(f"[cyan]Loading project from script:[/cyan] {script_path}")
-        project = _load_project_from_script(script_path, project_var)
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
     err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
     err_console.print()
@@ -391,9 +396,9 @@ def check(
 @app.command()
 def schema(
     path: Annotated[
-        str,
+        str | None,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
-    ],
+    ] = None,
     *,
     output: Annotated[
         Path,
@@ -411,16 +416,19 @@ def schema(
     """Generate JSON schema for the project input model."""
     err_console.print()
 
+    # Load config
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
     # Load the project
-    if ":" in path:
-        # Module path format
-        err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
-        project = _load_project_from_module_path(path)
-    else:
-        # Script path format
-        script_path = Path(path)
-        err_console.print(f"[cyan]Loading project from script:[/cyan] {script_path}")
-        project = _load_project_from_script(script_path, project_var)
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
     err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
     err_console.print()
@@ -444,9 +452,9 @@ def schema(
 @app.command()
 def init(
     path: Annotated[
-        str,
+        str | None,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
-    ],
+    ] = None,
     *,
     output: Annotated[
         Path,
@@ -460,16 +468,19 @@ def init(
     """Generate a sample input TOML file with default values."""
     err_console.print()
 
+    # Load config
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
     # Load the project
-    if ":" in path:
-        # Module path format
-        err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
-        project = _load_project_from_module_path(path)
-    else:
-        # Script path format
-        script_path = Path(path)
-        err_console.print(f"[cyan]Loading project from script:[/cyan] {script_path}")
-        project = _load_project_from_script(script_path, project_var)
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
     err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
     err_console.print()
@@ -496,9 +507,9 @@ def init(
 @app.command()
 def update(  # noqa: PLR0915
     path: Annotated[
-        str,
+        str | None,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
-    ],
+    ] = None,
     *,
     input: Annotated[  # noqa: A002
         Path,
@@ -529,16 +540,19 @@ def update(  # noqa: PLR0915
 
     err_console.print()
 
+    # Load config
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
     # Load the project
-    if ":" in path:
-        # Module path format
-        err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
-        project = _load_project_from_module_path(path)
-    else:
-        # Script path format
-        script_path = Path(path)
-        err_console.print(f"[cyan]Loading project from script:[/cyan] {script_path}")
-        project = _load_project_from_script(script_path, project_var)
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
     err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
     err_console.print()
@@ -632,14 +646,14 @@ def diff(
 @app.command()
 def edit(
     path: Annotated[
-        str,
+        str | None,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
-    ],
+    ] = None,
     *,
     input: Annotated[  # noqa: A002
-        Path,
+        Path | None,
         typer.Option("-i", "--input", help="Path to input TOML file to edit"),
-    ],
+    ] = None,
     project_var: Annotated[
         str | None,
         typer.Option("--project", help="Name of the project variable (for script paths only)"),
@@ -660,31 +674,42 @@ def edit(
     # Import TUI components here to avoid loading textual for other commands
     from .tui.app import VeriqEditApp  # noqa: PLC0415
 
+    # Load config
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    # Resolve input from config if not provided
+    effective_input = input if input is not None else config.input
+    if effective_input is None:
+        err_console.print("[red]Error: Input file required. Use -i/--input or configure [tool.veriq].input[/red]")
+        raise typer.Exit(code=1)
+
     # Load the project
-    if ":" in path:
-        # Module path format
-        project = _load_project_from_module_path(path)
-    else:
-        # Script path format
-        script_path = Path(path)
-        project = _load_project_from_script(script_path, project_var)
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
     # Verify input file exists
-    if not input.exists():
-        err_console.print(f"[red]Error: Input file not found: {input}[/red]")
+    if not effective_input.exists():
+        err_console.print(f"[red]Error: Input file not found: {effective_input}[/red]")
         raise typer.Exit(code=1)
 
     # Launch the TUI (comments are now preserved when saving)
-    tui_app = VeriqEditApp(input, project)
+    tui_app = VeriqEditApp(effective_input, project)
     tui_app.run()
 
 
 @app.command()
 def trace(
     path: Annotated[
-        str,
+        str | None,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
-    ],
+    ] = None,
     *,
     input: Annotated[  # noqa: A002
         Path | None,
@@ -708,16 +733,19 @@ def trace(
     """
     err_console.print()
 
+    # Load config
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
     # Load the project
-    if ":" in path:
-        # Module path format
-        err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
-        project = _load_project_from_module_path(path)
-    else:
-        # Script path format
-        script_path = Path(path)
-        err_console.print(f"[cyan]Loading project from script:[/cyan] {script_path}")
-        project = _load_project_from_script(script_path, project_var)
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
     err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
     err_console.print()
@@ -771,9 +799,9 @@ def trace(
 @app.command()
 def scopes(
     path: Annotated[
-        str,
+        str | None,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
-    ],
+    ] = None,
     *,
     project_var: Annotated[
         str | None,
@@ -788,12 +816,19 @@ def scopes(
     from .graph_query import get_scope_summaries  # noqa: PLC0415
     from .graph_render import render_scope_table  # noqa: PLC0415
 
+    # Load config
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
     # Load the project
-    if ":" in path:
-        project = _load_project_from_module_path(path)
-    else:
-        script_path = Path(path)
-        project = _load_project_from_script(script_path, project_var)
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
     summaries = get_scope_summaries(project)
 
@@ -815,9 +850,9 @@ def scopes(
 @app.command("list")
 def list_nodes_cmd(  # noqa: PLR0913
     path: Annotated[
-        str,
+        str | None,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
-    ],
+    ] = None,
     *,
     project_var: Annotated[
         str | None,
@@ -846,12 +881,19 @@ def list_nodes_cmd(  # noqa: PLR0913
     from .graph_query import get_available_scopes, list_nodes  # noqa: PLC0415
     from .graph_render import render_node_table  # noqa: PLC0415
 
+    # Load config
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
     # Load the project
-    if ":" in path:
-        project = _load_project_from_module_path(path)
-    else:
-        script_path = Path(path)
-        project = _load_project_from_script(script_path, project_var)
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
     # Convert kind strings to NodeKind enum
     kinds: list[NodeKind] | None = None
@@ -899,14 +941,14 @@ def list_nodes_cmd(  # noqa: PLR0913
 
 @app.command()
 def show(
-    path: Annotated[
-        str,
-        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
-    ],
     node_path: Annotated[
         str,
         typer.Argument(help="Node path in format 'Scope::path' (e.g., 'Power::$.design')"),
     ],
+    path: Annotated[
+        str | None,
+        typer.Option("--path", "-p", help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ] = None,
     *,
     project_var: Annotated[
         str | None,
@@ -923,12 +965,19 @@ def show(
     from .graph_query import NonLeafPathError, get_available_scopes, get_node_detail  # noqa: PLC0415
     from .graph_render import render_node_detail  # noqa: PLC0415
 
+    # Load config
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
     # Load the project
-    if ":" in path:
-        project = _load_project_from_module_path(path)
-    else:
-        script_path = Path(path)
-        project = _load_project_from_script(script_path, project_var)
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
     # Parse the node path
     try:
@@ -986,14 +1035,14 @@ def show(
 
 @app.command()
 def tree(  # noqa: PLR0913
-    path: Annotated[
-        str,
-        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
-    ],
     node_path: Annotated[
         str,
         typer.Argument(help="Node path in format 'Scope::path' (e.g., 'Power::$.design')"),
     ],
+    path: Annotated[
+        str | None,
+        typer.Option("--path", "-p", help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ] = None,
     *,
     project_var: Annotated[
         str | None,
@@ -1022,12 +1071,19 @@ def tree(  # noqa: PLR0913
     from .graph_query import get_available_scopes, get_dependency_tree  # noqa: PLC0415
     from .graph_render import render_tree  # noqa: PLC0415
 
+    # Load config
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
     # Load the project
-    if ":" in path:
-        project = _load_project_from_module_path(path)
-    else:
-        script_path = Path(path)
-        project = _load_project_from_script(script_path, project_var)
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
     # Parse the node path
     try:
