@@ -768,5 +768,309 @@ def trace(
     raise typer.Exit(code=0)
 
 
+@app.command()
+def scopes(
+    path: Annotated[
+        str,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ],
+    *,
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Output as JSON"),
+    ] = False,
+) -> None:
+    """List all scopes in the project with summary information."""
+    from .graph_query import get_scope_summaries  # noqa: PLC0415
+    from .graph_render import render_scope_table  # noqa: PLC0415
+
+    # Load the project
+    if ":" in path:
+        project = _load_project_from_module_path(path)
+    else:
+        script_path = Path(path)
+        project = _load_project_from_script(script_path, project_var)
+
+    summaries = get_scope_summaries(project)
+
+    if as_json:
+        data = [
+            {
+                "name": s.name,
+                "models": s.model_count,
+                "calcs": s.calc_count,
+                "verifications": s.verification_count,
+            }
+            for s in summaries
+        ]
+        out_console.print_json(data=data)
+    else:
+        render_scope_table(summaries, err_console)
+
+
+@app.command("list")
+def list_nodes_cmd(  # noqa: PLR0913
+    path: Annotated[
+        str,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ],
+    *,
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+    kind: Annotated[
+        list[str] | None,
+        typer.Option("--kind", help="Filter by kind: model, calc, verification (repeatable)"),
+    ] = None,
+    scope: Annotated[
+        list[str] | None,
+        typer.Option("--scope", help="Filter by scope name (repeatable)"),
+    ] = None,
+    leaves: Annotated[
+        bool,
+        typer.Option("--leaves", help="Show only leaf nodes (nothing depends on them)"),
+    ] = False,
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Output as JSON"),
+    ] = False,
+) -> None:
+    """List nodes in the dependency graph with optional filtering."""
+    from veriq._ir import NodeKind  # noqa: PLC0415
+
+    from .graph_query import get_available_scopes, list_nodes  # noqa: PLC0415
+    from .graph_render import render_node_table  # noqa: PLC0415
+
+    # Load the project
+    if ":" in path:
+        project = _load_project_from_module_path(path)
+    else:
+        script_path = Path(path)
+        project = _load_project_from_script(script_path, project_var)
+
+    # Convert kind strings to NodeKind enum
+    kinds: list[NodeKind] | None = None
+    if kind:
+        kind_map = {
+            "model": NodeKind.MODEL,
+            "calc": NodeKind.CALCULATION,
+            "calculation": NodeKind.CALCULATION,
+            "verification": NodeKind.VERIFICATION,
+            "verif": NodeKind.VERIFICATION,
+        }
+        kinds = []
+        for k in kind:
+            k_lower = k.lower()
+            if k_lower not in kind_map:
+                err_console.print(f"[red]Error: Unknown kind '{k}'[/red]")
+                err_console.print("[dim]Valid kinds: model, calc, verification[/dim]")
+                raise typer.Exit(code=1)
+            kinds.append(kind_map[k_lower])
+
+    # Validate scope names
+    if scope:
+        available_scopes = get_available_scopes(project)
+        for s in scope:
+            if s not in available_scopes:
+                err_console.print(f"[red]Error: Unknown scope '{s}'[/red]")
+                err_console.print(f"[dim]Available scopes: {', '.join(available_scopes)}[/dim]")
+                raise typer.Exit(code=1)
+
+    nodes = list_nodes(project, kinds=kinds, scopes=scope, leaves_only=leaves)
+
+    if as_json:
+        data = [
+            {
+                "path": str(n.path),
+                "kind": n.kind.value,
+                "dependencies": n.dependency_count,
+            }
+            for n in nodes
+        ]
+        out_console.print_json(data=data)
+    else:
+        render_node_table(nodes, err_console)
+
+
+@app.command()
+def show(
+    path: Annotated[
+        str,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ],
+    node_path: Annotated[
+        str,
+        typer.Argument(help="Node path in format 'Scope::path' (e.g., 'Power::$.design')"),
+    ],
+    *,
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Output as JSON"),
+    ] = False,
+) -> None:
+    """View detailed information about a specific node."""
+    from veriq._path import parse_project_path  # noqa: PLC0415
+
+    from .graph_query import NonLeafPathError, get_available_scopes, get_node_detail  # noqa: PLC0415
+    from .graph_render import render_node_detail  # noqa: PLC0415
+
+    # Load the project
+    if ":" in path:
+        project = _load_project_from_module_path(path)
+    else:
+        script_path = Path(path)
+        project = _load_project_from_script(script_path, project_var)
+
+    # Parse the node path
+    try:
+        ppath = parse_project_path(node_path)
+    except ValueError as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    # Validate scope exists
+    available_scopes = get_available_scopes(project)
+    if ppath.scope not in available_scopes:
+        err_console.print(f"[red]Error: Unknown scope '{ppath.scope}'[/red]")
+        err_console.print(f"[dim]Available scopes: {', '.join(available_scopes)}[/dim]")
+        raise typer.Exit(code=1)
+
+    # Get node detail
+    try:
+        detail = get_node_detail(project, ppath)
+    except NonLeafPathError as e:
+        from veriq._path import format_for_display  # noqa: PLC0415
+
+        escaped_node_path = escape(node_path)
+        err_console.print(f"[red]Error: '{escaped_node_path}' is not a leaf node[/red]")
+        err_console.print()
+        err_console.print(f"[cyan]This path has {len(e.leaf_paths)} leaf output(s):[/cyan]")
+        for leaf_path in e.leaf_paths:
+            err_console.print(f"  {format_for_display(leaf_path, escape_markup=True)}")
+        err_console.print()
+        err_console.print("[dim]Use one of the leaf paths above with 'veriq show'[/dim]")
+        raise typer.Exit(code=1) from None
+    except KeyError:
+        escaped_node_path = escape(node_path)
+        err_console.print(f"[red]Error: Node not found: {escaped_node_path}[/red]")
+        err_console.print("[dim]Use 'veriq list' to see available nodes[/dim]")
+        raise typer.Exit(code=1) from None
+
+    if as_json:
+        data = {
+            "path": str(detail.path),
+            "kind": detail.kind.value,
+            "scope": detail.path.scope,
+            "output_type": (
+                detail.output_type.__name__
+                if hasattr(detail.output_type, "__name__")
+                else str(detail.output_type)
+            ),
+            "dependencies": [str(d) for d in sorted(detail.direct_dependencies, key=str)],
+            "dependents": [str(d) for d in sorted(detail.direct_dependents, key=str)],
+            "metadata": detail.metadata,
+        }
+        out_console.print_json(data=data)
+    else:
+        render_node_detail(detail, err_console)
+
+
+@app.command()
+def tree(  # noqa: PLR0913
+    path: Annotated[
+        str,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ],
+    node_path: Annotated[
+        str,
+        typer.Argument(help="Node path in format 'Scope::path' (e.g., 'Power::$.design')"),
+    ],
+    *,
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+    invert: Annotated[
+        bool,
+        typer.Option("-i", "--invert", help="Show reverse dependencies (what depends on this node)"),
+    ] = False,
+    depth: Annotated[
+        int | None,
+        typer.Option("--depth", help="Maximum tree depth (default: unlimited)"),
+    ] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Output as JSON"),
+    ] = False,
+) -> None:
+    """Show dependency tree for a node.
+
+    By default, shows what the node depends on.
+    Use --invert/-i to show what depends on the node (impact analysis).
+    """
+    from veriq._path import parse_project_path  # noqa: PLC0415
+
+    from .graph_query import get_available_scopes, get_dependency_tree  # noqa: PLC0415
+    from .graph_render import render_tree  # noqa: PLC0415
+
+    # Load the project
+    if ":" in path:
+        project = _load_project_from_module_path(path)
+    else:
+        script_path = Path(path)
+        project = _load_project_from_script(script_path, project_var)
+
+    # Parse the node path
+    try:
+        ppath = parse_project_path(node_path)
+    except ValueError as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    # Validate scope exists
+    available_scopes = get_available_scopes(project)
+    if ppath.scope not in available_scopes:
+        err_console.print(f"[red]Error: Unknown scope '{ppath.scope}'[/red]")
+        err_console.print(f"[dim]Available scopes: {', '.join(available_scopes)}[/dim]")
+        raise typer.Exit(code=1)
+
+    # Get dependency tree
+    try:
+        tree_node = get_dependency_tree(project, ppath, invert=invert, max_depth=depth)
+    except KeyError:
+        escaped_node_path = escape(node_path)
+        err_console.print(f"[red]Error: Node not found: {escaped_node_path}[/red]")
+        err_console.print("[dim]Use 'veriq list' to see available nodes[/dim]")
+        raise typer.Exit(code=1) from None
+
+    if as_json:
+        from .graph_query import TreeNode as TreeNodeType  # noqa: PLC0415
+
+        def tree_to_dict(node: TreeNodeType) -> dict:
+            return {
+                "path": str(node.path),
+                "children": [tree_to_dict(c) for c in node.children],
+            }
+
+        out_console.print_json(data=tree_to_dict(tree_node))
+    elif not tree_node.children:
+        escaped_node_path = escape(node_path)
+        if invert:
+            err_console.print(f"[dim]No nodes depend on {escaped_node_path}[/dim]")
+        else:
+            err_console.print(f"[dim]{escaped_node_path} has no dependencies[/dim]")
+    else:
+        render_tree(tree_node, err_console)
+
+
 def main() -> None:
     app()

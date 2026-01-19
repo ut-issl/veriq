@@ -588,7 +588,7 @@ class TestSaveAndQuit:
 
                 # Click 'Save & Quit' button (query from the active screen)
                 save_button = app.screen.query_one("#save")
-                save_button.press()
+                save_button.press()  # ty: ignore[unresolved-attribute]
                 await pilot.pause()
 
                 # Verify the file was saved
@@ -635,7 +635,7 @@ class TestSaveAndQuit:
 
                 # Click 'Quit without saving' button (query from the active screen)
                 quit_button = app.screen.query_one("#quit")
-                quit_button.press()
+                quit_button.press()  # ty: ignore[unresolved-attribute]
                 await pilot.pause()
 
                 # Verify the file was NOT modified (still has original value)

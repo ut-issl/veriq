@@ -429,7 +429,7 @@ class TestExtractVerificationResults:
         def verify_power(
             power: Annotated[vq.Table[Mode, float], vq.Ref("$.power")],
         ) -> vq.Table[Mode, bool]:
-            return vq.Table({mode: power[mode] > 0 for mode in Mode})
+            return vq.Table({mode: power[mode] > 0 for mode in Mode})  # ty: ignore[invalid-return-type]
 
         # Simulate evaluation results for table verification
         evaluation_results = {
