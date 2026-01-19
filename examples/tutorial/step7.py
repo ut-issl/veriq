@@ -53,7 +53,7 @@ def verify_power_margin(
     consumption: Annotated[vq.Table[Mode, float], vq.Ref("$.power_consumption")],
 ) -> vq.Table[Mode, bool]:
     """Power generation must exceed consumption in all modes."""
-    return vq.Table({mode: generation[mode] > consumption[mode] for mode in Mode})
+    return vq.Table({mode: generation[mode] > consumption[mode] for mode in Mode})  # ty: ignore[invalid-return-type]
 
 
 # --- Thermal Scope ---

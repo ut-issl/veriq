@@ -17,6 +17,7 @@ __all__ = [
     "RequirementTraceEntry",
     "Scope",
     "Table",
+    "TableFieldHandler",
     "TraceabilityReport",
     "VerificationResult",
     "assume",
@@ -32,6 +33,8 @@ __all__ = [
     "validate_external_data",
 ]
 
+# bounded-models integration
+from ._bounded_models import TableFieldHandler
 from ._decorators import assume
 from ._eval import evaluate_project
 from ._eval_engine import EvaluationResult, evaluate_graph
