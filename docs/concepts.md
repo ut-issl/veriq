@@ -17,6 +17,7 @@ veriq is like a smart spreadsheet for engineering calculations:
 | Input cells | Model | Design parameters you provide |
 | Formula cells | Calculation | Computed values |
 | Conditional formatting | Verification | Requirement checks |
+| Cell comments | Requirement | Engineering constraints with traceability |
 
 ## Project
 
@@ -102,6 +103,67 @@ Key points:
 - Use `@scope.verification()` to register
 - Return `True` for pass, `False` for fail
 - Run with `--verify` flag to execute verifications
+
+## Requirements
+
+**Requirements** define engineering constraints that your design must satisfy. They form the traceability link between what must be achieved and how it's verified:
+
+```python
+# Define a requirement
+power.requirement(
+    "REQ-PWR-001",
+    "Battery capacity must be at least 100 Wh.",
+    verified_by=[verify_battery],
+)
+```
+
+Key points:
+
+- Use `scope.requirement()` to define requirements
+- Each requirement has an ID and description
+- Link verifications with `verified_by` parameter
+- Use context managers for hierarchical requirements
+
+### Hierarchical Requirements
+
+Real engineering projects have requirements at multiple levels:
+
+```python
+# Parent requirement with children
+with system.requirement("REQ-SYS-001", "System requirements."):
+    power.requirement("REQ-PWR-001", "Power requirement.", verified_by=[verify_power])
+    thermal.requirement("REQ-TH-001", "Thermal requirement.", verified_by=[verify_temp])
+```
+
+### Requirement Statuses
+
+| Status | Symbol | Meaning |
+|--------|--------|---------|
+| VERIFIED | ✓ | Has direct verifications, all passed |
+| SATISFIED | ○ | No direct verifications, all children pass |
+| FAILED | ✗ | Some verification or child failed |
+| NOT_VERIFIED | ? | Leaf requirement with no verifications |
+
+### Cross-Scope Requirements
+
+Add children to existing requirements from different scopes:
+
+```python
+# Fetch existing requirement and add children
+with system.fetch_requirement("REQ-SYS-001"):
+    power.requirement("REQ-PWR-002", "Another power requirement.", verified_by=[verify])
+```
+
+### Requirement Dependencies
+
+Declare that one requirement depends on another:
+
+```python
+req_parent = power.requirement("REQ-PWR-001", "Parent requirement.")
+
+with power.requirement("REQ-PWR-002", "Child requirement."):
+    vq.depends(req_parent)  # If REQ-PWR-001 fails, REQ-PWR-002 also fails
+```
 
 ## References
 
