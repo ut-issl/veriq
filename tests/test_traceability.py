@@ -412,7 +412,11 @@ class TestExtractVerificationResults:
         assert results[0].passed is False
 
     def test_extract_table_verification(self) -> None:
-        """Test extracting results from a Table[K, bool] verification."""
+        """Test extracting results from a Table[K, bool] verification.
+
+        Only leaf results (with table keys) should be returned.
+        The non-leaf aggregate result (without table key) should be excluded.
+        """
         from enum import StrEnum, unique
 
         @unique
@@ -431,8 +435,16 @@ class TestExtractVerificationResults:
         ) -> vq.Table[Mode, bool]:
             return vq.Table({mode: power[mode] > 0 for mode in Mode})  # ty: ignore[invalid-return-type]
 
-        # Simulate evaluation results for table verification
+        # Simulate evaluation results including both:
+        # - Non-leaf aggregate result (no parts) - should be excluded
+        # - Leaf results (with ItemPart) - should be included
         evaluation_results = {
+            # Non-leaf aggregate result - should NOT be included in output
+            ProjectPath(
+                scope="Power",
+                path=VerificationPath(root="?verify_power", parts=()),
+            ): True,
+            # Leaf results - should be included in output
             ProjectPath(
                 scope="Power",
                 path=VerificationPath(root="?verify_power", parts=(ItemPart(key="nominal"),)),
@@ -445,7 +457,10 @@ class TestExtractVerificationResults:
 
         results = extract_verification_results(verify_power, "Power", evaluation_results)
 
+        # Should only return leaf results (2), not the non-leaf aggregate (3 total in input)
         assert len(results) == 2
+        # All results should have a table_key (no None values)
+        assert all(r.table_key is not None for r in results)
         results_by_key = {r.table_key: r for r in results}
         assert results_by_key["nominal"].passed is True
         assert results_by_key["safe"].passed is False

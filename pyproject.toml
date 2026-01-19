@@ -164,3 +164,20 @@ unfixable = [
   "ARG001",  # Unused function argument
   "ERA001",  # Commented out code
 ]
+
+[tool.veriq]
+# Configure default project, input, and output files for veriq CLI commands.
+# All paths are relative to the project root (directory containing pyproject.toml).
+#
+# Option 1: Module path format (for installed packages)
+# project = "my_package.satellite:project"
+#
+# Option 2: Script path format (variable name auto-inferred)
+project = { script = "examples/dummysat.py" }
+#
+# Option 3: Script path with explicit variable name
+# project = { script = "examples/dummysat.py", name = "project" }
+#
+# Optional: Default input/output TOML files for calc/edit commands
+input = "examples/dummysat.in.toml"
+output = "examples/dummysat.out.toml"
