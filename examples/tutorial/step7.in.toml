@@ -1,0 +1,16 @@
+[System.model]
+
+[Power.model]
+battery_capacity = 150.0
+
+[Power.model.power_generation]
+nominal = 100.0
+safe = 50.0
+
+[Power.model.power_consumption]
+nominal = 80.0
+safe = 30.0
+
+[Thermal.model]
+max_temperature = 85.0
+calculated_temperature = 75.0

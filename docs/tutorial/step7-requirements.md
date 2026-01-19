@@ -132,6 +132,13 @@ class Mode(StrEnum):
     SAFE = "safe"
 
 
+# --- System Scope (container for system-level requirements) ---
+# Note: Every scope needs a root model, even if empty
+@system.root_model()
+class SystemModel(BaseModel):
+    pass
+
+
 # --- Power Scope ---
 @power.root_model()
 class PowerModel(BaseModel):
@@ -204,6 +211,8 @@ with system.requirement("REQ-SYS-001", "System shall meet all subsystem requirem
 ## Input File
 
 ```toml title="examples/tutorial/step7.in.toml"
+[System.model]
+
 [Power.model]
 battery_capacity = 150.0
 
