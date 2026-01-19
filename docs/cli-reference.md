@@ -31,6 +31,11 @@ veriq [OPTIONS] COMMAND
 | `update` | Update existing input with new schema |
 | `diff` | Compare two TOML files |
 | `edit` | Edit input with interactive TUI |
+| `trace` | Display requirement-verification traceability |
+| `scopes` | List all scopes in the project |
+| `list` | List nodes in the dependency graph |
+| `show` | View detailed information about a node |
+| `tree` | Show dependency tree for a node |
 
 ---
 
@@ -304,6 +309,250 @@ Opens a spreadsheet-like interface for editing Table fields in the input file. S
 ```bash
 # Edit input file interactively
 veriq edit my_project.py -i input.toml
+```
+
+---
+
+## `veriq trace`
+
+Display requirement-verification traceability.
+
+```bash
+veriq trace [PATH] [OPTIONS]
+```
+
+Shows the requirement tree with verification status for each requirement. This is useful for tracking which requirements are verified, satisfied, or failing.
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `PATH` | Path to Python script or module path (optional if configured in pyproject.toml) |
+
+**Options:**
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--input PATH` | `-i` | Path to input TOML file (enables verification evaluation) |
+| `--project NAME` | | Name of the project variable |
+
+**Examples:**
+
+```bash
+# Show requirement tree structure only
+veriq trace my_project.py
+
+# Show requirement tree with pass/fail status
+veriq trace my_project.py -i input.toml
+```
+
+**Exit codes:**
+
+| Code | Meaning |
+|------|---------|
+| `0` | All requirements pass (or only expected failures) |
+| `1` | Some requirements failed unexpectedly |
+
+---
+
+## `veriq scopes`
+
+List all scopes in the project with summary information.
+
+```bash
+veriq scopes [PATH] [OPTIONS]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `PATH` | Path to Python script or module path (optional if configured in pyproject.toml) |
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--project NAME` | Name of the project variable |
+| `--json` | Output as JSON |
+
+**Examples:**
+
+```bash
+# List all scopes
+veriq scopes my_project.py
+
+# Output as JSON for scripting
+veriq scopes my_project.py --json
+```
+
+---
+
+## `veriq list`
+
+List nodes in the dependency graph with optional filtering.
+
+```bash
+veriq list [PATH] [OPTIONS]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `PATH` | Path to Python script or module path (optional if configured in pyproject.toml) |
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--project NAME` | Name of the project variable |
+| `--kind KIND` | Filter by kind: `model`, `calc`, `verification` (repeatable) |
+| `--scope NAME` | Filter by scope name (repeatable) |
+| `--leaves` | Show only leaf nodes (nothing depends on them) |
+| `--json` | Output as JSON |
+
+**Examples:**
+
+```bash
+# List all nodes
+veriq list my_project.py
+
+# List only calculations
+veriq list my_project.py --kind calc
+
+# List nodes in a specific scope
+veriq list my_project.py --scope Power
+
+# List leaf nodes only
+veriq list my_project.py --leaves
+
+# Combine filters
+veriq list my_project.py --kind calc --scope Power
+```
+
+---
+
+## `veriq show`
+
+View detailed information about a specific node.
+
+```bash
+veriq show NODE_PATH [OPTIONS]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `NODE_PATH` | Node path in format `Scope::path` (required) |
+
+**Options:**
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--path PATH` | `-p` | Path to Python script or module path |
+| `--project NAME` | | Name of the project variable |
+| `--json` | | Output as JSON |
+
+**Node path format:**
+
+- Model fields: `Scope::$.field` or `Scope::$.nested.field`
+- Calculations: `Scope::@calculation_name`
+- Verifications: `Scope::?verification_name`
+
+**Examples:**
+
+```bash
+# Show details of a model field
+veriq show "Power::$.design" -p my_project.py
+
+# Show details of a calculation
+veriq show "Power::@calculate_power" -p my_project.py
+
+# Show details of a verification
+veriq show "Power::?verify_capacity" -p my_project.py
+```
+
+---
+
+## `veriq tree`
+
+Show dependency tree for a node.
+
+```bash
+veriq tree NODE_PATH [OPTIONS]
+```
+
+By default, shows what the node depends on. Use `--invert` to show what depends on the node (impact analysis).
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `NODE_PATH` | Node path in format `Scope::path` (required) |
+
+**Options:**
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--path PATH` | `-p` | Path to Python script or module path |
+| `--project NAME` | | Name of the project variable |
+| `--invert` | `-i` | Show reverse dependencies (what depends on this node) |
+| `--depth N` | | Maximum tree depth (default: unlimited) |
+| `--json` | | Output as JSON |
+
+**Examples:**
+
+```bash
+# Show what a calculation depends on
+veriq tree "Power::@calculate_power" -p my_project.py
+
+# Show what depends on a model field (impact analysis)
+veriq tree "Power::$.design.mass" -p my_project.py --invert
+
+# Limit tree depth
+veriq tree "Power::@calculate_power" -p my_project.py --depth 2
+```
+
+---
+
+## Configuration in pyproject.toml
+
+You can configure default project, input, and output paths in your `pyproject.toml` file. This allows you to omit these arguments when running CLI commands.
+
+```toml
+[tool.veriq]
+# Option 1: Module path format (for installed packages)
+project = "my_package.satellite:project"
+
+# Option 2: Script path format (variable name auto-inferred)
+project = { script = "examples/dummysat.py" }
+
+# Option 3: Script path with explicit variable name
+project = { script = "examples/dummysat.py", name = "project" }
+
+# Optional: Default input/output TOML files
+input = "data/input.toml"
+output = "data/output.toml"
+```
+
+**Notes:**
+
+- All paths are relative to the project root (directory containing `pyproject.toml`)
+- CLI arguments always override config defaults
+- Invalid config fails immediately with a clear error message
+
+**Examples with config:**
+
+```bash
+# With [tool.veriq] configured, project argument is optional
+veriq calc                              # Uses all defaults from config
+veriq calc -o custom_output.toml        # Partial override
+veriq calc other.py -i in.toml -o out.toml  # CLI args override config
+
+# trace command also uses config defaults
+veriq trace                             # Uses configured project and input
 ```
 
 ---
