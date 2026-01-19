@@ -81,7 +81,7 @@ def render_node_detail(detail: NodeDetail, console: Console) -> None:
         console: Rich Console to output to.
 
     """
-    console.print(f"[bold]Node:[/bold] {detail.path}")
+    console.print(f"[bold]Node:[/bold] {format_for_display(detail.path, escape_markup=True)}")
     console.print()
 
     kind_style = _get_kind_style(detail.kind)

@@ -111,6 +111,50 @@ def get_scope_summaries(project: Project) -> list[ScopeSummary]:
     ]
 
 
+def _is_path_prefix_of(prefix_str: str, path_str: str) -> bool:
+    """Check if prefix_str is a proper path prefix of path_str.
+
+    A proper prefix means path_str starts with prefix_str followed by
+    '.' (attribute access) or '[' (item access).
+
+    Args:
+        prefix_str: The potential prefix path string.
+        path_str: The path string to check against.
+
+    Returns:
+        True if prefix_str is a proper path prefix of path_str.
+
+    """
+    if not path_str.startswith(prefix_str):
+        return False
+    if len(path_str) <= len(prefix_str):
+        return False
+    next_char = path_str[len(prefix_str)]
+    return next_char in (".", "[")
+
+
+def _find_non_leaf_paths(paths: set[str]) -> set[str]:
+    """Find all path strings that have children (are non-leaf).
+
+    A path is non-leaf if another path exists that starts with it
+    followed by '.' or '['.
+
+    Args:
+        paths: Set of path strings to analyze.
+
+    Returns:
+        Set of path strings that are non-leaf (have children).
+
+    """
+    non_leaf: set[str] = set()
+    for path_str in paths:
+        for other_str in paths:
+            if path_str != other_str and _is_path_prefix_of(path_str, other_str):
+                non_leaf.add(path_str)
+                break
+    return non_leaf
+
+
 def _filter_non_leaf_table_paths(spec: GraphSpec) -> set[ProjectPath]:
     """Find all non-leaf Table paths that should be excluded from listings.
 
@@ -125,22 +169,9 @@ def _filter_non_leaf_table_paths(spec: GraphSpec) -> set[ProjectPath]:
         Set of ProjectPath that are non-leaf Table paths.
 
     """
-    all_paths = {str(p) for p in spec.nodes}
-    non_leaf_paths: set[ProjectPath] = set()
-
-    for path in spec.nodes:
-        path_str = str(path)
-        # Check if any other path starts with this one (making this a non-leaf)
-        for other_str in all_paths:
-            if other_str != path_str and other_str.startswith(path_str):
-                next_char_pos = len(path_str)
-                if next_char_pos < len(other_str):
-                    next_char = other_str[next_char_pos]
-                    if next_char in (".", "["):
-                        non_leaf_paths.add(path)
-                        break
-
-    return non_leaf_paths
+    all_path_strs = {str(p) for p in spec.nodes}
+    non_leaf_strs = _find_non_leaf_paths(all_path_strs)
+    return {p for p in spec.nodes if str(p) in non_leaf_strs}
 
 
 def list_nodes(
@@ -249,35 +280,18 @@ def _find_matching_leaf_paths(spec: GraphSpec, prefix_path: ProjectPath) -> list
 
     """
     prefix_str = str(prefix_path)
-    matching: list[ProjectPath] = []
 
-    for node_path in spec.nodes:
-        node_str = str(node_path)
-        # Check if the node path starts with the prefix and has additional parts
-        if node_str.startswith(prefix_str) and len(node_str) > len(prefix_str):
-            # Ensure it's actually a sub-path (not just a string prefix match)
-            next_char = node_str[len(prefix_str)]
-            if next_char in (".", "["):
-                matching.append(node_path)
+    # Find all paths that are children of the prefix
+    matching: list[ProjectPath] = [
+        node_path
+        for node_path in spec.nodes
+        if _is_path_prefix_of(prefix_str, str(node_path))
+    ]
 
-    # Filter out non-leaf paths (paths that are prefixes of other paths)
-    # This handles the case where Table paths are stored both as the whole table
-    # and as individual items (e.g., $.power_consumption and $.power_consumption[mission])
-    leaf_paths: list[ProjectPath] = []
+    # Filter out non-leaf paths using the shared helper
     matching_strs = {str(p) for p in matching}
-
-    for path in matching:
-        path_str = str(path)
-        is_leaf = True
-        # Check if any other path starts with this one (making this a non-leaf)
-        for other_str in matching_strs:
-            if other_str != path_str and other_str.startswith(path_str):
-                next_char = other_str[len(path_str)]
-                if next_char in (".", "["):
-                    is_leaf = False
-                    break
-        if is_leaf:
-            leaf_paths.append(path)
+    non_leaf_strs = _find_non_leaf_paths(matching_strs)
+    leaf_paths = [p for p in matching if str(p) not in non_leaf_strs]
 
     return sorted(leaf_paths, key=str)
 

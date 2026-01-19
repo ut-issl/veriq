@@ -950,7 +950,8 @@ def show(
     except NonLeafPathError as e:
         from veriq._path import format_for_display  # noqa: PLC0415
 
-        err_console.print(f"[red]Error: '{node_path}' is not a leaf node[/red]")
+        escaped_node_path = escape(node_path)
+        err_console.print(f"[red]Error: '{escaped_node_path}' is not a leaf node[/red]")
         err_console.print()
         err_console.print(f"[cyan]This path has {len(e.leaf_paths)} leaf output(s):[/cyan]")
         for leaf_path in e.leaf_paths:
@@ -959,7 +960,8 @@ def show(
         err_console.print("[dim]Use one of the leaf paths above with 'veriq show'[/dim]")
         raise typer.Exit(code=1) from None
     except KeyError:
-        err_console.print(f"[red]Error: Node not found: {node_path}[/red]")
+        escaped_node_path = escape(node_path)
+        err_console.print(f"[red]Error: Node not found: {escaped_node_path}[/red]")
         err_console.print("[dim]Use 'veriq list' to see available nodes[/dim]")
         raise typer.Exit(code=1) from None
 
@@ -1045,7 +1047,8 @@ def tree(  # noqa: PLR0913
     try:
         tree_node = get_dependency_tree(project, ppath, invert=invert, max_depth=depth)
     except KeyError:
-        err_console.print(f"[red]Error: Node not found: {node_path}[/red]")
+        escaped_node_path = escape(node_path)
+        err_console.print(f"[red]Error: Node not found: {escaped_node_path}[/red]")
         err_console.print("[dim]Use 'veriq list' to see available nodes[/dim]")
         raise typer.Exit(code=1) from None
 
@@ -1060,10 +1063,11 @@ def tree(  # noqa: PLR0913
 
         out_console.print_json(data=tree_to_dict(tree_node))
     elif not tree_node.children:
+        escaped_node_path = escape(node_path)
         if invert:
-            err_console.print(f"[dim]No nodes depend on {node_path}[/dim]")
+            err_console.print(f"[dim]No nodes depend on {escaped_node_path}[/dim]")
         else:
-            err_console.print(f"[dim]{node_path} has no dependencies[/dim]")
+            err_console.print(f"[dim]{escaped_node_path} has no dependencies[/dim]")
     else:
         render_tree(tree_node, err_console)
 
