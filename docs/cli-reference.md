@@ -339,11 +339,33 @@ Shows the requirement tree with verification status for each requirement. This i
 **Examples:**
 
 ```bash
-# Show requirement tree structure only
-veriq trace my_project.py
-
 # Show requirement tree with pass/fail status
-veriq trace my_project.py -i input.toml
+veriq trace examples/dummysat.py -i examples/dummysat.in.toml
+```
+
+**Example output:**
+
+```
+ Requirement          Description                              Status          Verifications
+ REQ-SYS-001          System-level requirement (status         ✗ FAILED        -
+                      propagates fro...
+ ├── REQ-SYS-002      Thermal subsystem requirements.          ✗ FAILED        -
+ │   └── REQ-TH-001   Solar panel temperature must be within   ✗ FAILED        ✗ Power::?solar_panel_max_temperature
+                      limits.
+ ├── REQ-SYS-003      Power subsystem requirements.            ○ SATISFIED     -
+ │   └── REQ-PWR-001  Battery and power budget requirements.   ✓ VERIFIED      ✓ Power::?verify_battery
+ │                                                                             ✓ Power::?verify_power_budget[nominal]
+ │                                                                             ✓ Power::?verify_power_budget[safe]
+ │                                                                             ✓ Power::?verify_power_budget[mission]
+ └── REQ-SYS-004      Future requirement (not yet verified).   ? NOT_VERIFIED  -
+
+╭───────────────────────────────────────────────────── Summary ──────────────────────────────────────────────────────╮
+│ Total requirements: 6                                                                                              │
+│ ✓ Verified: 1                                                                                                      │
+│ ○ Satisfied: 1                                                                                                     │
+│ ✗ Failed: 3                                                                                                        │
+│ ? Not verified: 1                                                                                                  │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 **Exit codes:**
@@ -380,10 +402,21 @@ veriq scopes [PATH] [OPTIONS]
 
 ```bash
 # List all scopes
-veriq scopes my_project.py
+veriq scopes examples/dummysat.py
+```
 
-# Output as JSON for scripting
-veriq scopes my_project.py --json
+**Example output:**
+
+```
+┏━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Scope   ┃ Models ┃ Calcs ┃ Verifications ┃
+┡━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ System  │      0 │     0 │             1 │
+│ AOCS    │      0 │     0 │             0 │
+│ Power   │     17 │     1 │             6 │
+│ Thermal │      0 │     1 │             0 │
+│ RWA     │     25 │     0 │             4 │
+└─────────┴────────┴───────┴───────────────┘
 ```
 
 ---
@@ -415,20 +448,31 @@ veriq list [PATH] [OPTIONS]
 **Examples:**
 
 ```bash
-# List all nodes
-veriq list my_project.py
-
 # List only calculations
-veriq list my_project.py --kind calc
+veriq list examples/dummysat.py --kind calc
+```
 
+**Example output:**
+
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━┓
+┃ Path                                                        ┃ Kind        ┃ Deps ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━┩
+│ Power::@calculate_solar_panel_heat.heat_generation          │ CALCULATION │    5 │
+│ Thermal::@calculate_temperature.solar_panel_temperature_max │ CALCULATION │    2 │
+└─────────────────────────────────────────────────────────────┴─────────────┴──────┘
+
+Total: 2 nodes
+```
+
+You can also combine filters:
+
+```bash
 # List nodes in a specific scope
-veriq list my_project.py --scope Power
+veriq list examples/dummysat.py --scope Power
 
-# List leaf nodes only
-veriq list my_project.py --leaves
-
-# Combine filters
-veriq list my_project.py --kind calc --scope Power
+# List leaf nodes only (nothing depends on them)
+veriq list examples/dummysat.py --leaves
 ```
 
 ---
@@ -458,20 +502,38 @@ veriq show NODE_PATH [OPTIONS]
 **Node path format:**
 
 - Model fields: `Scope::$.field` or `Scope::$.nested.field`
-- Calculations: `Scope::@calculation_name`
+- Calculations: `Scope::@calculation_name.output_field`
 - Verifications: `Scope::?verification_name`
 
 **Examples:**
 
 ```bash
-# Show details of a model field
-veriq show "Power::$.design" -p my_project.py
+# Show details of a calculation output
+veriq show "Power::@calculate_solar_panel_heat.heat_generation" -p examples/dummysat.py
+```
 
-# Show details of a calculation
-veriq show "Power::@calculate_power" -p my_project.py
+**Example output:**
 
-# Show details of a verification
-veriq show "Power::?verify_capacity" -p my_project.py
+```
+Node: Power::@calculate_solar_panel_heat.heat_generation
+
+Kind:         CALCULATION
+Scope:        Power
+Output Type:  float
+
+Dependencies (5 direct):
+  Power::$.design.config_file
+  Power::$.design.solar_panel.area
+  Power::$.design.solar_panel.efficiency
+  Power::$.design.solar_panel.max_temperature
+  Power::$.design.solar_panel.thermal_coefficient
+
+Dependents (1 direct):
+  Thermal::@calculate_temperature.solar_panel_temperature_max
+
+Metadata:
+  root_output_type: SolarPanelResult
+  assumed_verification_paths: [Power::?solar_panel_max_temperature]
 ```
 
 ---
@@ -506,13 +568,35 @@ By default, shows what the node depends on. Use `--invert` to show what depends 
 
 ```bash
 # Show what a calculation depends on
-veriq tree "Power::@calculate_power" -p my_project.py
+veriq tree "Power::@calculate_solar_panel_heat.heat_generation" -p examples/dummysat.py
+```
 
-# Show what depends on a model field (impact analysis)
-veriq tree "Power::$.design.mass" -p my_project.py --invert
+**Example output:**
 
-# Limit tree depth
-veriq tree "Power::@calculate_power" -p my_project.py --depth 2
+```
+Power::@calculate_solar_panel_heat.heat_generation
+├── Power::$.design.config_file
+├── Power::$.design.solar_panel.area
+├── Power::$.design.solar_panel.efficiency
+├── Power::$.design.solar_panel.max_temperature
+└── Power::$.design.solar_panel.thermal_coefficient
+```
+
+Use `--invert` for impact analysis (what depends on this node):
+
+```bash
+# Show what depends on a model field
+veriq tree "Power::$.design.solar_panel.area" -p examples/dummysat.py --invert
+```
+
+**Example output (inverted):**
+
+```
+Power::$.design.solar_panel.area
+├── Power::?solar_panel_max_temperature
+├── Power::@calculate_solar_panel_heat.heat_generation
+│   └── Thermal::@calculate_temperature.solar_panel_temperature_max
+└── System::?power_thermal_compatibility
 ```
 
 ---
