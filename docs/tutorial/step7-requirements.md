@@ -241,11 +241,12 @@ veriq trace examples/tutorial/step7.py -i examples/tutorial/step7.in.toml
 
 ```
  Requirement          Description                              Status          Verifications
- REQ-SYS-001          System shall meet all subsystem requi... ○ SATISFIED     -
+ REQ-SYS-001          System shall meet all subsystem          ? NOT_VERIFIED  -
+                      requirements.
  ├── REQ-SYS-002      Power subsystem requirements.            ○ SATISFIED     -
  │   ├── REQ-PWR-001  Battery capacity must be sufficient.     ✓ VERIFIED      ✓ Power::?verify_battery
- │   └── REQ-PWR-002  Power margin must be positive in all...  ✓ VERIFIED      ✓ Power::?verify_power_margin[nominal]
- │                                                                             ✓ Power::?verify_power_margin[safe]
+ │   └── REQ-PWR-002  Power margin must be positive in all     ✓ VERIFIED      ✓ Power::?verify_power_margin[nominal]
+ │                    modes.                                                   ✓ Power::?verify_power_margin[safe]
  ├── REQ-SYS-003      Thermal subsystem requirements.          ○ SATISFIED     -
  │   └── REQ-TH-001   Temperature must be within limits.       ✓ VERIFIED      ✓ Thermal::?verify_temperature
  └── REQ-SYS-004      Future requirement (placeholder).        ? NOT_VERIFIED  -
@@ -253,9 +254,9 @@ veriq trace examples/tutorial/step7.py -i examples/tutorial/step7.in.toml
 ╭───────────────────────────────────────────────────── Summary ──────────────────────────────────────────────────────╮
 │ Total requirements: 7                                                                                              │
 │ ✓ Verified: 3                                                                                                      │
-│ ○ Satisfied: 3                                                                                                     │
+│ ○ Satisfied: 2                                                                                                     │
 │ ✗ Failed: 0                                                                                                        │
-│ ? Not verified: 1                                                                                                  │
+│ ? Not verified: 2                                                                                                  │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 ✓ All requirements satisfied
