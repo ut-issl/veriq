@@ -31,6 +31,12 @@ class Phase(StrEnum):
     CRUISE = "cruise"
 
 
+@unique
+class Component(StrEnum):
+    CPU = "cpu"
+    RADIO = "radio"
+
+
 def create_test_project() -> vq.Project:
     """Create a test project with table fields."""
     project = vq.Project("TestProject")
@@ -158,7 +164,7 @@ class TestTableNavigation:
                 initial_table = app._current_table_path
 
                 # Call the action directly to switch tables
-                app.action_next_table()
+                await app.action_next_table()
                 await pilot.pause()
 
                 # Table should have changed
@@ -167,7 +173,7 @@ class TestTableNavigation:
                 assert new_table == "matrix"
 
                 # Calling again should cycle back to first table
-                app.action_next_table()
+                await app.action_next_table()
                 await pilot.pause()
                 assert app._current_table_path == "power"
         finally:
@@ -811,7 +817,7 @@ class TestMultiDimensionalTable:
             app = VeriqEditApp(toml_path, project)
             async with app.run_test(size=(120, 40)) as pilot:
                 # Switch to the matrix table
-                app._load_table_in_editor("TestScope", "matrix")
+                await app._load_table_in_editor("TestScope", "matrix")
                 await pilot.pause()
 
                 # Check the table data
@@ -992,6 +998,173 @@ class TestMultiScopeNavigation:
                 tabbed_content.active = "scope-Thermal"
                 await pilot.pause()
                 assert app._current_scope == "Thermal"
+
+        finally:
+            toml_path.unlink()
+
+
+def create_project_with_3d_tables() -> vq.Project:
+    """Create a test project with multiple 3D tables sharing the same key types."""
+    project = vq.Project("Project3D")
+
+    scope = vq.Scope("Scope3D")
+    project.add_scope(scope)
+
+    @scope.root_model()
+    class Model3D(BaseModel):
+        table_a: vq.Table[tuple[Component, Mode, Phase], float]
+        table_b: vq.Table[tuple[Component, Mode, Phase], int]
+
+    return project
+
+
+class TestSwitchBetween3DTables:
+    """Tests for switching between 3D tables within the same scope.
+
+    This reproduces an issue where switching from one 3D table to another
+    with the same key types causes an error.
+    """
+
+    async def test_switch_between_3d_tables_same_key_types(self):
+        """Test switching between two 3D tables with the same key types.
+
+        This test reproduces the issue reported when using `veriq edit`
+        in cdh-telemetry-planner:
+        1. Go to the TLM-Plan tab
+        2. Switch table from `downlink_frequency` to `dr_skip_width`
+        Both tables have key type tuple[OperationMode, TelemetryPacketType, BitRate].
+        """
+        project = create_project_with_3d_tables()
+        toml_data = {
+            "Scope3D": {
+                "model": {
+                    "table_a": {
+                        "cpu,nominal,initial": 1.0,
+                        "cpu,nominal,cruise": 2.0,
+                        "cpu,safe,initial": 3.0,
+                        "cpu,safe,cruise": 4.0,
+                        "radio,nominal,initial": 5.0,
+                        "radio,nominal,cruise": 6.0,
+                        "radio,safe,initial": 7.0,
+                        "radio,safe,cruise": 8.0,
+                    },
+                    "table_b": {
+                        "cpu,nominal,initial": 10,
+                        "cpu,nominal,cruise": 20,
+                        "cpu,safe,initial": 30,
+                        "cpu,safe,cruise": 40,
+                        "radio,nominal,initial": 50,
+                        "radio,nominal,cruise": 60,
+                        "radio,safe,initial": 70,
+                        "radio,safe,cruise": 80,
+                    },
+                },
+            },
+        }
+        toml_path = create_toml_file(toml_data)
+
+        try:
+            app = VeriqEditApp(toml_path, project)
+            async with app.run_test(size=(120, 40)) as pilot:
+                # Initial table should be table_a
+                assert app._current_table_path == "table_a"
+
+                editor = app.query_one("#editor-Scope3D", TableEditor)
+                assert editor.table_data is not None
+                assert editor.table_data.field_name == "table_a"
+
+                # The table should have dimension selector for the first dimension
+                assert editor.table_data.dimensions == 3
+                options = editor.table_data.get_fixed_dimension_options()
+                assert len(options) == 1  # First dimension (Component) should be fixable
+
+                # Switch to table_b using the table selector
+                table_selector = app.query_one("#table-selector-Scope3D", TableSelector)
+                table_selector.set_table("table_b")
+                await pilot.pause()
+
+                # This should not raise any error and the table should be loaded
+                assert app._current_table_path == "table_b"
+
+                # The editor should now show table_b
+                assert editor.table_data is not None
+                assert editor.table_data.field_name == "table_b"
+                assert editor.table_data.dimensions == 3
+
+                # Verify the data is correct
+                fixed_dims = {0: Component.CPU}
+                assert editor.table_data.get_cell(fixed_dims, "nominal", "initial") == 10
+                assert editor.table_data.get_cell(fixed_dims, "safe", "cruise") == 40
+
+        finally:
+            toml_path.unlink()
+
+    async def test_switch_3d_tables_and_change_dimension(self):
+        """Test switching between 3D tables and changing dimension selector."""
+        project = create_project_with_3d_tables()
+        toml_data = {
+            "Scope3D": {
+                "model": {
+                    "table_a": {
+                        "cpu,nominal,initial": 1.0,
+                        "cpu,nominal,cruise": 2.0,
+                        "cpu,safe,initial": 3.0,
+                        "cpu,safe,cruise": 4.0,
+                        "radio,nominal,initial": 5.0,
+                        "radio,nominal,cruise": 6.0,
+                        "radio,safe,initial": 7.0,
+                        "radio,safe,cruise": 8.0,
+                    },
+                    "table_b": {
+                        "cpu,nominal,initial": 10,
+                        "cpu,nominal,cruise": 20,
+                        "cpu,safe,initial": 30,
+                        "cpu,safe,cruise": 40,
+                        "radio,nominal,initial": 50,
+                        "radio,nominal,cruise": 60,
+                        "radio,safe,initial": 70,
+                        "radio,safe,cruise": 80,
+                    },
+                },
+            },
+        }
+        toml_path = create_toml_file(toml_data)
+
+        try:
+            app = VeriqEditApp(toml_path, project)
+            async with app.run_test(size=(120, 40)) as pilot:
+                editor = app.query_one("#editor-Scope3D", TableEditor)
+
+                # Switch to table_b
+                table_selector = app.query_one("#table-selector-Scope3D", TableSelector)
+                table_selector.set_table("table_b")
+                await pilot.pause()
+
+                # Verify we're on table_b with CPU selected by default
+                assert editor.table_data is not None
+                assert editor.table_data.field_name == "table_b"
+
+                # The dimension selector should exist and have CPU as default
+                dim_selector = app._dimension_selectors.get("Scope3D")
+                assert dim_selector is not None
+
+                fixed_dims = dim_selector.get_fixed_dims()
+                assert 0 in fixed_dims
+                assert fixed_dims[0] == Component.CPU
+
+                # Verify cell values for CPU slice
+                assert editor.table_data.get_cell(fixed_dims, "nominal", "initial") == 10
+
+                # Switch back to table_a
+                table_selector.set_table("table_a")
+                await pilot.pause()
+
+                assert editor.table_data.field_name == "table_a"
+                # Dimension selector should still work
+                dim_selector = app._dimension_selectors.get("Scope3D")
+                assert dim_selector is not None
+                fixed_dims = dim_selector.get_fixed_dims()
+                assert editor.table_data.get_cell(fixed_dims, "nominal", "initial") == 1.0
 
         finally:
             toml_path.unlink()

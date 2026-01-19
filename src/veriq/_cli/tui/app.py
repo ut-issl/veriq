@@ -153,7 +153,7 @@ class VeriqEditApp(App[None]):
 
         self.tables = load_tables_from_toml(self.project, self.toml_data)
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         """Initialize the display after mounting."""
         if not self.tables:
             return
@@ -166,9 +166,9 @@ class VeriqEditApp(App[None]):
             scope_tables = self.tables[self._current_scope]
             if scope_tables:
                 first_table_path = next(iter(scope_tables.keys()))
-                self._load_table_in_editor(self._current_scope, first_table_path)
+                await self._load_table_in_editor(self._current_scope, first_table_path)
 
-    def on_tabbed_content_tab_activated(
+    async def on_tabbed_content_tab_activated(
         self,
         event: TabbedContent.TabActivated,
     ) -> None:
@@ -190,17 +190,17 @@ class VeriqEditApp(App[None]):
                     )
                     current_table = selector.current_table
                     if current_table:
-                        self._load_table_in_editor(scope_name, current_table)
+                        await self._load_table_in_editor(scope_name, current_table)
 
-    def on_table_selector_table_selected(
+    async def on_table_selector_table_selected(
         self,
         event: TableSelector.TableSelected,
     ) -> None:
         """Handle table selection changes."""
         if self._current_scope:
-            self._load_table_in_editor(self._current_scope, event.field_path)
+            await self._load_table_in_editor(self._current_scope, event.field_path)
 
-    def _load_table_in_editor(self, scope_name: str, field_path: str) -> None:
+    async def _load_table_in_editor(self, scope_name: str, field_path: str) -> None:
         """Load a specific table into the editor.
 
         Args:
@@ -224,14 +224,14 @@ class VeriqEditApp(App[None]):
             return
 
         # Update dimension selector if needed
-        self._update_dimension_selector(scope_name, table_data)
+        await self._update_dimension_selector(scope_name, table_data)
 
         # Load the table
         dim_selector = self._dimension_selectors.get(scope_name)
         fixed_dims = dim_selector.get_fixed_dims() if dim_selector else {}
         editor.load_table(table_data, fixed_dims)
 
-    def _update_dimension_selector(
+    async def _update_dimension_selector(
         self,
         scope_name: str,
         table_data: TableData,
@@ -248,7 +248,7 @@ class VeriqEditApp(App[None]):
         # Remove old selector if exists
         old_selector = self._dimension_selectors.get(scope_name)
         if old_selector is not None:
-            old_selector.remove()
+            await old_selector.remove()
             del self._dimension_selectors[scope_name]
 
         # Create new selector if needed
@@ -259,7 +259,7 @@ class VeriqEditApp(App[None]):
                 table_data.key_types,
                 id=f"dim-selector-{scope_name}",
             )
-            container.mount(selector)
+            await container.mount(selector)
             self._dimension_selectors[scope_name] = selector
 
     def on_dimension_selector_dimension_changed(
@@ -309,9 +309,7 @@ class VeriqEditApp(App[None]):
     def _update_title(self) -> None:
         """Update the title to show modified indicator."""
         has_modifications = any(
-            table.modified
-            for scope_tables in self.tables.values()
-            for table in scope_tables.values()
+            table.modified for scope_tables in self.tables.values() for table in scope_tables.values()
         )
         if has_modifications:
             self.title = f"veriq edit: {self.toml_path.name} [modified]"
@@ -320,11 +318,7 @@ class VeriqEditApp(App[None]):
 
     def _has_unsaved_changes(self) -> bool:
         """Check if there are any unsaved changes."""
-        return any(
-            table.modified
-            for scope_tables in self.tables.values()
-            for table in scope_tables.values()
-        )
+        return any(table.modified for scope_tables in self.tables.values() for table in scope_tables.values())
 
     def action_save(self) -> None:
         """Save the current changes to the TOML file."""
@@ -370,7 +364,7 @@ class VeriqEditApp(App[None]):
         else:
             self.exit()
 
-    def action_next_table(self) -> None:
+    async def action_next_table(self) -> None:
         """Switch to the next table in the current scope."""
         if self._current_scope is None:
             return
@@ -393,4 +387,4 @@ class VeriqEditApp(App[None]):
             selector.set_table(next_path)
 
             # Load the new table
-            self._load_table_in_editor(self._current_scope, next_path)
+            await self._load_table_in_editor(self._current_scope, next_path)
