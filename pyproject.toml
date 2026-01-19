@@ -18,6 +18,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
+  "bounded-models>=0.0.3",
   "pydantic>=2.11.7",
   "rich>=14.0.0",
   "scoped-context>=0.0.1",

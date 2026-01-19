@@ -33,6 +33,8 @@ __all__ = [
     "validate_external_data",
 ]
 
+# bounded-models integration
+from ._bounded_models import TableFieldHandler
 from ._decorators import assume
 from ._eval import evaluate_project
 from ._eval_engine import EvaluationResult, evaluate_graph
@@ -56,15 +58,3 @@ from ._traceability import (
     VerificationResult,
     build_traceability_report,
 )
-
-# Optional bounded-models integration
-try:
-    from ._bounded_models import TableFieldHandler
-except ImportError:
-
-    def __getattr__(name: str) -> object:
-        if name == "TableFieldHandler":
-            msg = "TableFieldHandler requires bounded-models to be installed. Install with: pip install bounded-models"
-            raise ImportError(msg)
-        msg = f"module {__name__!r} has no attribute {name!r}"
-        raise AttributeError(msg)

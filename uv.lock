@@ -727,6 +727,7 @@ name = "veriq"
 version = "0.3.0"
 source = { editable = "." }
 dependencies = [
+    { name = "bounded-models" },
     { name = "pydantic" },
     { name = "rich" },
     { name = "scoped-context" },
@@ -774,6 +775,7 @@ typing = [
 
 [package.metadata]
 requires-dist = [
+    { name = "bounded-models", specifier = ">=0.0.3" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "rich", specifier = ">=14.0.0" },
     { name = "scoped-context", specifier = ">=0.0.1" },
