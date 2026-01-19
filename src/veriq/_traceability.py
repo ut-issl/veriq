@@ -212,7 +212,7 @@ def extract_verification_results(
     is_table = origin is Table or (isinstance(origin, type) and issubclass(origin, Table))
 
     if is_table:
-        # Table[K, bool] verification - find all matching leaf paths
+        # Table[K, bool] verification - find all matching leaf paths (with table keys)
         type_args = get_args(output_type)
         if len(type_args) == 2:
             # Look for all results matching this verification
@@ -224,12 +224,16 @@ def extract_verification_results(
                 if ppath.path.verification_name != verification.name:
                     continue
 
-                # Extract table key from path parts
-                table_key: str | tuple[str, ...] | None = None
-                if ppath.path.parts:
-                    part = ppath.path.parts[0]
-                    if isinstance(part, ItemPart):
-                        table_key = part.key
+                # Extract table key from path parts - skip non-leaf results (no table key)
+                if not ppath.path.parts:
+                    # This is the non-leaf (aggregate) result, skip it
+                    continue
+
+                part = ppath.path.parts[0]
+                if not isinstance(part, ItemPart):
+                    continue
+
+                table_key: str | tuple[str, ...] = part.key
 
                 results.append(
                     VerificationResult(
@@ -279,7 +283,7 @@ def _expand_verification_names(verification: Verification[Any, ...]) -> list[str
     """Expand a verification into all its names, including Table keys.
 
     For a simple bool verification, returns a single name.
-    For a Table[K, bool] verification, returns names for the base and each key.
+    For a Table[K, bool] verification, returns names for each key only (not the base).
 
     Args:
         verification: The verification to expand.
@@ -295,8 +299,8 @@ def _expand_verification_names(verification: Verification[Any, ...]) -> list[str
         # Simple bool verification
         return [base_name]
 
-    # Table[K, bool] verification - expand to include base and all keys
-    names = [base_name]
+    # Table[K, bool] verification - expand to each key only (not the base)
+    names: list[str] = []
 
     # Handle Enum key types
     if isinstance(key_type, type) and issubclass(key_type, Enum):
@@ -313,7 +317,8 @@ def _expand_verification_names(verification: Verification[Any, ...]) -> list[str
                     key_str = ",".join(m.value for m in combo)
                     names.append(f"{base_name}[{key_str}]")
 
-    return names
+    # If we couldn't expand the keys (unknown key type), fall back to base name
+    return names if names else [base_name]
 
 
 def detect_circular_dependencies(
