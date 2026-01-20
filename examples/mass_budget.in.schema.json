@@ -6,48 +6,23 @@
         "mass": {
           "additionalProperties": false,
           "properties": {
-            "battery_a": {
-              "title": "Battery A",
+            "structure": {
+              "title": "Structure",
               "type": "number"
             },
-            "battery_b": {
-              "title": "Battery B",
+            "battery": {
+              "title": "Battery",
               "type": "number"
             },
             "solar_panel": {
               "title": "Solar Panel",
               "type": "number"
-            },
-            "rw_x": {
-              "title": "Rw X",
-              "type": "number"
-            },
-            "rw_y": {
-              "title": "Rw Y",
-              "type": "number"
-            },
-            "rw_z": {
-              "title": "Rw Z",
-              "type": "number"
-            },
-            "main_structure": {
-              "title": "Main Structure",
-              "type": "number"
-            },
-            "antenna": {
-              "title": "Antenna",
-              "type": "number"
             }
           },
           "required": [
-            "battery_a",
-            "battery_b",
-            "solar_panel",
-            "rw_x",
-            "rw_y",
-            "rw_z",
-            "main_structure",
-            "antenna"
+            "structure",
+            "battery",
+            "solar_panel"
           ],
           "title": "Mass",
           "type": "object"
@@ -55,28 +30,28 @@
         "position": {
           "additionalProperties": false,
           "properties": {
-            "battery_a,x": {
-              "title": "Battery A,X",
+            "structure,x": {
+              "title": "Structure,X",
               "type": "number"
             },
-            "battery_a,y": {
-              "title": "Battery A,Y",
+            "structure,y": {
+              "title": "Structure,Y",
               "type": "number"
             },
-            "battery_a,z": {
-              "title": "Battery A,Z",
+            "structure,z": {
+              "title": "Structure,Z",
               "type": "number"
             },
-            "battery_b,x": {
-              "title": "Battery B,X",
+            "battery,x": {
+              "title": "Battery,X",
               "type": "number"
             },
-            "battery_b,y": {
-              "title": "Battery B,Y",
+            "battery,y": {
+              "title": "Battery,Y",
               "type": "number"
             },
-            "battery_b,z": {
-              "title": "Battery B,Z",
+            "battery,z": {
+              "title": "Battery,Z",
               "type": "number"
             },
             "solar_panel,x": {
@@ -90,93 +65,18 @@
             "solar_panel,z": {
               "title": "Solar Panel,Z",
               "type": "number"
-            },
-            "rw_x,x": {
-              "title": "Rw X,X",
-              "type": "number"
-            },
-            "rw_x,y": {
-              "title": "Rw X,Y",
-              "type": "number"
-            },
-            "rw_x,z": {
-              "title": "Rw X,Z",
-              "type": "number"
-            },
-            "rw_y,x": {
-              "title": "Rw Y,X",
-              "type": "number"
-            },
-            "rw_y,y": {
-              "title": "Rw Y,Y",
-              "type": "number"
-            },
-            "rw_y,z": {
-              "title": "Rw Y,Z",
-              "type": "number"
-            },
-            "rw_z,x": {
-              "title": "Rw Z,X",
-              "type": "number"
-            },
-            "rw_z,y": {
-              "title": "Rw Z,Y",
-              "type": "number"
-            },
-            "rw_z,z": {
-              "title": "Rw Z,Z",
-              "type": "number"
-            },
-            "main_structure,x": {
-              "title": "Main Structure,X",
-              "type": "number"
-            },
-            "main_structure,y": {
-              "title": "Main Structure,Y",
-              "type": "number"
-            },
-            "main_structure,z": {
-              "title": "Main Structure,Z",
-              "type": "number"
-            },
-            "antenna,x": {
-              "title": "Antenna,X",
-              "type": "number"
-            },
-            "antenna,y": {
-              "title": "Antenna,Y",
-              "type": "number"
-            },
-            "antenna,z": {
-              "title": "Antenna,Z",
-              "type": "number"
             }
           },
           "required": [
-            "battery_a,x",
-            "battery_a,y",
-            "battery_a,z",
-            "battery_b,x",
-            "battery_b,y",
-            "battery_b,z",
+            "structure,x",
+            "structure,y",
+            "structure,z",
+            "battery,x",
+            "battery,y",
+            "battery,z",
             "solar_panel,x",
             "solar_panel,y",
-            "solar_panel,z",
-            "rw_x,x",
-            "rw_x,y",
-            "rw_x,z",
-            "rw_y,x",
-            "rw_y,y",
-            "rw_y,z",
-            "rw_z,x",
-            "rw_z,y",
-            "rw_z,z",
-            "main_structure,x",
-            "main_structure,y",
-            "main_structure,z",
-            "antenna,x",
-            "antenna,y",
-            "antenna,z"
+            "solar_panel,z"
           ],
           "title": "Position",
           "type": "object"
@@ -184,48 +84,23 @@
         "margin_percent": {
           "additionalProperties": false,
           "properties": {
-            "battery_a": {
-              "title": "Battery A",
+            "structure": {
+              "title": "Structure",
               "type": "number"
             },
-            "battery_b": {
-              "title": "Battery B",
+            "battery": {
+              "title": "Battery",
               "type": "number"
             },
             "solar_panel": {
               "title": "Solar Panel",
               "type": "number"
-            },
-            "rw_x": {
-              "title": "Rw X",
-              "type": "number"
-            },
-            "rw_y": {
-              "title": "Rw Y",
-              "type": "number"
-            },
-            "rw_z": {
-              "title": "Rw Z",
-              "type": "number"
-            },
-            "main_structure": {
-              "title": "Main Structure",
-              "type": "number"
-            },
-            "antenna": {
-              "title": "Antenna",
-              "type": "number"
             }
           },
           "required": [
-            "battery_a",
-            "battery_b",
-            "solar_panel",
-            "rw_x",
-            "rw_y",
-            "rw_z",
-            "main_structure",
-            "antenna"
+            "structure",
+            "battery",
+            "solar_panel"
           ],
           "title": "Margin Percent",
           "type": "object"

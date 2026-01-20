@@ -37,14 +37,9 @@ project.add_scope(system)
 class Component(StrEnum):
     """Satellite components tracked in the mass budget."""
 
-    BATTERY_A = "battery_a"
-    BATTERY_B = "battery_b"
+    STRUCTURE = "structure"
+    BATTERY = "battery"
     SOLAR_PANEL = "solar_panel"
-    RW_X = "rw_x"
-    RW_Y = "rw_y"
-    RW_Z = "rw_z"
-    MAIN_STRUCTURE = "main_structure"
-    ANTENNA = "antenna"
 
 
 @unique

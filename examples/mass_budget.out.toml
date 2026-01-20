@@ -1,51 +1,26 @@
 [System.model.design.mass]
-battery_a = 5.0
-battery_b = 5.0
+structure = 15.0
+battery = 5.0
 solar_panel = 8.0
-rw_x = 2.0
-rw_y = 2.0
-rw_z = 2.0
-main_structure = 15.0
-antenna = 1.5
 
 [System.model.design.position]
-"battery_a,x" = 0.15
-"battery_a,y" = 0.1
-"battery_a,z" = 0.0
-"battery_b,x" = 0.15
-"battery_b,y" = -0.1
-"battery_b,z" = 0.0
+"structure,x" = 0.0
+"structure,y" = 0.0
+"structure,z" = 0.0
+"battery,x" = 0.15
+"battery,y" = 0.0
+"battery,z" = 0.0
 "solar_panel,x" = 0.0
 "solar_panel,y" = 0.0
 "solar_panel,z" = 0.3
-"rw_x,x" = -0.1
-"rw_x,y" = 0.0
-"rw_x,z" = 0.0
-"rw_y,x" = 0.0
-"rw_y,y" = -0.1
-"rw_y,z" = 0.0
-"rw_z,x" = 0.0
-"rw_z,y" = 0.0
-"rw_z,z" = -0.1
-"main_structure,x" = 0.0
-"main_structure,y" = 0.0
-"main_structure,z" = 0.0
-"antenna,x" = -0.2
-"antenna,y" = 0.0
-"antenna,z" = 0.15
 
 [System.model.design.margin_percent]
-battery_a = 10.0
-battery_b = 10.0
+structure = 3.0
+battery = 10.0
 solar_panel = 5.0
-rw_x = 5.0
-rw_y = 5.0
-rw_z = 5.0
-main_structure = 3.0
-antenna = 10.0
 
 [System.model.requirement]
-mass_limit = 50.0
+mass_limit = 30.0
 
 [System.model.requirement.cog_limit]
 x = 0.05
@@ -53,13 +28,13 @@ y = 0.05
 z = 0.1
 
 [System.calc.calculate_mass]
-total_mass = 40.5
-mass_with_margin = 42.8
+total_mass = 28.0
+mass_with_margin = 29.35
 
 [System.calc.calculate_cog.cog]
-x = 0.024691358024691357
-y = -0.0049382716049382715
-z = 0.05987654320987654
+x = 0.026785714285714284
+y = 0.0
+z = 0.08571428571428572
 
 [System.verification]
 verify_total_mass = true
