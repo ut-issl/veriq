@@ -61,18 +61,18 @@ class Axis(StrEnum):
 # -----------------------------------------------------------------------------
 
 
-class ComponentMassProperties(BaseModel):
-    """Mass properties for a single component."""
-
-    mass: float  # kg (Current Best Estimate)
-    position: tuple[float, float, float]  # m (x, y, z) from satellite origin
-    margin_percent: float  # growth margin percentage
-
-
 class MassBudgetDesign(BaseModel):
-    """Design parameters for the mass budget."""
+    """Design parameters for the mass budget.
 
-    components: vq.Table[Component, ComponentMassProperties]
+    Each component has:
+    - mass: Current Best Estimate (CBE) in kg
+    - position: (x, y, z) coordinates in meters from satellite origin
+    - margin_percent: growth margin as percentage
+    """
+
+    mass: vq.Table[Component, float]  # kg (Current Best Estimate)
+    position: vq.Table[tuple[Component, Axis], float]  # m from satellite origin
+    margin_percent: vq.Table[Component, float]  # growth margin percentage
 
 
 class MassBudgetRequirement(BaseModel):
@@ -115,15 +115,16 @@ class CogResult(BaseModel):
 
 @system.calculation()
 def calculate_mass(
-    components: Annotated[vq.Table[Component, ComponentMassProperties], vq.Ref("$.design.components")],
+    mass: Annotated[vq.Table[Component, float], vq.Ref("$.design.mass")],
+    margin_percent: Annotated[vq.Table[Component, float], vq.Ref("$.design.margin_percent")],
 ) -> MassResult:
     """Calculate total mass and mass with margin using NumPy.
 
     Total mass is the sum of all component CBE masses.
     Mass with margin applies each component's individual margin percentage.
     """
-    masses = np.array([c.mass for c in components.values()])
-    margins = np.array([c.margin_percent for c in components.values()])
+    masses = np.array(list(mass.values()))
+    margins = np.array(list(margin_percent.values()))
 
     total_mass = float(np.sum(masses))
     mass_with_margin = float(np.sum(masses * (1 + margins / 100)))
@@ -133,14 +134,15 @@ def calculate_mass(
 
 @system.calculation()
 def calculate_cog(
-    components: Annotated[vq.Table[Component, ComponentMassProperties], vq.Ref("$.design.components")],
+    mass: Annotated[vq.Table[Component, float], vq.Ref("$.design.mass")],
+    position: Annotated[vq.Table[tuple[Component, Axis], float], vq.Ref("$.design.position")],
 ) -> CogResult:
     """Calculate center of gravity using NumPy weighted average.
 
     CoG = sum(mass_i * position_i) / sum(mass_i)
     """
-    masses = np.array([c.mass for c in components.values()])
-    positions = np.array([c.position for c in components.values()])
+    masses = np.array(list(mass.values()))
+    positions = np.array([[position[comp, axis] for axis in Axis] for comp in Component])
 
     # Weighted average: sum(mass * position) / sum(mass)
     total_mass = np.sum(masses)

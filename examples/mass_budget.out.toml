@@ -1,74 +1,48 @@
-[System.model.design.components.battery_a]
-mass = 5.0
-position = [
-    0.15,
-    0.1,
-    0.0,
-]
-margin_percent = 10.0
+[System.model.design.mass]
+battery_a = 5.0
+battery_b = 5.0
+solar_panel = 8.0
+rw_x = 2.0
+rw_y = 2.0
+rw_z = 2.0
+main_structure = 15.0
+antenna = 1.5
 
-[System.model.design.components.battery_b]
-mass = 5.0
-position = [
-    0.15,
-    -0.1,
-    0.0,
-]
-margin_percent = 10.0
+[System.model.design.position]
+"battery_a,x" = 0.15
+"battery_a,y" = 0.1
+"battery_a,z" = 0.0
+"battery_b,x" = 0.15
+"battery_b,y" = -0.1
+"battery_b,z" = 0.0
+"solar_panel,x" = 0.0
+"solar_panel,y" = 0.0
+"solar_panel,z" = 0.3
+"rw_x,x" = -0.1
+"rw_x,y" = 0.0
+"rw_x,z" = 0.0
+"rw_y,x" = 0.0
+"rw_y,y" = -0.1
+"rw_y,z" = 0.0
+"rw_z,x" = 0.0
+"rw_z,y" = 0.0
+"rw_z,z" = -0.1
+"main_structure,x" = 0.0
+"main_structure,y" = 0.0
+"main_structure,z" = 0.0
+"antenna,x" = -0.2
+"antenna,y" = 0.0
+"antenna,z" = 0.15
 
-[System.model.design.components.solar_panel]
-mass = 8.0
-position = [
-    0.0,
-    0.0,
-    0.3,
-]
-margin_percent = 5.0
-
-[System.model.design.components.rw_x]
-mass = 2.0
-position = [
-    -0.1,
-    0.0,
-    0.0,
-]
-margin_percent = 5.0
-
-[System.model.design.components.rw_y]
-mass = 2.0
-position = [
-    0.0,
-    -0.1,
-    0.0,
-]
-margin_percent = 5.0
-
-[System.model.design.components.rw_z]
-mass = 2.0
-position = [
-    0.0,
-    0.0,
-    -0.1,
-]
-margin_percent = 5.0
-
-[System.model.design.components.main_structure]
-mass = 15.0
-position = [
-    0.0,
-    0.0,
-    0.0,
-]
-margin_percent = 3.0
-
-[System.model.design.components.antenna]
-mass = 1.5
-position = [
-    -0.2,
-    0.0,
-    0.15,
-]
-margin_percent = 10.0
+[System.model.design.margin_percent]
+battery_a = 10.0
+battery_b = 10.0
+solar_panel = 5.0
+rw_x = 5.0
+rw_y = 5.0
+rw_z = 5.0
+main_structure = 3.0
+antenna = 10.0
 
 [System.model.requirement]
 mass_limit = 50.0

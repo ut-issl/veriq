@@ -1,71 +1,42 @@
 {
   "$defs": {
-    "ComponentMassProperties": {
-      "description": "Mass properties for a single component.",
+    "MassBudgetDesign": {
+      "description": "Design parameters for the mass budget.\n\nEach component has:\n- mass: Current Best Estimate (CBE) in kg\n- position: (x, y, z) coordinates in meters from satellite origin\n- margin_percent: growth margin as percentage",
       "properties": {
         "mass": {
-          "title": "Mass",
-          "type": "number"
-        },
-        "position": {
-          "maxItems": 3,
-          "minItems": 3,
-          "prefixItems": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "number"
-            }
-          ],
-          "title": "Position",
-          "type": "array"
-        },
-        "margin_percent": {
-          "title": "Margin Percent",
-          "type": "number"
-        }
-      },
-      "required": [
-        "mass",
-        "position",
-        "margin_percent"
-      ],
-      "title": "ComponentMassProperties",
-      "type": "object"
-    },
-    "MassBudgetDesign": {
-      "description": "Design parameters for the mass budget.",
-      "properties": {
-        "components": {
           "additionalProperties": false,
           "properties": {
             "battery_a": {
-              "$ref": "#/$defs/ComponentMassProperties"
+              "title": "Battery A",
+              "type": "number"
             },
             "battery_b": {
-              "$ref": "#/$defs/ComponentMassProperties"
+              "title": "Battery B",
+              "type": "number"
             },
             "solar_panel": {
-              "$ref": "#/$defs/ComponentMassProperties"
+              "title": "Solar Panel",
+              "type": "number"
             },
             "rw_x": {
-              "$ref": "#/$defs/ComponentMassProperties"
+              "title": "Rw X",
+              "type": "number"
             },
             "rw_y": {
-              "$ref": "#/$defs/ComponentMassProperties"
+              "title": "Rw Y",
+              "type": "number"
             },
             "rw_z": {
-              "$ref": "#/$defs/ComponentMassProperties"
+              "title": "Rw Z",
+              "type": "number"
             },
             "main_structure": {
-              "$ref": "#/$defs/ComponentMassProperties"
+              "title": "Main Structure",
+              "type": "number"
             },
             "antenna": {
-              "$ref": "#/$defs/ComponentMassProperties"
+              "title": "Antenna",
+              "type": "number"
             }
           },
           "required": [
@@ -78,12 +49,192 @@
             "main_structure",
             "antenna"
           ],
-          "title": "Components",
+          "title": "Mass",
+          "type": "object"
+        },
+        "position": {
+          "additionalProperties": false,
+          "properties": {
+            "battery_a,x": {
+              "title": "Battery A,X",
+              "type": "number"
+            },
+            "battery_a,y": {
+              "title": "Battery A,Y",
+              "type": "number"
+            },
+            "battery_a,z": {
+              "title": "Battery A,Z",
+              "type": "number"
+            },
+            "battery_b,x": {
+              "title": "Battery B,X",
+              "type": "number"
+            },
+            "battery_b,y": {
+              "title": "Battery B,Y",
+              "type": "number"
+            },
+            "battery_b,z": {
+              "title": "Battery B,Z",
+              "type": "number"
+            },
+            "solar_panel,x": {
+              "title": "Solar Panel,X",
+              "type": "number"
+            },
+            "solar_panel,y": {
+              "title": "Solar Panel,Y",
+              "type": "number"
+            },
+            "solar_panel,z": {
+              "title": "Solar Panel,Z",
+              "type": "number"
+            },
+            "rw_x,x": {
+              "title": "Rw X,X",
+              "type": "number"
+            },
+            "rw_x,y": {
+              "title": "Rw X,Y",
+              "type": "number"
+            },
+            "rw_x,z": {
+              "title": "Rw X,Z",
+              "type": "number"
+            },
+            "rw_y,x": {
+              "title": "Rw Y,X",
+              "type": "number"
+            },
+            "rw_y,y": {
+              "title": "Rw Y,Y",
+              "type": "number"
+            },
+            "rw_y,z": {
+              "title": "Rw Y,Z",
+              "type": "number"
+            },
+            "rw_z,x": {
+              "title": "Rw Z,X",
+              "type": "number"
+            },
+            "rw_z,y": {
+              "title": "Rw Z,Y",
+              "type": "number"
+            },
+            "rw_z,z": {
+              "title": "Rw Z,Z",
+              "type": "number"
+            },
+            "main_structure,x": {
+              "title": "Main Structure,X",
+              "type": "number"
+            },
+            "main_structure,y": {
+              "title": "Main Structure,Y",
+              "type": "number"
+            },
+            "main_structure,z": {
+              "title": "Main Structure,Z",
+              "type": "number"
+            },
+            "antenna,x": {
+              "title": "Antenna,X",
+              "type": "number"
+            },
+            "antenna,y": {
+              "title": "Antenna,Y",
+              "type": "number"
+            },
+            "antenna,z": {
+              "title": "Antenna,Z",
+              "type": "number"
+            }
+          },
+          "required": [
+            "battery_a,x",
+            "battery_a,y",
+            "battery_a,z",
+            "battery_b,x",
+            "battery_b,y",
+            "battery_b,z",
+            "solar_panel,x",
+            "solar_panel,y",
+            "solar_panel,z",
+            "rw_x,x",
+            "rw_x,y",
+            "rw_x,z",
+            "rw_y,x",
+            "rw_y,y",
+            "rw_y,z",
+            "rw_z,x",
+            "rw_z,y",
+            "rw_z,z",
+            "main_structure,x",
+            "main_structure,y",
+            "main_structure,z",
+            "antenna,x",
+            "antenna,y",
+            "antenna,z"
+          ],
+          "title": "Position",
+          "type": "object"
+        },
+        "margin_percent": {
+          "additionalProperties": false,
+          "properties": {
+            "battery_a": {
+              "title": "Battery A",
+              "type": "number"
+            },
+            "battery_b": {
+              "title": "Battery B",
+              "type": "number"
+            },
+            "solar_panel": {
+              "title": "Solar Panel",
+              "type": "number"
+            },
+            "rw_x": {
+              "title": "Rw X",
+              "type": "number"
+            },
+            "rw_y": {
+              "title": "Rw Y",
+              "type": "number"
+            },
+            "rw_z": {
+              "title": "Rw Z",
+              "type": "number"
+            },
+            "main_structure": {
+              "title": "Main Structure",
+              "type": "number"
+            },
+            "antenna": {
+              "title": "Antenna",
+              "type": "number"
+            }
+          },
+          "required": [
+            "battery_a",
+            "battery_b",
+            "solar_panel",
+            "rw_x",
+            "rw_y",
+            "rw_z",
+            "main_structure",
+            "antenna"
+          ],
+          "title": "Margin Percent",
           "type": "object"
         }
       },
       "required": [
-        "components"
+        "mass",
+        "position",
+        "margin_percent"
       ],
       "title": "MassBudgetDesign",
       "type": "object"
