@@ -1,0 +1,96 @@
+[System.model.design.components.battery_a]
+mass = 5.0
+position = [
+    0.15,
+    0.1,
+    0.0,
+]
+margin_percent = 10.0
+
+[System.model.design.components.battery_b]
+mass = 5.0
+position = [
+    0.15,
+    -0.1,
+    0.0,
+]
+margin_percent = 10.0
+
+[System.model.design.components.solar_panel]
+mass = 8.0
+position = [
+    0.0,
+    0.0,
+    0.3,
+]
+margin_percent = 5.0
+
+[System.model.design.components.rw_x]
+mass = 2.0
+position = [
+    -0.1,
+    0.0,
+    0.0,
+]
+margin_percent = 5.0
+
+[System.model.design.components.rw_y]
+mass = 2.0
+position = [
+    0.0,
+    -0.1,
+    0.0,
+]
+margin_percent = 5.0
+
+[System.model.design.components.rw_z]
+mass = 2.0
+position = [
+    0.0,
+    0.0,
+    -0.1,
+]
+margin_percent = 5.0
+
+[System.model.design.components.main_structure]
+mass = 15.0
+position = [
+    0.0,
+    0.0,
+    0.0,
+]
+margin_percent = 3.0
+
+[System.model.design.components.antenna]
+mass = 1.5
+position = [
+    -0.2,
+    0.0,
+    0.15,
+]
+margin_percent = 10.0
+
+[System.model.requirement]
+mass_limit = 50.0
+
+[System.model.requirement.cog_limit]
+x = 0.05
+y = 0.05
+z = 0.1
+
+[System.calc.calculate_mass]
+total_mass = 40.5
+mass_with_margin = 42.8
+
+[System.calc.calculate_cog.cog]
+x = 0.024691358024691357
+y = -0.0049382716049382715
+z = 0.05987654320987654
+
+[System.verification]
+verify_total_mass = true
+
+[System.verification.verify_cog_envelope]
+x = true
+y = true
+z = true

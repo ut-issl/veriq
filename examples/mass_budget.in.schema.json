@@ -1,0 +1,170 @@
+{
+  "$defs": {
+    "ComponentMassProperties": {
+      "description": "Mass properties for a single component.",
+      "properties": {
+        "mass": {
+          "title": "Mass",
+          "type": "number"
+        },
+        "position": {
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Position",
+          "type": "array"
+        },
+        "margin_percent": {
+          "title": "Margin Percent",
+          "type": "number"
+        }
+      },
+      "required": [
+        "mass",
+        "position",
+        "margin_percent"
+      ],
+      "title": "ComponentMassProperties",
+      "type": "object"
+    },
+    "MassBudgetDesign": {
+      "description": "Design parameters for the mass budget.",
+      "properties": {
+        "components": {
+          "additionalProperties": false,
+          "properties": {
+            "battery_a": {
+              "$ref": "#/$defs/ComponentMassProperties"
+            },
+            "battery_b": {
+              "$ref": "#/$defs/ComponentMassProperties"
+            },
+            "solar_panel": {
+              "$ref": "#/$defs/ComponentMassProperties"
+            },
+            "rw_x": {
+              "$ref": "#/$defs/ComponentMassProperties"
+            },
+            "rw_y": {
+              "$ref": "#/$defs/ComponentMassProperties"
+            },
+            "rw_z": {
+              "$ref": "#/$defs/ComponentMassProperties"
+            },
+            "main_structure": {
+              "$ref": "#/$defs/ComponentMassProperties"
+            },
+            "antenna": {
+              "$ref": "#/$defs/ComponentMassProperties"
+            }
+          },
+          "required": [
+            "battery_a",
+            "battery_b",
+            "solar_panel",
+            "rw_x",
+            "rw_y",
+            "rw_z",
+            "main_structure",
+            "antenna"
+          ],
+          "title": "Components",
+          "type": "object"
+        }
+      },
+      "required": [
+        "components"
+      ],
+      "title": "MassBudgetDesign",
+      "type": "object"
+    },
+    "MassBudgetModel": {
+      "description": "Root model for the mass budget scope.",
+      "properties": {
+        "design": {
+          "$ref": "#/$defs/MassBudgetDesign"
+        },
+        "requirement": {
+          "$ref": "#/$defs/MassBudgetRequirement"
+        }
+      },
+      "required": [
+        "design",
+        "requirement"
+      ],
+      "title": "MassBudgetModel",
+      "type": "object"
+    },
+    "MassBudgetRequirement": {
+      "description": "Requirement parameters for mass budget verification.",
+      "properties": {
+        "mass_limit": {
+          "title": "Mass Limit",
+          "type": "number"
+        },
+        "cog_limit": {
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "title": "Y",
+              "type": "number"
+            },
+            "z": {
+              "title": "Z",
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "title": "Cog Limit",
+          "type": "object"
+        }
+      },
+      "required": [
+        "mass_limit",
+        "cog_limit"
+      ],
+      "title": "MassBudgetRequirement",
+      "type": "object"
+    },
+    "SystemInput": {
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/MassBudgetModel"
+        }
+      },
+      "required": [
+        "model"
+      ],
+      "title": "SystemInput",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "System": {
+      "$ref": "#/$defs/SystemInput"
+    }
+  },
+  "required": [
+    "System"
+  ],
+  "title": "Mass BudgetInput",
+  "type": "object"
+}

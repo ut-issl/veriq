@@ -1,0 +1,64 @@
+#:schema ./mass_budget.in.schema.json
+# Mass Budget Example Input
+# This file contains component mass properties and requirement parameters.
+
+# -----------------------------------------------------------------------------
+# Design: Component Mass Properties
+# -----------------------------------------------------------------------------
+# Each component has:
+#   - mass: Current Best Estimate (CBE) in kg
+#   - position: (x, y, z) coordinates in meters from satellite origin
+#   - margin_percent: growth margin as percentage
+
+[System.model.design.components.battery_a]
+mass = 5.0
+position = [0.15, 0.10, 0.0]
+margin_percent = 10.0
+
+[System.model.design.components.battery_b]
+mass = 5.0
+position = [0.15, -0.10, 0.0]
+margin_percent = 10.0
+
+[System.model.design.components.solar_panel]
+mass = 8.0
+position = [0.0, 0.0, 0.30]
+margin_percent = 5.0
+
+[System.model.design.components.rw_x]
+mass = 2.0
+position = [-0.10, 0.0, 0.0]
+margin_percent = 5.0
+
+[System.model.design.components.rw_y]
+mass = 2.0
+position = [0.0, -0.10, 0.0]
+margin_percent = 5.0
+
+[System.model.design.components.rw_z]
+mass = 2.0
+position = [0.0, 0.0, -0.10]
+margin_percent = 5.0
+
+[System.model.design.components.main_structure]
+mass = 15.0
+position = [0.0, 0.0, 0.0]
+margin_percent = 3.0
+
+[System.model.design.components.antenna]
+mass = 1.5
+position = [-0.20, 0.0, 0.15]
+margin_percent = 10.0
+
+# -----------------------------------------------------------------------------
+# Requirement Parameters
+# -----------------------------------------------------------------------------
+# These values can be adjusted for trade studies.
+
+[System.model.requirement]
+mass_limit = 50.0  # kg - Launch vehicle constraint
+
+[System.model.requirement.cog_limit]
+x = 0.05  # m - CoG must be within ±50mm of origin on X axis
+y = 0.05  # m - CoG must be within ±50mm of origin on Y axis
+z = 0.10  # m - CoG must be within ±100mm of origin on Z axis
