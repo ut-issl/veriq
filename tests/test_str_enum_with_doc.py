@@ -1,3 +1,5 @@
+from enum import unique
+
 import pytest
 
 from veriq import StrEnumWithDoc
@@ -68,3 +70,13 @@ def test_enum_members_parametrized(
 ) -> None:
     assert member.value == expected_value
     assert member.__doc__ == expected_doc
+
+
+def test_unique_decorator_rejects_duplicate_values_with_different_docs() -> None:
+    """Ensure @unique considers only values, not docstrings."""
+    with pytest.raises(ValueError, match="duplicate values"):
+
+        @unique
+        class DuplicateMode(StrEnumWithDoc):
+            NORMAL = "same_value", "First docstring"
+            DUPLICATE = "same_value", "Different docstring"
