@@ -1,5 +1,7 @@
 """Tests for the update functionality (functional core)."""
 
+from enum import StrEnum
+
 from veriq._update import UpdateResult, UpdateWarning, deep_merge, update_input_data
 
 
@@ -236,3 +238,49 @@ def test_deep_merge_dict_to_list_type_mismatch():
     assert result == {"field": {"a": 1}}
     assert len(warnings) == 1
     assert "type" in warnings[0].message.lower()
+
+
+class Mode(StrEnum):
+    """Test enum for StrEnum tests."""
+
+    NOMINAL = "nominal"
+    SAFE = "safe"
+
+
+def test_deep_merge_strenum_default_with_string_existing():
+    """Test that StrEnum default and string existing are treated as compatible.
+
+    StrEnum values are stored as plain strings in TOML files, so when the schema
+    has a StrEnum default and the existing value is a string, they should be
+    treated as compatible types (no false positive type mismatch warning).
+    """
+    new_default = {"mode": Mode.NOMINAL}
+    existing = {"mode": "safe"}  # Plain string from TOML
+
+    result, warnings = deep_merge(new_default, existing)
+
+    # Should preserve existing string value without type mismatch warning
+    assert result == {"mode": "safe"}
+    assert len(warnings) == 0
+
+
+def test_deep_merge_string_default_with_strenum_existing():
+    """Test that string default and StrEnum existing are also compatible."""
+    new_default = {"mode": "nominal"}
+    existing = {"mode": Mode.SAFE}
+
+    result, warnings = deep_merge(new_default, existing)
+
+    assert result == {"mode": Mode.SAFE}
+    assert len(warnings) == 0
+
+
+def test_deep_merge_strenum_nested():
+    """Test StrEnum handling in nested structures."""
+    new_default = {"config": {"mode": Mode.NOMINAL, "value": 10}}
+    existing = {"config": {"mode": "safe", "value": 20}}
+
+    result, warnings = deep_merge(new_default, existing)
+
+    assert result == {"config": {"mode": "safe", "value": 20}}
+    assert len(warnings) == 0
