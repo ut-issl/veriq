@@ -284,3 +284,30 @@ def test_deep_merge_strenum_nested():
 
     assert result == {"config": {"mode": "safe", "value": 20}}
     assert len(warnings) == 0
+
+
+def test_deep_merge_int_compatible_with_float():
+    """Test that int values are compatible with float schema fields.
+
+    TOML files may store integer values (e.g., 100) for fields that the schema
+    defines as float. These should be treated as compatible without warnings,
+    and the int value should be preserved to maintain TOML formatting.
+    """
+    new_default = {"temperature": 0.0}
+    existing = {"temperature": 100}  # int from TOML
+
+    result, warnings = deep_merge(new_default, existing)
+
+    assert result == {"temperature": 100}  # Preserved as int
+    assert len(warnings) == 0
+
+
+def test_deep_merge_int_compatible_with_float_nested():
+    """Test int/float compatibility in nested structures."""
+    new_default = {"sensor": {"temperature": 0.0, "pressure": 0.0}}
+    existing = {"sensor": {"temperature": 25, "pressure": 101}}
+
+    result, warnings = deep_merge(new_default, existing)
+
+    assert result == {"sensor": {"temperature": 25, "pressure": 101}}
+    assert len(warnings) == 0
