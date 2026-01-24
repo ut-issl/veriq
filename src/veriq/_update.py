@@ -84,6 +84,12 @@ def deep_merge(
 
         return result, warnings
 
+    # Handle StrEnum case: StrEnum values are stored as plain strings in TOML files,
+    # so when comparing a StrEnum default with a string from TOML, they should be
+    # treated as compatible types (StrEnum inherits from str).
+    if isinstance(new_default, str) and isinstance(existing, str):
+        return existing, warnings
+
     # If both are the same type (and not dict), prefer existing
     if type(new_default) is type(existing):
         return existing, warnings
