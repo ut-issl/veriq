@@ -90,6 +90,12 @@ def deep_merge(
     if isinstance(new_default, str) and isinstance(existing, str):
         return existing, warnings
 
+    # Handle numeric types: int is compatible with float
+    # (TOML may store 100 as int, but schema expects float)
+    # Keep as int to preserve original TOML formatting; Pydantic will coerce at validation time
+    if isinstance(new_default, float) and isinstance(existing, int):
+        return existing, warnings
+
     # If both are the same type (and not dict), prefer existing
     if type(new_default) is type(existing):
         return existing, warnings
