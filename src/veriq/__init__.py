@@ -32,6 +32,7 @@ __all__ = [
     "is_valid_verification_return_type",
     "load_model_data_from_toml",
     "validate_external_data",
+    "with_range",
 ]
 
 # bounded-models integration
@@ -50,6 +51,7 @@ from ._graph import DependencyGraph
 from ._io import export_to_toml, input_base_dir, load_model_data_from_toml
 from ._ir import GraphSpec, NodeKind, NodeSpec, build_graph_spec
 from ._models import Project, Ref, Requirement, Scope, is_valid_verification_return_type
+from ._range_enum import with_range
 from ._relations import depends
 from ._str_enum_with_doc import StrEnumWithDoc
 from ._table import Table
