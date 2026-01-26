@@ -1,0 +1,45 @@
+[System.model.design.mass]
+structure = 15.0
+battery = 5.0
+solar_panel = 8.0
+
+[System.model.design.position]
+"structure,x" = 0.0
+"structure,y" = 0.0
+"structure,z" = 0.0
+"battery,x" = 0.15
+"battery,y" = 0.0
+"battery,z" = 0.0
+"solar_panel,x" = 0.0
+"solar_panel,y" = 0.0
+"solar_panel,z" = 0.3
+
+[System.model.design.margin_percent]
+structure = 3.0
+battery = 10.0
+solar_panel = 5.0
+
+[System.model.requirement]
+mass_limit = 30.0
+
+[System.model.requirement.cog_limit]
+x = 0.05
+y = 0.05
+z = 0.1
+
+[System.calc.calculate_mass]
+total_mass = 28.0
+mass_with_margin = 29.35
+
+[System.calc.calculate_cog.cog]
+x = 0.026785714285714284
+y = 0.0
+z = 0.08571428571428572
+
+[System.verification]
+verify_total_mass = true
+
+[System.verification.verify_cog_envelope]
+x = true
+y = true
+z = true

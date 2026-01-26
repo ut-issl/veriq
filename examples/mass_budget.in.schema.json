@@ -1,0 +1,196 @@
+{
+  "$defs": {
+    "MassBudgetDesign": {
+      "description": "Design parameters for the mass budget.\n\nEach component has:\n- mass: Current Best Estimate (CBE) in kg\n- position: (x, y, z) coordinates in meters from satellite origin\n- margin_percent: growth margin as percentage",
+      "properties": {
+        "mass": {
+          "additionalProperties": false,
+          "properties": {
+            "structure": {
+              "title": "Structure",
+              "type": "number"
+            },
+            "battery": {
+              "title": "Battery",
+              "type": "number"
+            },
+            "solar_panel": {
+              "title": "Solar Panel",
+              "type": "number"
+            }
+          },
+          "required": [
+            "structure",
+            "battery",
+            "solar_panel"
+          ],
+          "title": "Mass",
+          "type": "object"
+        },
+        "position": {
+          "additionalProperties": false,
+          "properties": {
+            "structure,x": {
+              "title": "Structure,X",
+              "type": "number"
+            },
+            "structure,y": {
+              "title": "Structure,Y",
+              "type": "number"
+            },
+            "structure,z": {
+              "title": "Structure,Z",
+              "type": "number"
+            },
+            "battery,x": {
+              "title": "Battery,X",
+              "type": "number"
+            },
+            "battery,y": {
+              "title": "Battery,Y",
+              "type": "number"
+            },
+            "battery,z": {
+              "title": "Battery,Z",
+              "type": "number"
+            },
+            "solar_panel,x": {
+              "title": "Solar Panel,X",
+              "type": "number"
+            },
+            "solar_panel,y": {
+              "title": "Solar Panel,Y",
+              "type": "number"
+            },
+            "solar_panel,z": {
+              "title": "Solar Panel,Z",
+              "type": "number"
+            }
+          },
+          "required": [
+            "structure,x",
+            "structure,y",
+            "structure,z",
+            "battery,x",
+            "battery,y",
+            "battery,z",
+            "solar_panel,x",
+            "solar_panel,y",
+            "solar_panel,z"
+          ],
+          "title": "Position",
+          "type": "object"
+        },
+        "margin_percent": {
+          "additionalProperties": false,
+          "properties": {
+            "structure": {
+              "title": "Structure",
+              "type": "number"
+            },
+            "battery": {
+              "title": "Battery",
+              "type": "number"
+            },
+            "solar_panel": {
+              "title": "Solar Panel",
+              "type": "number"
+            }
+          },
+          "required": [
+            "structure",
+            "battery",
+            "solar_panel"
+          ],
+          "title": "Margin Percent",
+          "type": "object"
+        }
+      },
+      "required": [
+        "mass",
+        "position",
+        "margin_percent"
+      ],
+      "title": "MassBudgetDesign",
+      "type": "object"
+    },
+    "MassBudgetModel": {
+      "description": "Root model for the mass budget scope.",
+      "properties": {
+        "design": {
+          "$ref": "#/$defs/MassBudgetDesign"
+        },
+        "requirement": {
+          "$ref": "#/$defs/MassBudgetRequirement"
+        }
+      },
+      "required": [
+        "design",
+        "requirement"
+      ],
+      "title": "MassBudgetModel",
+      "type": "object"
+    },
+    "MassBudgetRequirement": {
+      "description": "Requirement parameters for mass budget verification.",
+      "properties": {
+        "mass_limit": {
+          "title": "Mass Limit",
+          "type": "number"
+        },
+        "cog_limit": {
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "title": "Y",
+              "type": "number"
+            },
+            "z": {
+              "title": "Z",
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "title": "Cog Limit",
+          "type": "object"
+        }
+      },
+      "required": [
+        "mass_limit",
+        "cog_limit"
+      ],
+      "title": "MassBudgetRequirement",
+      "type": "object"
+    },
+    "SystemInput": {
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/MassBudgetModel"
+        }
+      },
+      "required": [
+        "model"
+      ],
+      "title": "SystemInput",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "System": {
+      "$ref": "#/$defs/SystemInput"
+    }
+  },
+  "required": [
+    "System"
+  ],
+  "title": "Mass BudgetInput",
+  "type": "object"
+}

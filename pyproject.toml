@@ -39,10 +39,14 @@ veriq = "veriq._cli.main:app"
 dev = [
   "bounded-models>=0.0.3",
   "pre-commit>=4.2.0",
+  { include-group = "examples" },
   { include-group = "license" },
   { include-group = "ruff" },
   { include-group = "test" },
-  { include-group = "typing" },
+  { include-group = "typing" }
+]
+examples = [
+  "numpy>=2.4.1",
 ]
 license = [
   "pip-licenses>=5.5.0",
@@ -58,7 +62,8 @@ typing = [
   "basedpyright>=1.33.0",
   "mypy>=1.16.0",
   "ty>=0.0.2",
-  { include-group = "test" },
+  { include-group = "examples" },
+  { include-group = "test" }
 ]
 
 [build-system]

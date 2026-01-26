@@ -1,0 +1,43 @@
+#:schema ./mass_budget.in.schema.json
+# Mass Budget Example Input
+# This file contains component mass properties and requirement parameters.
+
+# -----------------------------------------------------------------------------
+# Design: Component Mass Properties
+# -----------------------------------------------------------------------------
+
+# Mass: Current Best Estimate (CBE) in kg
+[System.model.design.mass]
+structure = 15.0
+battery = 5.0
+solar_panel = 8.0
+
+# Position: (x, y, z) coordinates in meters from satellite origin
+[System.model.design.position]
+"structure,x" = 0.0
+"structure,y" = 0.0
+"structure,z" = 0.0
+"battery,x" = 0.15
+"battery,y" = 0.0
+"battery,z" = 0.0
+"solar_panel,x" = 0.0
+"solar_panel,y" = 0.0
+"solar_panel,z" = 0.30
+
+# Margin: growth margin as percentage
+[System.model.design.margin_percent]
+structure = 3.0
+battery = 10.0
+solar_panel = 5.0
+
+# -----------------------------------------------------------------------------
+# Requirement Parameters
+# -----------------------------------------------------------------------------
+
+[System.model.requirement]
+mass_limit = 30.0  # kg - Launch vehicle constraint
+
+[System.model.requirement.cog_limit]
+x = 0.05  # m - CoG must be within ±50mm of origin on X axis
+y = 0.05  # m - CoG must be within ±50mm of origin on Y axis
+z = 0.10  # m - CoG must be within ±100mm of origin on Z axis
