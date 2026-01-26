@@ -56,7 +56,7 @@ jobs:
         run: uv sync --no-dev --group typing
 
       - name: Run ty
-        run: uv run -- ty check src # TODO: Check other directories
+        run: uv run -- ty check
 
   markdownlint:
     runs-on: ubuntu-latest
