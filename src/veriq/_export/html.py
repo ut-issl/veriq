@@ -144,7 +144,7 @@ def _render_scope_section(scope_name: str, _scope: Any, data: ScopeData | None) 
     if data and data.model_values:
         parts.append('<div class="section">')
         parts.append("<h4>Model</h4>")
-        parts.append(_render_values_table(data.model_values, f"{scope_name}-model"))
+        parts.append(_render_values_table(data.model_values, f"{scope_name}-model", data.model_descriptions))
         parts.append("</div>")
 
     # Calculations
@@ -172,19 +172,44 @@ def _render_scope_section(scope_name: str, _scope: Any, data: ScopeData | None) 
     return "\n".join(parts)
 
 
-def _render_values_table(values: dict[str, Any], prefix: str) -> str:
-    """Render a table of path -> value pairs."""
-    parts = ['<table class="data-table">', "<thead><tr><th>Path</th><th>Value</th></tr></thead>", "<tbody>"]
+def _render_values_table(
+    values: dict[str, Any],
+    prefix: str,
+    descriptions: dict[str, str] | None = None,
+) -> str:
+    """Render a table of path -> value pairs with optional descriptions.
+
+    Args:
+        values: Dictionary mapping paths to values.
+        prefix: Prefix for anchor IDs.
+        descriptions: Optional dictionary mapping paths to field descriptions.
+
+    """
+    if descriptions is None:
+        descriptions = {}
+
+    has_descriptions = bool(descriptions)
+    header = "<thead><tr><th>Path</th><th>Value</th>"
+    if has_descriptions:
+        header += "<th>Description</th>"
+    header += "</tr></thead>"
+
+    parts = ['<table class="data-table">', header, "<tbody>"]
 
     for path, value in values.items():
         anchor_id = f"{prefix}-{path}".replace(".", "-").replace("[", "-").replace("]", "")
         rendered_value = _render_value(value)
-        parts.append(
+        desc = descriptions.get(path, "")
+
+        row = (
             f'<tr id="{html.escape(anchor_id)}">'
             f"<td><code>{html.escape(path)}</code></td>"
             f"<td>{rendered_value}</td>"
-            f"</tr>",
         )
+        if has_descriptions:
+            row += f"<td>{html.escape(desc)}</td>"
+        row += "</tr>"
+        parts.append(row)
 
     parts.append("</tbody></table>")
 
@@ -460,13 +485,45 @@ class ScopeData:
 
     def __init__(self) -> None:
         self.model_values: dict[str, Any] = {}
+        self.model_descriptions: dict[str, str] = {}
         self.calc_values: dict[str, dict[str, Any]] = {}
+        self.calc_descriptions: dict[str, dict[str, str]] = {}
         self.verification_values: dict[str, bool | dict[str, bool]] = {}
 
 
-def _group_results_by_scope(  # noqa: C901
+def _extract_field_descriptions(model: BaseModel, prefix: str = "$") -> dict[str, str]:
+    """Extract field descriptions from a Pydantic model recursively.
+
+    Args:
+        model: The Pydantic model instance.
+        prefix: The path prefix (e.g., "$" for root model).
+
+    Returns:
+        Dictionary mapping field paths to their descriptions.
+
+    """
+    descriptions: dict[str, str] = {}
+    model_class = type(model)
+
+    for field_name, field_info in model_class.model_fields.items():
+        path = f"{prefix}.{field_name}"
+
+        # Get description from field info
+        if field_info.description:
+            descriptions[path] = field_info.description
+
+        # Recursively extract from nested models
+        field_value = getattr(model, field_name, None)
+        if field_value is not None and hasattr(field_value, "model_fields"):
+            nested_descriptions = _extract_field_descriptions(field_value, path)
+            descriptions.update(nested_descriptions)
+
+    return descriptions
+
+
+def _group_results_by_scope(  # noqa: C901, PLR0912
     project: Project,
-    _model_data: dict[str, Any],
+    model_data: dict[str, BaseModel],
     result: EvaluationResult,
 ) -> dict[str, ScopeData]:
     """Group evaluation results by scope and type."""
@@ -474,6 +531,11 @@ def _group_results_by_scope(  # noqa: C901
 
     for scope_name in project.scopes:
         scope_data[scope_name] = ScopeData()
+
+    # Extract descriptions from model data
+    for scope_name, model in model_data.items():
+        if scope_name in scope_data:
+            scope_data[scope_name].model_descriptions = _extract_field_descriptions(model)
 
     for ppath, value in result.values.items():
         scope_name = ppath.scope
