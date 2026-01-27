@@ -222,7 +222,7 @@ with system.requirement("REQ-SYS-001", "System-level requirement (status propaga
         power.requirement(
             "REQ-PWR-001",
             "Battery and power budget requirements.",
-            verified_by=[verify_battery, verify_power_budget],
+            verified_by=[vq.Ref("?verify_battery"), vq.Ref("?verify_power_budget")],
         )
     # REQ-SYS-004: Will be NOT_VERIFIED (no verifications attached)
     system.requirement("REQ-SYS-004", "Future requirement (not yet verified).")
@@ -232,5 +232,5 @@ with system.fetch_requirement("REQ-SYS-002"):
     thermal.requirement(
         "REQ-TH-001",
         "Solar panel temperature must be within limits.",
-        verified_by=[solar_panel_max_temperature],
+        verified_by=[vq.Ref("?solar_panel_max_temperature", scope="Power")],
     )

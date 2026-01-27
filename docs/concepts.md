@@ -113,7 +113,7 @@ Key points:
 power.requirement(
     "REQ-PWR-001",
     "Battery capacity must be at least 100 Wh.",
-    verified_by=[verify_battery],
+    verified_by=[vq.Ref("?verify_battery")],
 )
 ```
 
@@ -121,7 +121,7 @@ Key points:
 
 - Use `scope.requirement()` to define requirements
 - Each requirement has an ID and description
-- Link verifications with `verified_by` parameter
+- Link verifications with `verified_by` using `vq.Ref("?verification_name")`
 - Use context managers for hierarchical requirements
 
 ### Hierarchical Requirements
@@ -131,8 +131,8 @@ Real engineering projects have requirements at multiple levels:
 ```python
 # Parent requirement with children
 with system.requirement("REQ-SYS-001", "System requirements."):
-    power.requirement("REQ-PWR-001", "Power requirement.", verified_by=[verify_power])
-    thermal.requirement("REQ-TH-001", "Thermal requirement.", verified_by=[verify_temp])
+    power.requirement("REQ-PWR-001", "Power requirement.", verified_by=[vq.Ref("?verify_power")])
+    thermal.requirement("REQ-TH-001", "Thermal requirement.", verified_by=[vq.Ref("?verify_temp")])
 ```
 
 ### Requirement Statuses
@@ -151,7 +151,18 @@ Add children to existing requirements from different scopes:
 ```python
 # Fetch existing requirement and add children
 with system.fetch_requirement("REQ-SYS-001"):
-    power.requirement("REQ-PWR-002", "Another power requirement.", verified_by=[verify])
+    power.requirement("REQ-PWR-002", "Another power requirement.", verified_by=[vq.Ref("?verify")])
+```
+
+You can also reference verifications from other scopes:
+
+```python
+# Reference a verification in another scope
+system.requirement(
+    "REQ-SYS-002",
+    "Cross-scope requirement.",
+    verified_by=[vq.Ref("?verify_power", scope="Power")],
+)
 ```
 
 ### Requirement Dependencies

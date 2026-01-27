@@ -489,7 +489,7 @@ class Requirement(ScopedContext):
     id: str
     description: str
     decomposed_requirements: list[Requirement] = field(default_factory=list, repr=False)
-    verified_by: list[Verification[Any, ...]] = field(default_factory=list, repr=False)
+    verified_by: list[Ref] = field(default_factory=list, repr=False)
     depends_on: list[Requirement] = field(default_factory=list, repr=False)
     xfail: bool = field(default=False, kw_only=True)
 
@@ -616,12 +616,17 @@ class Scope:
         id_: str,
         /,
         description: str,
-        verified_by: Iterable[Verification[Any, ...]] = (),
+        verified_by: Iterable[Ref] = (),
         *,
         xfail: bool = False,
     ) -> Requirement:
         """Create and add a requirement to the scope."""
-        requirement = Requirement(description=description, verified_by=list(verified_by), id=id_, xfail=xfail)
+        verified_by_list = list(verified_by)
+        for ref in verified_by_list:
+            if not ref.path.startswith("?"):
+                msg = f"verified_by Ref must point to a verification (path starting with '?'), got: {ref.path}"
+                raise ValueError(msg)
+        requirement = Requirement(description=description, verified_by=verified_by_list, id=id_, xfail=xfail)
         if id_ in self._requirements:
             msg = f"Requirement with ID '{id_}' already exists in scope '{self.name}'."
             raise KeyError(msg)

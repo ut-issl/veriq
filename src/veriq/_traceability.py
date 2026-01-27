@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ._eval_engine import EvaluationResult
-    from ._models import Project, Requirement, Verification
+    from ._models import Project, Ref, Requirement, Verification
 
 
 class RequirementStatus(StrEnum):
@@ -97,6 +97,75 @@ def _worst_status(statuses: Sequence[RequirementStatus]) -> RequirementStatus | 
     if not statuses:
         return None
     return max(statuses, key=lambda s: s.severity)
+
+
+def resolve_verification_ref(
+    ref: Ref,
+    project: Project,
+    default_scope_name: str,
+) -> Verification[Any, ...]:
+    """Resolve a Ref to a Verification object.
+
+    Args:
+        ref: The Ref object pointing to a verification (path starts with '?').
+        project: The Project containing all scopes.
+        default_scope_name: The scope name to use if ref.scope is None.
+
+    Returns:
+        The resolved Verification object.
+
+    Raises:
+        ValueError: If the ref path doesn't start with '?' or verification not found.
+
+    """
+    # Validate the path is a verification path
+    if not ref.path.startswith("?"):
+        msg = f"verified_by Ref must point to a verification (path starting with '?'), got: {ref.path}"
+        raise ValueError(msg)
+
+    # Determine the scope
+    scope_name = ref.scope if ref.scope is not None else default_scope_name
+
+    # Get the scope
+    if scope_name not in project.scopes:
+        msg = f"Scope '{scope_name}' not found in project."
+        raise ValueError(msg)
+    scope = project.scopes[scope_name]
+
+    # Extract verification name (remove '?' prefix)
+    verification_name = ref.path[1:]
+
+    # Handle paths with parts (e.g., "?verify_name.something")
+    # For now, only support simple verification names without parts
+    if "." in verification_name or "[" in verification_name:
+        msg = f"verified_by Ref must point to a verification directly (no path parts), got: {ref.path}"
+        raise ValueError(msg)
+
+    # Look up the verification
+    if verification_name not in scope.verifications:
+        msg = f"Verification '{verification_name}' not found in scope '{scope_name}'."
+        raise ValueError(msg)
+
+    return scope.verifications[verification_name]
+
+
+def resolve_verified_by(
+    verified_by: list[Ref],
+    project: Project,
+    default_scope_name: str,
+) -> list[Verification[Any, ...]]:
+    """Resolve all verified_by Ref objects to Verification objects.
+
+    Args:
+        verified_by: List of Ref objects pointing to verifications.
+        project: The Project containing all scopes.
+        default_scope_name: The scope name for Refs without explicit scope.
+
+    Returns:
+        List of resolved Verification objects.
+
+    """
+    return [resolve_verification_ref(ref, project, default_scope_name) for ref in verified_by]
 
 
 def compute_requirement_status(
@@ -393,12 +462,13 @@ def _get_root_requirements(
     return [(scope_name, req) for scope_name, req in requirements.values() if req.id not in child_ids]
 
 
-def _build_entry(
+def _build_entry(  # noqa: PLR0913
     requirement: Requirement,
     scope_name: str,
     evaluation_results: dict[ProjectPath, Any] | None,
     computed_statuses: dict[str, RequirementStatus],
     depth: int,
+    project: Project,
 ) -> RequirementTraceEntry:
     """Build a trace entry for a single requirement.
 
@@ -408,15 +478,19 @@ def _build_entry(
         evaluation_results: Optional evaluation results for verification extraction.
         computed_statuses: Dict of already computed statuses for children/deps.
         depth: Hierarchy depth for indentation.
+        project: The project containing all scopes (for resolving Refs).
 
     Returns:
         RequirementTraceEntry for this requirement.
 
     """
+    # Resolve verified_by Refs to Verification objects
+    resolved_verifications = resolve_verified_by(requirement.verified_by, project, scope_name)
+
     # Extract verification results if evaluation results provided
     verification_results: list[VerificationResult] = []
     if evaluation_results is not None:
-        for verif in requirement.verified_by:
+        for verif in resolved_verifications:
             verification_results.extend(
                 extract_verification_results(verif, verif.default_scope_name, evaluation_results),
             )
@@ -450,7 +524,7 @@ def _build_entry(
     # Get linked verification names in Scope::?verification_name format
     # Expand Table verifications to include all keys
     linked_verifications_list: list[str] = []
-    for verif in requirement.verified_by:
+    for verif in resolved_verifications:
         linked_verifications_list.extend(_expand_verification_names(verif))
     linked_verifications = tuple(linked_verifications_list)
 
@@ -476,6 +550,7 @@ def _build_entries_recursive(  # noqa: PLR0913
     depth: int,
     entries: list[RequirementTraceEntry],
     requirements: dict[str, tuple[str, Requirement]],
+    project: Project,
 ) -> None:
     """Recursively build trace entries in pre-order (parent before children).
 
@@ -490,6 +565,7 @@ def _build_entries_recursive(  # noqa: PLR0913
         depth: Current hierarchy depth.
         entries: List to append entries to.
         requirements: All requirements dict (for looking up scope names).
+        project: The project containing all scopes (for resolving Refs).
 
     """
     # First, recursively process all children to compute their statuses
@@ -503,6 +579,7 @@ def _build_entries_recursive(  # noqa: PLR0913
             depth + 1,
             [],  # Don't add to entries yet - we'll do it in order
             requirements,
+            project,
         )
 
     # Process depends_on requirements (they should already be processed)
@@ -517,10 +594,11 @@ def _build_entries_recursive(  # noqa: PLR0913
                 0,  # depth doesn't matter for status computation
                 [],
                 requirements,
+                project,
             )
 
     # Now build this requirement's entry (children are already computed)
-    entry = _build_entry(requirement, scope_name, evaluation_results, computed_statuses, depth)
+    entry = _build_entry(requirement, scope_name, evaluation_results, computed_statuses, depth, project)
     computed_statuses[requirement.id] = entry.status
 
     # Add this entry
@@ -529,14 +607,14 @@ def _build_entries_recursive(  # noqa: PLR0913
     # Then add children's entries in order (for display)
     for child in requirement.decomposed_requirements:
         child_scope_name = requirements[child.id][0] if child.id in requirements else scope_name
-        child_entry = _build_entry(child, child_scope_name, evaluation_results, computed_statuses, depth + 1)
+        child_entry = _build_entry(child, child_scope_name, evaluation_results, computed_statuses, depth + 1, project)
         entries.append(child_entry)
 
         # Recursively add grandchildren
         for grandchild in child.decomposed_requirements:
             gc_scope = requirements[grandchild.id][0] if grandchild.id in requirements else scope_name
             _add_entries_in_order(
-                grandchild, gc_scope, evaluation_results, computed_statuses, depth + 2, entries, requirements,
+                grandchild, gc_scope, evaluation_results, computed_statuses, depth + 2, entries, requirements, project,
             )
 
 
@@ -548,15 +626,16 @@ def _add_entries_in_order(  # noqa: PLR0913
     depth: int,
     entries: list[RequirementTraceEntry],
     requirements: dict[str, tuple[str, Requirement]],
+    project: Project,
 ) -> None:
     """Add entries in display order (pre-order traversal)."""
-    entry = _build_entry(requirement, scope_name, evaluation_results, computed_statuses, depth)
+    entry = _build_entry(requirement, scope_name, evaluation_results, computed_statuses, depth, project)
     entries.append(entry)
 
     for child in requirement.decomposed_requirements:
         child_scope_name = requirements[child.id][0] if child.id in requirements else scope_name
         _add_entries_in_order(
-            child, child_scope_name, evaluation_results, computed_statuses, depth + 1, entries, requirements,
+            child, child_scope_name, evaluation_results, computed_statuses, depth + 1, entries, requirements, project,
         )
 
 
@@ -601,11 +680,11 @@ def build_traceability_report(
 
     # First pass: compute all statuses (bottom-up)
     for scope_name, req in root_reqs:
-        _compute_statuses_recursive(req, scope_name, eval_values, computed_statuses, requirements)
+        _compute_statuses_recursive(req, scope_name, eval_values, computed_statuses, requirements, project)
 
     # Second pass: build entries in display order (top-down)
     for scope_name, req in root_reqs:
-        _add_entries_in_order(req, scope_name, eval_values, computed_statuses, 0, entries, requirements)
+        _add_entries_in_order(req, scope_name, eval_values, computed_statuses, 0, entries, requirements, project)
 
     # Count statistics
     verified_count = sum(1 for e in entries if e.status == RequirementStatus.VERIFIED)
@@ -630,6 +709,7 @@ def _compute_statuses_recursive(  # noqa: PLR0913
     evaluation_results: dict[ProjectPath, Any] | None,
     computed_statuses: dict[str, RequirementStatus],
     requirements: dict[str, tuple[str, Requirement]],
+    project: Project,
     in_progress: set[str] | None = None,
 ) -> RequirementStatus:
     """Recursively compute statuses bottom-up.
@@ -640,6 +720,7 @@ def _compute_statuses_recursive(  # noqa: PLR0913
         evaluation_results: Optional evaluation results.
         computed_statuses: Dict to store computed statuses.
         requirements: All requirements dict.
+        project: The project containing all scopes (for resolving Refs).
         in_progress: Set of requirement IDs currently being computed (for cycle detection).
 
     Returns:
@@ -668,7 +749,7 @@ def _compute_statuses_recursive(  # noqa: PLR0913
         if child.id not in computed_statuses:
             child_scope = requirements[child.id][0] if child.id in requirements else scope_name
             _compute_statuses_recursive(
-                child, child_scope, evaluation_results, computed_statuses, requirements, in_progress,
+                child, child_scope, evaluation_results, computed_statuses, requirements, project, in_progress,
             )
 
     # Compute depends_on statuses
@@ -676,13 +757,16 @@ def _compute_statuses_recursive(  # noqa: PLR0913
         if dep.id not in computed_statuses:
             dep_scope = requirements[dep.id][0] if dep.id in requirements else scope_name
             _compute_statuses_recursive(
-                dep, dep_scope, evaluation_results, computed_statuses, requirements, in_progress,
+                dep, dep_scope, evaluation_results, computed_statuses, requirements, project, in_progress,
             )
+
+    # Resolve verified_by Refs to Verification objects
+    resolved_verifications = resolve_verified_by(requirement.verified_by, project, scope_name)
 
     # Extract verification results
     verification_results: list[VerificationResult] = []
     if evaluation_results is not None:
-        for verif in requirement.verified_by:
+        for verif in resolved_verifications:
             verification_results.extend(
                 extract_verification_results(verif, verif.default_scope_name, evaluation_results),
             )
