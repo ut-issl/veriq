@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from enum import Enum, StrEnum
 from typing import TYPE_CHECKING, Any, get_args, get_origin
 
-from ._path import ItemPart, ProjectPath, VerificationPath
+from ._path import ItemPart
 from ._table import Table
 
 if TYPE_CHECKING:
@@ -257,7 +257,7 @@ def collect_all_requirements(
 def extract_verification_results(
     verification: Verification[Any, ...],
     scope_name: str,
-    evaluation_results: dict[ProjectPath, Any],
+    result: EvaluationResult,
 ) -> list[VerificationResult]:
     """Extract verification results for a single verification.
 
@@ -267,67 +267,42 @@ def extract_verification_results(
     Args:
         verification: The verification to extract results for.
         scope_name: The scope name where the verification is defined.
-        evaluation_results: The evaluation results from evaluate_project().
+        result: The EvaluationResult from evaluate_project().
 
     Returns:
         List of VerificationResult objects.
 
     """
     results: list[VerificationResult] = []
-    output_type = verification.output_type
 
-    # Check if it's a Table[K, bool] verification
-    origin = get_origin(output_type)
-    is_table = origin is Table or (isinstance(origin, type) and issubclass(origin, Table))
+    # Get the scope tree
+    scope_tree = result.get_scope_tree(scope_name)
+    if scope_tree is None:
+        return results
 
-    if is_table:
-        # Table[K, bool] verification - find all matching leaf paths (with table keys)
-        type_args = get_args(output_type)
-        if len(type_args) == 2:
-            # Look for all results matching this verification
-            for ppath, value in evaluation_results.items():
-                if not isinstance(ppath.path, VerificationPath):
-                    continue
-                if ppath.scope != scope_name:
-                    continue
-                if ppath.path.verification_name != verification.name:
-                    continue
+    # Get the verification node
+    verif_node = scope_tree.get_verification(verification.name)
+    if verif_node is None:
+        return results
 
-                # Extract table key from path parts - skip non-leaf results (no table key)
-                if not ppath.path.parts:
-                    # This is the non-leaf (aggregate) result, skip it
-                    continue
+    # Iterate over all leaf nodes in the verification tree
+    for leaf in verif_node.iter_leaves():
+        # Extract table key from path parts if present
+        table_key: str | tuple[str, ...] | None = None
+        if leaf.path.path.parts:
+            part = leaf.path.path.parts[0]
+            if isinstance(part, ItemPart):
+                table_key = part.key
 
-                part = ppath.path.parts[0]
-                if not isinstance(part, ItemPart):
-                    continue
-
-                table_key: str | tuple[str, ...] = part.key
-
-                results.append(
-                    VerificationResult(
-                        scope_name=scope_name,
-                        verification_name=verification.name,
-                        passed=bool(value),
-                        xfail=verification.xfail,
-                        table_key=table_key,
-                    ),
-                )
-    else:
-        # Simple bool verification
-        ppath = ProjectPath(
-            scope=scope_name,
-            path=VerificationPath(root=f"?{verification.name}", parts=()),
+        results.append(
+            VerificationResult(
+                scope_name=scope_name,
+                verification_name=verification.name,
+                passed=bool(leaf.value),
+                xfail=verification.xfail,
+                table_key=table_key,
+            ),
         )
-        if ppath in evaluation_results:
-            results.append(
-                VerificationResult(
-                    scope_name=scope_name,
-                    verification_name=verification.name,
-                    passed=bool(evaluation_results[ppath]),
-                    xfail=verification.xfail,
-                ),
-            )
 
     return results
 
@@ -465,7 +440,7 @@ def _get_root_requirements(
 def _build_entry(  # noqa: PLR0913
     requirement: Requirement,
     scope_name: str,
-    evaluation_results: dict[ProjectPath, Any] | None,
+    evaluation_results: EvaluationResult | None,
     computed_statuses: dict[str, RequirementStatus],
     depth: int,
     project: Project,
@@ -545,7 +520,7 @@ def _build_entry(  # noqa: PLR0913
 def _build_entries_recursive(  # noqa: PLR0913
     requirement: Requirement,
     scope_name: str,
-    evaluation_results: dict[ProjectPath, Any] | None,
+    evaluation_results: EvaluationResult | None,
     computed_statuses: dict[str, RequirementStatus],
     depth: int,
     entries: list[RequirementTraceEntry],
@@ -621,7 +596,7 @@ def _build_entries_recursive(  # noqa: PLR0913
 def _add_entries_in_order(  # noqa: PLR0913
     requirement: Requirement,
     scope_name: str,
-    evaluation_results: dict[ProjectPath, Any] | None,
+    evaluation_results: EvaluationResult | None,
     computed_statuses: dict[str, RequirementStatus],
     depth: int,
     entries: list[RequirementTraceEntry],
@@ -657,10 +632,6 @@ def build_traceability_report(
         ValueError: If circular dependencies are detected in depends_on.
 
     """
-    # Extract values dict from EvaluationResult
-    eval_values: dict[ProjectPath, Any] | None = (
-        evaluation_results.values if evaluation_results is not None else None
-    )
     # Collect all requirements
     requirements = collect_all_requirements(project)
 
@@ -680,11 +651,11 @@ def build_traceability_report(
 
     # First pass: compute all statuses (bottom-up)
     for scope_name, req in root_reqs:
-        _compute_statuses_recursive(req, scope_name, eval_values, computed_statuses, requirements, project)
+        _compute_statuses_recursive(req, scope_name, evaluation_results, computed_statuses, requirements, project)
 
     # Second pass: build entries in display order (top-down)
     for scope_name, req in root_reqs:
-        _add_entries_in_order(req, scope_name, eval_values, computed_statuses, 0, entries, requirements, project)
+        _add_entries_in_order(req, scope_name, evaluation_results, computed_statuses, 0, entries, requirements, project)
 
     # Count statistics
     verified_count = sum(1 for e in entries if e.status == RequirementStatus.VERIFIED)
@@ -706,7 +677,7 @@ def build_traceability_report(
 def _compute_statuses_recursive(  # noqa: PLR0913
     requirement: Requirement,
     scope_name: str,
-    evaluation_results: dict[ProjectPath, Any] | None,
+    evaluation_results: EvaluationResult | None,
     computed_statuses: dict[str, RequirementStatus],
     requirements: dict[str, tuple[str, Requirement]],
     project: Project,

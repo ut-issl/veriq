@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 import veriq as vq
 from veriq._eval import evaluate_project
-from veriq._path import CalcPath, ProjectPath
+from veriq._path import CalcPath, ItemPart, ProjectPath
 
 
 class Option(StrEnum):
@@ -60,17 +60,22 @@ def test_table_as_calc_output() -> None:
     result = evaluate_project(project, model_data)
 
     # Check that the calculation was evaluated correctly
-    # Get the whole Table output
-    calc_output = result.values[
+    # Verify leaf values directly (tree model stores only leaf values)
+    option_a_value = result.get_value(
         ProjectPath(
             scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=()),
-        )
-    ]
+            path=CalcPath(root="@output_table", parts=(ItemPart(key="option_a"),)),
+        ),
+    )
+    option_b_value = result.get_value(
+        ProjectPath(
+            scope="Test Scope",
+            path=CalcPath(root="@output_table", parts=(ItemPart(key="option_b"),)),
+        ),
+    )
 
-    assert isinstance(calc_output, vq.Table)
-    assert calc_output[Option.OPTION_A] == 6.28
-    assert calc_output[Option.OPTION_B] == 5.42
+    assert option_a_value == 6.28
+    assert option_b_value == 5.42
 
 
 def test_table_as_calc_output_with_calc_input() -> None:
@@ -122,17 +127,22 @@ def test_table_as_calc_output_with_calc_input() -> None:
     result = evaluate_project(project, model_data)
 
     # Check that the calculation was evaluated correctly
-    # Get the whole Table output
-    calc_output = result.values[
+    # Verify leaf values directly (tree model stores only leaf values)
+    option_a_value = result.get_value(
         ProjectPath(
             scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=()),
-        )
-    ]
+            path=CalcPath(root="@output_table", parts=(ItemPart(key="option_a"),)),
+        ),
+    )
+    option_b_value = result.get_value(
+        ProjectPath(
+            scope="Test Scope",
+            path=CalcPath(root="@output_table", parts=(ItemPart(key="option_b"),)),
+        ),
+    )
 
-    assert isinstance(calc_output, vq.Table)
-    assert calc_output[Option.OPTION_A] == 3.14 * 2 * 3
-    assert calc_output[Option.OPTION_B] == 2.71 * 2 * 3
+    assert option_a_value == 3.14 * 2 * 3
+    assert option_b_value == 2.71 * 2 * 3
 
 
 def test_table_with_tuple_index_as_calc_output() -> None:
@@ -177,19 +187,32 @@ def test_table_with_tuple_index_as_calc_output() -> None:
     result = evaluate_project(project, model_data)
 
     # Check that the calculation was evaluated correctly
-    # Get the whole Table output
-    calc_output = result.values[
+    # Verify leaf values directly (tree model stores only leaf values)
+    # Tuple keys are stored in ItemPart
+    assert result.get_value(
         ProjectPath(
             scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=()),
-        )
-    ]
-
-    assert isinstance(calc_output, vq.Table)
-    assert calc_output[(Region.NORTH, Product.WIDGET)] == 20.0
-    assert calc_output[(Region.NORTH, Product.GADGET)] == 40.0
-    assert calc_output[(Region.SOUTH, Product.WIDGET)] == 60.0
-    assert calc_output[(Region.SOUTH, Product.GADGET)] == 80.0
+            path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "widget")),)),
+        ),
+    ) == 20.0
+    assert result.get_value(
+        ProjectPath(
+            scope="Test Scope",
+            path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "gadget")),)),
+        ),
+    ) == 40.0
+    assert result.get_value(
+        ProjectPath(
+            scope="Test Scope",
+            path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "widget")),)),
+        ),
+    ) == 60.0
+    assert result.get_value(
+        ProjectPath(
+            scope="Test Scope",
+            path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "gadget")),)),
+        ),
+    ) == 80.0
 
 
 def test_table_with_tuple_index_as_calc_output_with_calc_input() -> None:
@@ -248,19 +271,31 @@ def test_table_with_tuple_index_as_calc_output_with_calc_input() -> None:
     result = evaluate_project(project, model_data)
 
     # Check that the calculation was evaluated correctly
-    # Get the whole Table output
-    calc_output = result.values[
+    # Verify leaf values directly (tree model stores only leaf values)
+    assert result.get_value(
         ProjectPath(
             scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=()),
-        )
-    ]
-
-    assert isinstance(calc_output, vq.Table)
-    assert calc_output[(Region.NORTH, Product.WIDGET)] == 10.0 * 2 * 3
-    assert calc_output[(Region.NORTH, Product.GADGET)] == 20.0 * 2 * 3
-    assert calc_output[(Region.SOUTH, Product.WIDGET)] == 30.0 * 2 * 3
-    assert calc_output[(Region.SOUTH, Product.GADGET)] == 40.0 * 2 * 3
+            path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "widget")),)),
+        ),
+    ) == 10.0 * 2 * 3
+    assert result.get_value(
+        ProjectPath(
+            scope="Test Scope",
+            path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "gadget")),)),
+        ),
+    ) == 20.0 * 2 * 3
+    assert result.get_value(
+        ProjectPath(
+            scope="Test Scope",
+            path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "widget")),)),
+        ),
+    ) == 30.0 * 2 * 3
+    assert result.get_value(
+        ProjectPath(
+            scope="Test Scope",
+            path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "gadget")),)),
+        ),
+    ) == 40.0 * 2 * 3
 
 
 def test_table_with_triple_tuple_index() -> None:
@@ -337,19 +372,18 @@ def test_table_with_triple_tuple_index() -> None:
     result = evaluate_project(project, model_data)
 
     # Check that the calculation was evaluated correctly
-    calc_output = result.values[
-        ProjectPath(
+    # Verify leaf values directly (tree model stores only leaf values)
+    def make_path(key: tuple[str, str, str]) -> ProjectPath:
+        return ProjectPath(
             scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=()),
+            path=CalcPath(root="@output_table", parts=(ItemPart(key=key),)),
         )
-    ]
 
-    assert isinstance(calc_output, vq.Table)
-    assert calc_output[(Region.NORTH, Product.WIDGET, Option.OPTION_A)] == 101.0
-    assert calc_output[(Region.NORTH, Product.WIDGET, Option.OPTION_B)] == 102.0
-    assert calc_output[(Region.NORTH, Product.GADGET, Option.OPTION_A)] == 103.0
-    assert calc_output[(Region.NORTH, Product.GADGET, Option.OPTION_B)] == 104.0
-    assert calc_output[(Region.SOUTH, Product.WIDGET, Option.OPTION_A)] == 105.0
-    assert calc_output[(Region.SOUTH, Product.WIDGET, Option.OPTION_B)] == 106.0
-    assert calc_output[(Region.SOUTH, Product.GADGET, Option.OPTION_A)] == 107.0
-    assert calc_output[(Region.SOUTH, Product.GADGET, Option.OPTION_B)] == 108.0
+    assert result.get_value(make_path(("north", "widget", "option_a"))) == 101.0
+    assert result.get_value(make_path(("north", "widget", "option_b"))) == 102.0
+    assert result.get_value(make_path(("north", "gadget", "option_a"))) == 103.0
+    assert result.get_value(make_path(("north", "gadget", "option_b"))) == 104.0
+    assert result.get_value(make_path(("south", "widget", "option_a"))) == 105.0
+    assert result.get_value(make_path(("south", "widget", "option_b"))) == 106.0
+    assert result.get_value(make_path(("south", "gadget", "option_a"))) == 107.0
+    assert result.get_value(make_path(("south", "gadget", "option_b"))) == 108.0

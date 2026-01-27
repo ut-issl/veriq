@@ -10,12 +10,14 @@ __all__ = [
     "GraphSpec",
     "NodeKind",
     "NodeSpec",
+    "PathNode",
     "Project",
     "Ref",
     "Requirement",
     "RequirementStatus",
     "RequirementTraceEntry",
     "Scope",
+    "ScopeTree",
     "StrEnumWithDoc",
     "Table",
     "TableFieldHandler",
@@ -39,7 +41,7 @@ __all__ = [
 from ._bounded_models import TableFieldHandler
 from ._decorators import assume
 from ._eval import evaluate_project
-from ._eval_engine import EvaluationResult, evaluate_graph
+from ._eval_engine import EvaluationResult, PathNode, ScopeTree, evaluate_graph
 from ._external_data import (
     ChecksumValidationEntry,
     ChecksumValidationResult,
