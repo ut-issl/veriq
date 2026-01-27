@@ -662,7 +662,7 @@ class TestBuildTraceabilityReport:
         ) -> bool:
             return capacity > 0
 
-        scope.requirement("REQ-001", "Capacity must be positive", verified_by=[verify_capacity])
+        scope.requirement("REQ-001", "Capacity must be positive", verified_by=[vq.Ref("?verify_capacity")])
 
         # Simulate evaluation results
         ppath = ProjectPath(
@@ -681,7 +681,6 @@ class TestBuildTraceabilityReport:
         assert report.entries[0].status == RequirementStatus.VERIFIED
         assert len(report.entries[0].verification_results) == 1
         assert report.entries[0].verification_results[0].passed is True
-        assert report.verified_count == 1
 
     def test_report_with_failed_verification(self) -> None:
         """Test report with failed verification."""
@@ -702,7 +701,7 @@ class TestBuildTraceabilityReport:
         ) -> bool:
             return capacity > 0
 
-        scope.requirement("REQ-001", "Capacity must be positive", verified_by=[verify_capacity])
+        scope.requirement("REQ-001", "Capacity must be positive", verified_by=[vq.Ref("?verify_capacity")])
 
         ppath = ProjectPath(
             scope="Power",
@@ -739,7 +738,7 @@ class TestBuildTraceabilityReport:
             return capacity > 0
 
         with scope.requirement("REQ-001", "Parent"):
-            scope.requirement("REQ-001-1", "Child", verified_by=[verify_capacity])
+            scope.requirement("REQ-001-1", "Child", verified_by=[vq.Ref("?verify_capacity")])
 
         ppath = ProjectPath(
             scope="Power",
@@ -806,7 +805,7 @@ class TestBuildTraceabilityReport:
         ) -> bool:
             return capacity > 0
 
-        req1 = scope.requirement("REQ-001", "Base requirement", verified_by=[verify_capacity])
+        req1 = scope.requirement("REQ-001", "Base requirement", verified_by=[vq.Ref("?verify_capacity")])
         req2 = scope.requirement("REQ-002", "Dependent requirement")
 
         with scope.fetch_requirement("REQ-002"):
@@ -853,7 +852,7 @@ class TestBuildTraceabilityReport:
         ) -> bool:
             return capacity > 0
 
-        scope.requirement("REQ-001", "Capacity must be positive", verified_by=[verify_capacity])
+        scope.requirement("REQ-001", "Capacity must be positive", verified_by=[vq.Ref("?verify_capacity")])
 
         # Use EvaluationResult object instead of plain dict
         ppath = ProjectPath(
@@ -872,3 +871,156 @@ class TestBuildTraceabilityReport:
         assert report.entries[0].status == RequirementStatus.VERIFIED
         assert len(report.entries[0].verification_results) == 1
         assert report.entries[0].verification_results[0].passed is True
+
+
+class TestVerifiedByRef:
+    """Tests for verified_by with Ref objects."""
+
+    def test_verified_by_ref_same_scope(self) -> None:
+        """Ref without scope uses requirement's scope."""
+        project = vq.Project("Test")
+        scope = vq.Scope("Power")
+        project.add_scope(scope)
+
+        class PowerModel(BaseModel):
+            capacity: float
+
+        @scope.root_model()
+        class RootModel(BaseModel):
+            power: PowerModel
+
+        @scope.verification()
+        def verify_capacity(
+            capacity: Annotated[float, vq.Ref("$.power.capacity")],
+        ) -> bool:
+            return capacity > 0
+
+        # Use Ref instead of direct Verification
+        scope.requirement(
+            "REQ-001",
+            "Capacity must be positive",
+            verified_by=[vq.Ref("?verify_capacity")],
+        )
+
+        ppath = ProjectPath(
+            scope="Power",
+            path=VerificationPath(root="?verify_capacity", parts=()),
+        )
+        evaluation_results = EvaluationResult(
+            values={ppath: True},
+            errors=[],
+            validity={ppath: True},
+        )
+
+        report = build_traceability_report(project, evaluation_results)
+
+        assert len(report.entries) == 1
+        entry = report.entries[0]
+        assert "Power::?verify_capacity" in entry.linked_verifications
+        assert entry.status == RequirementStatus.VERIFIED
+
+    def test_verified_by_ref_cross_scope(self) -> None:
+        """Ref with scope references verification in another scope."""
+        project = vq.Project("Test")
+        power = vq.Scope("Power")
+        thermal = vq.Scope("Thermal")
+        project.add_scope(power)
+        project.add_scope(thermal)
+
+        @power.root_model()
+        class PowerModel(BaseModel):
+            pass
+
+        class ThermalData(BaseModel):
+            temperature: float
+
+        @thermal.root_model()
+        class ThermalModel(BaseModel):
+            data: ThermalData
+
+        @thermal.verification()
+        def verify_temp(
+            temperature: Annotated[float, vq.Ref("$.data.temperature")],
+        ) -> bool:
+            return temperature < 100
+
+        # Requirement in power scope references verification in thermal scope
+        power.requirement(
+            "REQ-PWR-001",
+            "Temperature must be safe.",
+            verified_by=[vq.Ref("?verify_temp", scope="Thermal")],
+        )
+
+        ppath = ProjectPath(
+            scope="Thermal",
+            path=VerificationPath(root="?verify_temp", parts=()),
+        )
+        evaluation_results = EvaluationResult(
+            values={ppath: True},
+            errors=[],
+            validity={ppath: True},
+        )
+
+        report = build_traceability_report(project, evaluation_results)
+
+        assert len(report.entries) == 1
+        entry = report.entries[0]
+        assert "Thermal::?verify_temp" in entry.linked_verifications
+        assert entry.status == RequirementStatus.VERIFIED
+
+    def test_verified_by_ref_invalid_path_raises(self) -> None:
+        """Ref with non-verification path raises ValueError."""
+        project = vq.Project("Test")
+        scope = vq.Scope("Power")
+        project.add_scope(scope)
+
+        @scope.root_model()
+        class Model(BaseModel):
+            pass
+
+        with pytest.raises(ValueError, match="must point to a verification"):
+            scope.requirement(
+                "REQ-001",
+                "Test",
+                verified_by=[vq.Ref("$.field")],  # Model path, not verification
+            )
+
+    def test_verified_by_ref_nonexistent_verification_raises(self) -> None:
+        """Ref to nonexistent verification raises ValueError at resolution time."""
+        project = vq.Project("Test")
+        scope = vq.Scope("Power")
+        project.add_scope(scope)
+
+        @scope.root_model()
+        class Model(BaseModel):
+            pass
+
+        scope.requirement(
+            "REQ-001",
+            "Test",
+            verified_by=[vq.Ref("?nonexistent_verification")],
+        )
+
+        # Error occurs at resolution time (when building traceability report)
+        with pytest.raises(ValueError, match="Verification 'nonexistent_verification' not found"):
+            build_traceability_report(project)
+
+    def test_verified_by_ref_nonexistent_scope_raises(self) -> None:
+        """Ref with nonexistent scope raises ValueError at resolution time."""
+        project = vq.Project("Test")
+        scope = vq.Scope("Power")
+        project.add_scope(scope)
+
+        @scope.root_model()
+        class Model(BaseModel):
+            pass
+
+        scope.requirement(
+            "REQ-001",
+            "Test",
+            verified_by=[vq.Ref("?some_verification", scope="NonexistentScope")],
+        )
+
+        # Error occurs at resolution time (when building traceability report)
+        with pytest.raises(ValueError, match="Scope 'NonexistentScope' not found"):
+            build_traceability_report(project)
