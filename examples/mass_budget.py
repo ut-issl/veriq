@@ -185,10 +185,10 @@ with system.requirement("REQ-MAS-001", "Mass properties shall meet launch vehicl
     system.requirement(
         "REQ-MAS-002",
         "Total mass with margin shall not exceed LV limit.",
-        verified_by=[verify_total_mass],
+        verified_by=[vq.Ref("?verify_total_mass")],
     )
     system.requirement(
         "REQ-MAS-003",
         "CoG shall be within allowed envelope.",
-        verified_by=[verify_cog_envelope],
+        verified_by=[vq.Ref("?verify_cog_envelope")],
     )
