@@ -217,6 +217,7 @@ class TestBuildScopeTrees:
         result = build_scope_trees(values)
 
         tree = result["Test"]
+        assert tree.model is not None
         leaves = list(tree.model.iter_leaves())
         assert len(leaves) == 2
 
@@ -292,10 +293,12 @@ class TestBuildScopeTrees:
         assert "Power" in result
         assert "Thermal" in result
 
+        assert result["Power"].model is not None
         power_leaves = list(result["Power"].model.iter_leaves())
         assert len(power_leaves) == 1
         assert power_leaves[0].value == 1.0
 
+        assert result["Thermal"].model is not None
         thermal_leaves = list(result["Thermal"].model.iter_leaves())
         assert len(thermal_leaves) == 1
         assert thermal_leaves[0].value == 2.0
@@ -313,8 +316,12 @@ class TestBuildScopeTrees:
 
         tree = result["Power"]
         assert len(tree.calculations) == 2
-        assert tree.get_calculation("calc1").value == 10.0
-        assert tree.get_calculation("calc2").value == 20.0
+        calc1 = tree.get_calculation("calc1")
+        calc2 = tree.get_calculation("calc2")
+        assert calc1 is not None
+        assert calc2 is not None
+        assert calc1.value == 10.0
+        assert calc2.value == 20.0
 
     def test_calculation_with_nested_output(self):
         # Calculation that returns a complex type with nested fields
@@ -355,5 +362,6 @@ class TestBuildScopeTrees:
         result = build_scope_trees(values)
 
         tree = result["Test"]
+        assert tree.model is not None
         leaves = list(tree.model.iter_leaves())
         assert len(leaves) == 2
