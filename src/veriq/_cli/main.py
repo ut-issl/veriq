@@ -29,6 +29,7 @@ from veriq._update import update_input_data
 
 from .config import ConfigError, VeriqConfig, get_config
 from .discover import load_project_from_module_path, load_project_from_script
+from .export import export_command
 from .render_trace import render_traceability_summary, render_traceability_table
 
 
@@ -1138,6 +1139,10 @@ def tree(  # noqa: PLR0913
             err_console.print(f"[dim]{escaped_node_path} has no dependencies[/dim]")
     else:
         render_tree(tree_node, err_console)
+
+
+# Register export command
+app.command(name="export")(export_command)
 
 
 def main() -> None:
