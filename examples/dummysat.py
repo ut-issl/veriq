@@ -2,7 +2,7 @@ import json
 from enum import StrEnum, unique
 from typing import Annotated
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import veriq as vq
 
@@ -41,83 +41,96 @@ class SatelliteModel(BaseModel):
 
 @aocs.root_model()
 class AOCSModel(BaseModel):
-    # reaction_wheel_assembly: ReactionWheelAssemblyModel
-    design: AOCSDesign
-    requirement: AOCSRequirement
+    design: Annotated[AOCSDesign, Field(description="AOCS design parameters")]
+    requirement: Annotated[AOCSRequirement, Field(description="AOCS requirements")]
 
 
-class AOCSDesign(BaseModel): ...
+class AOCSDesign(BaseModel):
+    """AOCS design parameters placeholder."""
 
 
 @rwa.root_model()
 class ReactionWheelAssemblyModel(BaseModel):
-    wheel_x: ReactionWheelModel
-    wheel_y: ReactionWheelModel
-    wheel_z: ReactionWheelModel
+    wheel_x: Annotated[ReactionWheelModel, Field(description="Reaction wheel on X-axis")]
+    wheel_y: Annotated[ReactionWheelModel, Field(description="Reaction wheel on Y-axis")]
+    wheel_z: Annotated[ReactionWheelModel, Field(description="Reaction wheel on Z-axis")]
 
-    # required by PowerInterface
-    power_consumption: vq.Table[OperationMode, float]
-    power_limit: vq.Table[OperationMode, float]
-    peak_power_consumption: vq.Table[tuple[OperationPhase, OperationMode], float]
+    power_consumption: Annotated[
+        vq.Table[OperationMode, float],
+        Field(description="Power consumption per operation mode [W]"),
+    ]
+    power_limit: Annotated[
+        vq.Table[OperationMode, float],
+        Field(description="Power limit per operation mode [W]"),
+    ]
+    peak_power_consumption: Annotated[
+        vq.Table[tuple[OperationPhase, OperationMode], float],
+        Field(description="Peak power consumption per phase and mode [W]"),
+    ]
 
-    # required by StructuralInterface
-    mass: float
+    mass: Annotated[float, Field(description="Total assembly mass [kg]")]
 
 
 class ReactionWheelModel(BaseModel):
-    max_torque: float  # in Nm
-    power_consumption: float  # in Watts
-    mass: float  # in kg
+    max_torque: Annotated[float, Field(description="Maximum torque output [Nm]")]
+    power_consumption: Annotated[float, Field(description="Nominal power consumption [W]")]
+    mass: Annotated[float, Field(description="Wheel mass [kg]")]
 
 
-class AOCSRequirement(BaseModel): ...
+class AOCSRequirement(BaseModel):
+    """AOCS requirements placeholder."""
 
 
-# - There should be at most one model per scope.
 @power.root_model()
 class PowerSubsystemModel(BaseModel):
-    design: PowerSubsystemDesign
-    requirement: PowerSubsystemRequirement
+    design: Annotated[PowerSubsystemDesign, Field(description="Power subsystem design parameters")]
+    requirement: Annotated[PowerSubsystemRequirement, Field(description="Power subsystem requirements")]
 
 
 class PowerSubsystemDesign(BaseModel):
-    battery_a: BatteryModel
-    battery_b: BatteryModel
-    solar_panel: SolarPanelModel
+    battery_a: Annotated[BatteryModel, Field(description="Primary battery unit")]
+    battery_b: Annotated[BatteryModel, Field(description="Backup battery unit")]
+    solar_panel: Annotated[SolarPanelModel, Field(description="Solar panel configuration")]
 
-    # Power budget per operation mode
-    power_generation: vq.Table[OperationMode, float]  # in Watts
-    power_consumption: vq.Table[OperationMode, float]  # in Watts
+    power_generation: Annotated[
+        vq.Table[OperationMode, float],
+        Field(description="Power generation per operation mode [W]"),
+    ]
+    power_consumption: Annotated[
+        vq.Table[OperationMode, float],
+        Field(description="Power consumption per operation mode [W]"),
+    ]
 
-    # External configuration file
-    config_file: vq.FileRef
+    config_file: Annotated[vq.FileRef, Field(description="External configuration file reference")]
 
 
-class PowerSubsystemRequirement(BaseModel): ...
+class PowerSubsystemRequirement(BaseModel):
+    """Power subsystem requirements placeholder."""
 
 
 class BatteryModel(BaseModel):
-    capacity: float  # in Watt-hours
-    min_capacity: float  # minimum required capacity in Watt-hours
+    capacity: Annotated[float, Field(description="Battery capacity [Wh]")]
+    min_capacity: Annotated[float, Field(description="Minimum required capacity [Wh]")]
 
 
 class SolarPanelModel(BaseModel):
-    area: float  # in square meters
-    efficiency: float  # as a fraction
-    max_temperature: float  # maximum allowable temperature in Celsius
-    thermal_coefficient: float  # heat-to-temperature conversion factor
+    area: Annotated[float, Field(description="Panel area [m^2]")]
+    efficiency: Annotated[float, Field(description="Conversion efficiency [0-1]")]
+    max_temperature: Annotated[float, Field(description="Maximum allowable temperature [C]")]
+    thermal_coefficient: Annotated[float, Field(description="Heat-to-temperature conversion factor")]
 
 
 class SolarPanelResult(BaseModel):
-    heat_generation: float  # in Watts
+    heat_generation: Annotated[float, Field(description="Heat generation [W]")]
 
 
 @thermal.root_model()
-class ThermalModel(BaseModel): ...
+class ThermalModel(BaseModel):
+    """Thermal subsystem model placeholder."""
 
 
 class ThermalResult(BaseModel):
-    solar_panel_temperature_max: float  # in Celsius
+    solar_panel_temperature_max: Annotated[float, Field(description="Maximum solar panel temperature [C]")]
 
 
 @system.verification(imports=["Power", "Thermal"])
