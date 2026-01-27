@@ -42,7 +42,7 @@ Each requirement has:
 
 ## Linking Verifications to Requirements
 
-The key to traceability is linking verifications to requirements using `verified_by`:
+The key to traceability is linking verifications to requirements using `verified_by` with `vq.Ref`:
 
 ```python
 @power.verification()
@@ -51,13 +51,15 @@ def verify_battery_capacity(
 ) -> bool:
     return capacity >= 100.0
 
-# Link the verification to the requirement
+# Link the verification to the requirement using vq.Ref
 power.requirement(
     "REQ-PWR-001",
     "Battery capacity must be at least 100 Wh.",
-    verified_by=[verify_battery_capacity],
+    verified_by=[vq.Ref("?verify_battery_capacity")],
 )
 ```
+
+The `?` prefix indicates a verification reference (similar to how `$` references models and `@` references calculations).
 
 Now when you run `veriq trace`, you can see that REQ-PWR-001 is verified by `verify_battery_capacity`.
 
@@ -75,12 +77,12 @@ with system.requirement("REQ-SYS-001", "System shall meet all subsystem requirem
     power.requirement(
         "REQ-PWR-001",
         "Battery capacity must be at least 100 Wh.",
-        verified_by=[verify_battery_capacity],
+        verified_by=[vq.Ref("?verify_battery_capacity", scope="Power")],
     )
     power.requirement(
         "REQ-PWR-002",
         "Power margin must be positive in all modes.",
-        verified_by=[verify_power_margin],
+        verified_by=[vq.Ref("?verify_power_margin", scope="Power")],
     )
 ```
 
@@ -103,8 +105,19 @@ with system.fetch_requirement("REQ-SYS-002"):
     thermal.requirement(
         "REQ-TH-001",
         "Solar panel temperature must be within limits.",
-        verified_by=[verify_temperature],
+        verified_by=[vq.Ref("?verify_temperature", scope="Thermal")],
     )
+```
+
+You can also reference verifications from other scopes directly:
+
+```python
+# Reference a verification from another scope
+system.requirement(
+    "REQ-SYS-003",
+    "Cross-scope verification example.",
+    verified_by=[vq.Ref("?verify_power", scope="Power")],
+)
 ```
 
 ## Complete Example
@@ -188,12 +201,12 @@ with system.requirement("REQ-SYS-001", "System shall meet all subsystem requirem
         power.requirement(
             "REQ-PWR-001",
             "Battery capacity must be sufficient.",
-            verified_by=[verify_battery],
+            verified_by=[vq.Ref("?verify_battery")],
         )
         power.requirement(
             "REQ-PWR-002",
             "Power margin must be positive in all modes.",
-            verified_by=[verify_power_margin],
+            verified_by=[vq.Ref("?verify_power_margin")],
         )
 
     # Thermal subsystem requirements
@@ -201,7 +214,7 @@ with system.requirement("REQ-SYS-001", "System shall meet all subsystem requirem
         thermal.requirement(
             "REQ-TH-001",
             "Temperature must be within limits.",
-            verified_by=[verify_temperature],
+            verified_by=[vq.Ref("?verify_temperature")],
         )
 
     # Future requirement (not yet verified)
@@ -279,7 +292,7 @@ Sometimes you need to track requirements that are known to fail temporarily. Use
 power.requirement(
     "REQ-PWR-003",
     "Advanced power management (not yet implemented).",
-    verified_by=[verify_advanced_power],
+    verified_by=[vq.Ref("?verify_advanced_power")],
     xfail=True,  # Expected to fail
 )
 ```
@@ -302,7 +315,8 @@ If REQ-PWR-001 fails, REQ-PWR-002 will also be marked as failed.
 ## What You Learned
 
 - **Requirements** - Define engineering requirements with IDs and descriptions
-- **`verified_by`** - Link verifications to requirements for traceability
+- **`verified_by`** - Link verifications to requirements using `vq.Ref("?verification_name")`
+- **Cross-scope references** - Use `vq.Ref("?name", scope="ScopeName")` to reference verifications in other scopes
 - **Hierarchical requirements** - Use context managers for parent-child relationships
 - **`fetch_requirement()`** - Add children to requirements across scopes
 - **`veriq trace`** - View requirement tree with verification status

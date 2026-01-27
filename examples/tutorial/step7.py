@@ -80,12 +80,12 @@ with system.requirement("REQ-SYS-001", "System shall meet all subsystem requirem
         power.requirement(
             "REQ-PWR-001",
             "Battery capacity must be sufficient.",
-            verified_by=[verify_battery],
+            verified_by=[vq.Ref("?verify_battery")],
         )
         power.requirement(
             "REQ-PWR-002",
             "Power margin must be positive in all modes.",
-            verified_by=[verify_power_margin],
+            verified_by=[vq.Ref("?verify_power_margin")],
         )
 
     # Thermal subsystem requirements
@@ -93,7 +93,7 @@ with system.requirement("REQ-SYS-001", "System shall meet all subsystem requirem
         thermal.requirement(
             "REQ-TH-001",
             "Temperature must be within limits.",
-            verified_by=[verify_temperature],
+            verified_by=[vq.Ref("?verify_temperature")],
         )
 
     # Future requirement (not yet verified)
