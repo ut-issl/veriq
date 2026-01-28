@@ -6,7 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 import veriq as vq
-from veriq._eval_engine import EvaluationResult
+from veriq._eval_engine import EvaluationResult, build_scope_trees
 from veriq._path import ItemPart, ProjectPath, VerificationPath
 from veriq._traceability import (
     RequirementStatus,
@@ -377,7 +377,11 @@ class TestExtractVerificationResults:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = {ppath: True}
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees({ppath: True}),
+            errors=[],
+            validity={ppath: True},
+        )
 
         results = extract_verification_results(verify_capacity, "Power", evaluation_results)
 
@@ -404,7 +408,11 @@ class TestExtractVerificationResults:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = {ppath: False}
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees({ppath: False}),
+            errors=[],
+            validity={ppath: True},
+        )
 
         results = extract_verification_results(verify_capacity, "Power", evaluation_results)
 
@@ -438,22 +446,30 @@ class TestExtractVerificationResults:
         # Simulate evaluation results including both:
         # - Non-leaf aggregate result (no parts) - should be excluded
         # - Leaf results (with ItemPart) - should be included
-        evaluation_results = {
+        ppath_root = ProjectPath(
+            scope="Power",
+            path=VerificationPath(root="?verify_power", parts=()),
+        )
+        ppath_nominal = ProjectPath(
+            scope="Power",
+            path=VerificationPath(root="?verify_power", parts=(ItemPart(key="nominal"),)),
+        )
+        ppath_safe = ProjectPath(
+            scope="Power",
+            path=VerificationPath(root="?verify_power", parts=(ItemPart(key="safe"),)),
+        )
+        values_dict = {
             # Non-leaf aggregate result - should NOT be included in output
-            ProjectPath(
-                scope="Power",
-                path=VerificationPath(root="?verify_power", parts=()),
-            ): True,
+            ppath_root: True,
             # Leaf results - should be included in output
-            ProjectPath(
-                scope="Power",
-                path=VerificationPath(root="?verify_power", parts=(ItemPart(key="nominal"),)),
-            ): True,
-            ProjectPath(
-                scope="Power",
-                path=VerificationPath(root="?verify_power", parts=(ItemPart(key="safe"),)),
-            ): False,
+            ppath_nominal: True,
+            ppath_safe: False,
         }
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees(values_dict),
+            errors=[],
+            validity={ppath_root: True, ppath_nominal: True, ppath_safe: True},
+        )
 
         results = extract_verification_results(verify_power, "Power", evaluation_results)
 
@@ -482,7 +498,11 @@ class TestExtractVerificationResults:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = {ppath: False}
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees({ppath: False}),
+            errors=[],
+            validity={ppath: True},
+        )
 
         results = extract_verification_results(verify_capacity, "Power", evaluation_results)
 
@@ -502,7 +522,11 @@ class TestExtractVerificationResults:
         ) -> bool:
             return capacity > 0
 
-        evaluation_results: dict[ProjectPath, bool] = {}
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees({}),
+            errors=[],
+            validity={},
+        )
 
         results = extract_verification_results(verify_capacity, "Power", evaluation_results)
 
@@ -669,8 +693,7 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(
-            values={ppath: True},
+        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: True}),
             errors=[],
             validity={ppath: True},
         )
@@ -707,8 +730,7 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(
-            values={ppath: False},
+        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: False}),
             errors=[],
             validity={ppath: True},
         )
@@ -744,8 +766,7 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(
-            values={ppath: False},
+        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: False}),
             errors=[],
             validity={ppath: True},
         )
@@ -815,8 +836,7 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(
-            values={ppath: False},
+        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: False}),
             errors=[],
             validity={ppath: True},
         )
@@ -859,8 +879,7 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(
-            values={ppath: True},
+        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: True}),
             errors=[],
             validity={ppath: True},
         )
@@ -906,8 +925,7 @@ class TestVerifiedByRef:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(
-            values={ppath: True},
+        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: True}),
             errors=[],
             validity={ppath: True},
         )
@@ -955,8 +973,7 @@ class TestVerifiedByRef:
             scope="Thermal",
             path=VerificationPath(root="?verify_temp", parts=()),
         )
-        evaluation_results = EvaluationResult(
-            values={ppath: True},
+        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: True}),
             errors=[],
             validity={ppath: True},
         )

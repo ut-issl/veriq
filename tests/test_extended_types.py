@@ -61,7 +61,7 @@ def test_strenum_field_in_model() -> None:
         scope="TestScope",
         path=ModelPath(root="$", parts=(AttributePart("mode"),)),
     )
-    assert result.values[mode_path] == OperationMode.NOMINAL
+    assert result.get_value(mode_path) == OperationMode.NOMINAL
 
 
 def test_strenum_field_in_calculation() -> None:
@@ -94,7 +94,7 @@ def test_strenum_field_in_calculation() -> None:
         scope="TestScope",
         path=CalcPath(root="@adjusted_power", parts=()),
     )
-    assert result.values[calc_path] == 50.0
+    assert result.get_value(calc_path) == 50.0
 
 
 def test_strenum_field_toml_roundtrip(tmp_path: Path) -> None:
@@ -146,7 +146,7 @@ def test_intenum_field_in_model() -> None:
         scope="TestScope",
         path=ModelPath(root="$", parts=(AttributePart("priority"),)),
     )
-    assert result.values[priority_path] == Priority.HIGH
+    assert result.get_value(priority_path) == Priority.HIGH
 
 
 def test_intenum_field_in_calculation() -> None:
@@ -175,7 +175,7 @@ def test_intenum_field_in_calculation() -> None:
         scope="TestScope",
         path=CalcPath(root="@priority_weighted", parts=()),
     )
-    assert result.values[calc_path] == 20.0  # 10.0 * 2
+    assert result.get_value(calc_path) == 20.0  # 10.0 * 2
 
 
 def test_intenum_field_toml_roundtrip(tmp_path: Path) -> None:
@@ -228,7 +228,7 @@ def test_datetime_field_in_model() -> None:
         scope="TestScope",
         path=ModelPath(root="$", parts=(AttributePart("timestamp"),)),
     )
-    assert result.values[timestamp_path] == test_time
+    assert result.get_value(timestamp_path) == test_time
 
 
 def test_date_field_in_model() -> None:
@@ -250,7 +250,7 @@ def test_date_field_in_model() -> None:
         scope="TestScope",
         path=ModelPath(root="$", parts=(AttributePart("launch_date"),)),
     )
-    assert result.values[date_path] == test_date
+    assert result.get_value(date_path) == test_date
 
 
 def test_time_field_in_model() -> None:
@@ -272,7 +272,7 @@ def test_time_field_in_model() -> None:
         scope="TestScope",
         path=ModelPath(root="$", parts=(AttributePart("event_time"),)),
     )
-    assert result.values[time_path] == test_time
+    assert result.get_value(time_path) == test_time
 
 
 def test_datetime_field_in_calculation() -> None:
@@ -306,7 +306,7 @@ def test_datetime_field_in_calculation() -> None:
         scope="TestScope",
         path=CalcPath(root="@duration_hours", parts=()),
     )
-    assert result.values[calc_path] == 2.5
+    assert result.get_value(calc_path) == 2.5
 
 
 def test_datetime_field_toml_roundtrip(tmp_path: Path) -> None:
@@ -411,7 +411,7 @@ def test_optional_field_with_value() -> None:
         scope="TestScope",
         path=ModelPath(root="$", parts=(AttributePart("optional_value"),)),
     )
-    assert result.values[optional_path] == 2.0
+    assert result.get_value(optional_path) == 2.0
 
 
 def test_optional_field_with_none() -> None:
@@ -432,7 +432,7 @@ def test_optional_field_with_none() -> None:
         scope="TestScope",
         path=ModelPath(root="$", parts=(AttributePart("optional_value"),)),
     )
-    assert result.values[optional_path] is None
+    assert result.get_value(optional_path) is None
 
 
 def test_optional_field_in_calculation() -> None:
@@ -463,12 +463,12 @@ def test_optional_field_in_calculation() -> None:
         scope="TestScope",
         path=CalcPath(root="@computed_value", parts=()),
     )
-    assert result.values[calc_path] == 10.0
+    assert result.get_value(calc_path) == 10.0
 
     # Test with value
     model_data = {"TestScope": TestModel(base_value=10.0, multiplier=3.0)}
     result = evaluate_project(project, model_data)
-    assert result.values[calc_path] == 30.0
+    assert result.get_value(calc_path) == 30.0
 
 
 def test_optional_field_toml_with_value(tmp_path: Path) -> None:
@@ -540,7 +540,7 @@ def test_optional_field_with_non_none_default() -> None:
         scope="TestScope",
         path=ModelPath(root="$", parts=(AttributePart("threshold"),)),
     )
-    assert result.values[threshold_path] == 100.0
+    assert result.get_value(threshold_path) == 100.0
 
 
 # =============================================================================
@@ -587,17 +587,17 @@ def test_combined_extended_types() -> None:
         scope="TestScope",
         path=ModelPath(root="$", parts=(AttributePart("mode"),)),
     )
-    assert result.values[mode_path] == OperationMode.NOMINAL
+    assert result.get_value(mode_path) == OperationMode.NOMINAL
 
     priority_path = ProjectPath(
         scope="TestScope",
         path=ModelPath(root="$", parts=(AttributePart("priority"),)),
     )
-    assert result.values[priority_path] == Priority.HIGH
+    assert result.get_value(priority_path) == Priority.HIGH
 
     # Check calculation
     calc_path = ProjectPath(
         scope="TestScope",
         path=CalcPath(root="@mission_duration", parts=()),
     )
-    assert result.values[calc_path] == 6.0
+    assert result.get_value(calc_path) == 6.0

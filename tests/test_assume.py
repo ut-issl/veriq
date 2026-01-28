@@ -36,7 +36,7 @@ def test_assume_valid_when_verification_passes() -> None:
         scope="TestScope",
         path=VerificationPath(root="?value_positive", parts=()),
     )
-    assert result.values[verif_path] is True
+    assert result.get_value(verif_path) is True
     assert result.is_valid(verif_path)
 
     # Calculation should be valid since assumption holds
@@ -44,7 +44,7 @@ def test_assume_valid_when_verification_passes() -> None:
         scope="TestScope",
         path=CalcPath(root="@doubled_value", parts=()),
     )
-    assert result.values[calc_path] == 20.0
+    assert result.get_value(calc_path) == 20.0
     assert result.is_valid(calc_path)
 
 
@@ -75,7 +75,7 @@ def test_assume_invalid_when_verification_fails() -> None:
         scope="TestScope",
         path=VerificationPath(root="?value_positive", parts=()),
     )
-    assert result.values[verif_path] is False
+    assert result.get_value(verif_path) is False
     assert result.is_valid(verif_path)  # Verification itself is valid (it ran)
 
     # Calculation should be invalid since assumption doesn't hold
@@ -84,7 +84,7 @@ def test_assume_invalid_when_verification_fails() -> None:
         path=CalcPath(root="@doubled_value", parts=()),
     )
     # The calculated value is still computed
-    assert result.values[calc_path] == -10.0
+    assert result.get_value(calc_path) == -10.0
     # But it's marked as invalid
     assert not result.is_valid(calc_path)
 
@@ -206,7 +206,7 @@ def test_assume_cross_scope() -> None:
         scope="Thermal",
         path=VerificationPath(root="?temp_in_range", parts=()),
     )
-    assert result.values[verif_path] is False
+    assert result.get_value(verif_path) is False
 
     # Calculation should be invalid
     calc_path = ProjectPath(
@@ -246,7 +246,7 @@ def test_assume_invalid_verification_overrides_to_false() -> None:
         path=VerificationPath(root="?dependent_verification", parts=()),
     )
     # The value should be overridden to False because it's invalid
-    assert result.values[dep_verif_path] is False
+    assert result.get_value(dep_verif_path) is False
     assert not result.is_valid(dep_verif_path)
 
 

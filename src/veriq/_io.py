@@ -11,7 +11,7 @@ from ._context import (  # noqa: F401 - get_input_base_dir re-exported
     reset_input_base_dir,
     set_input_base_dir,
 )
-from ._path import AttributePart, CalcPath, ItemPart, ModelPath, PartBase, ProjectPath, VerificationPath
+from ._path import AttributePart, CalcPath, ItemPart, ModelPath, PartBase, VerificationPath
 from ._table import Table
 
 if TYPE_CHECKING:
@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
     from pydantic import BaseModel
 
+    from ._eval_engine import EvaluationResult
     from ._models import Project
 
 logger = logging.getLogger(__name__)
@@ -131,14 +132,14 @@ def _parts_to_keys(parts: tuple[PartBase, ...]) -> list[str]:
     return keys
 
 
-def results_to_dict(results: dict[ProjectPath, Any]) -> dict[str, Any]:
+def results_to_dict(result: EvaluationResult) -> dict[str, Any]:
     """Convert evaluation results to a nested dictionary structure.
 
-    This is a pure function that converts the flat results dictionary
-    (with ProjectPath keys) into a nested dictionary suitable for TOML export.
+    This is a pure function that converts the tree-based evaluation result
+    into a nested dictionary suitable for TOML export.
 
     Args:
-        results: The evaluation results from evaluate_project
+        result: The EvaluationResult from evaluate_project
 
     Returns:
         A nested dictionary with the structure:
@@ -153,8 +154,8 @@ def results_to_dict(results: dict[ProjectPath, Any]) -> dict[str, Any]:
     """
     toml_data: dict[str, Any] = {}
 
-    # Process all results (includes both model data and calculated/verified values)
-    for ppath, value in results.items():
+    # Process all leaf values from the tree
+    for ppath, value in result.iter_leaf_values():
         scope_name = ppath.scope
         path = ppath.path
 
@@ -194,7 +195,7 @@ def results_to_dict(results: dict[ProjectPath, Any]) -> dict[str, Any]:
 def export_to_toml(
     _project: Project,
     _model_data: Mapping[str, BaseModel],
-    results: dict[ProjectPath, Any],
+    result: EvaluationResult,
     output_path: Path | str,
 ) -> None:
     """Export model data and evaluation results to a TOML file.
@@ -202,11 +203,11 @@ def export_to_toml(
     Args:
         project: The project containing scope definitions
         model_data: The input model data for each scope
-        results: The evaluation results from evaluate_project
+        result: The EvaluationResult from evaluate_project
         output_path: Path to the output TOML file
 
     """
-    toml_data = results_to_dict(results)
+    toml_data = results_to_dict(result)
 
     # Write to TOML file
     output_path = Path(output_path)

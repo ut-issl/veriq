@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     # Export to TOML
     output_path = Path("output.toml")
-    vq.export_to_toml(project, model_data, results.values, output_path)
+    vq.export_to_toml(project, model_data, results, output_path)
     print(f"✓ Exported results to {output_path}")
 
     # Load back and verify

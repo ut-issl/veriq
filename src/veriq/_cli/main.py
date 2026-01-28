@@ -250,7 +250,7 @@ def calc(  # noqa: C901, PLR0912, PLR0915
         # Group verification results by scope
         grouped_results: dict[str, list[tuple[str, bool, bool]]] = {}
 
-        for ppath, value in result.values.items():
+        for ppath, value in result.iter_leaf_values():
             if isinstance(ppath.path, VerificationPath):
                 verification_name = ppath.path.verification_name
                 scope_name = ppath.scope
@@ -328,7 +328,7 @@ def calc(  # noqa: C901, PLR0912, PLR0915
 
     # Export results
     err_console.print(f"[cyan]Exporting results to:[/cyan] {effective_output}")
-    export_to_toml(project, model_data, result.values, effective_output)
+    export_to_toml(project, model_data, result, effective_output)
 
     err_console.print()
     err_console.print("[green]✓ Calculation complete[/green]")

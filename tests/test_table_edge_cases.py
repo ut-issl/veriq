@@ -118,15 +118,15 @@ def test_table_with_pydantic_model_value_in_root_model() -> None:
     result = evaluate_project(project, model_data)
 
     # Verify the table is stored correctly - access via model path
-    battery_power = result.values[
+    battery_power = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=ModelPath(
                 root="$",
                 parts=(AttributePart("component_specs"), ItemPart("battery"), AttributePart("power")),
             ),
-        )
-    ]
+        ),
+    )
     assert battery_power == 100.0
 
 
@@ -169,12 +169,12 @@ def test_table_with_pydantic_model_value_in_calculation() -> None:
     result = evaluate_project(project, model_data)
 
     # Verify calculation output - access leaf values
-    nominal_avg_power = result.values[
+    nominal_avg_power = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@power_profiles", parts=(ItemPart("nominal"), AttributePart("avg_power"))),
-        )
-    ]
+        ),
+    )
     assert nominal_avg_power == 100.0
 
 
@@ -216,12 +216,12 @@ def test_table_with_pydantic_model_value_nested_access() -> None:
     result = evaluate_project(project, model_data)
 
     # Verify calculation that accesses nested fields
-    temp_range = result.values[
+    temp_range = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@battery_temp_range", parts=()),
-        )
-    ]
+        ),
+    )
     assert temp_range == 80.0  # 60.0 - (-20.0)
 
 
@@ -282,12 +282,12 @@ def test_table_with_complex_pydantic_model_value() -> None:
     result = evaluate_project(project, model_data)
 
     # Verify calculation
-    volume = result.values[
+    volume = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@battery_volume", parts=()),
-        )
-    ]
+        ),
+    )
     assert volume == 150.0  # 10.0 * 5.0 * 3.0
 
 
@@ -342,12 +342,12 @@ def test_nested_table_single_to_single() -> None:
     result = evaluate_project(project, model_data)
 
     # Verify nested table access
-    power = result.values[
+    power = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@battery_nominal_power", parts=()),
-        )
-    ]
+        ),
+    )
     assert power == 100.0
 
 
@@ -391,12 +391,12 @@ def test_nested_table_tuple_to_single() -> None:
     result = evaluate_project(project, model_data)
 
     # Verify nested access
-    power = result.values[
+    power = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@battery_launch_nominal_power", parts=()),
-        )
-    ]
+        ),
+    )
     # Battery is first (index 0), so (0+1)*100 = 100
     # Launch is first (index 0), so 0*10 = 0
     # Total: 100 + 0 = 100  # noqa: ERA001
@@ -445,16 +445,21 @@ def test_nested_table_as_calculation_output() -> None:
     result = evaluate_project(project, model_data)
 
     # Verify nested table calculation output
-    # Access the whole outer table
-    outer_table = result.values[
+    # Access leaf values directly (tree model stores only leaf values)
+    battery_nominal = result.get_value(
         ProjectPath(
             scope=scope.name,
-            path=CalcPath(root="@power_matrix", parts=()),
-        )
-    ]
-    assert isinstance(outer_table, vq.Table)
-    assert outer_table[Component.BATTERY][Mode.NOMINAL] == 100.0
-    assert outer_table[Component.SOLAR][Mode.SAFE] == 100.0
+            path=CalcPath(root="@power_matrix", parts=(ItemPart(key="battery"), ItemPart(key="nominal"))),
+        ),
+    )
+    solar_safe = result.get_value(
+        ProjectPath(
+            scope=scope.name,
+            path=CalcPath(root="@power_matrix", parts=(ItemPart(key="solar"), ItemPart(key="safe"))),
+        ),
+    )
+    assert battery_nominal == 100.0
+    assert solar_safe == 100.0
 
 
 def test_nested_table_chained_calculations() -> None:
@@ -501,12 +506,12 @@ def test_nested_table_chained_calculations() -> None:
     result = evaluate_project(project, model_data)
 
     # Verify chained calculation
-    value = result.values[
+    value = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@battery_safe_doubled", parts=()),
-        )
-    ]
+        ),
+    )
     assert value == 10.0  # 5.0 * 2
 
 
@@ -554,12 +559,12 @@ def test_triple_nested_table() -> None:
     result = evaluate_project(project, model_data)
 
     # Verify triple-nested access
-    power = result.values[
+    power = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@battery_launch_nominal_power", parts=()),
-        )
-    ]
+        ),
+    )
     # Battery: comp_idx=0, Launch: phase_idx=0, Nominal: mode_idx=0
     # (0+1)*100 + 0*10 + 0 = 100
     assert power == 100.0
@@ -598,12 +603,12 @@ def test_table_with_string_value() -> None:
 
     result = evaluate_project(project, model_data)
 
-    name = result.values[
+    name = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@battery_name", parts=()),
-        )
-    ]
+        ),
+    )
     assert name == "LITHIUM-ION BATTERY"
 
 
@@ -637,12 +642,12 @@ def test_table_with_int_value() -> None:
 
     result = evaluate_project(project, model_data)
 
-    total = result.values[
+    total = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@total_ids", parts=()),
-        )
-    ]
+        ),
+    )
     assert total == 6006  # 1001 + 2002 + 3003
 
 
@@ -676,12 +681,12 @@ def test_table_with_bool_value() -> None:
 
     result = evaluate_project(project, model_data)
 
-    count = result.values[
+    count = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@active_count", parts=()),
-        )
-    ]
+        ),
+    )
     assert count == 2
 
 
@@ -716,12 +721,12 @@ def test_table_with_list_value() -> None:
 
     result = evaluate_project(project, model_data)
 
-    avg = result.values[
+    avg = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@battery_avg_measurement", parts=()),
-        )
-    ]
+        ),
+    )
     assert avg == 105.0  # (100 + 105 + 110) / 3
 
 
@@ -755,12 +760,12 @@ def test_table_with_dict_value() -> None:
 
     result = evaluate_project(project, model_data)
 
-    manufacturer = result.values[
+    manufacturer = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@battery_manufacturer", parts=()),
-        )
-    ]
+        ),
+    )
     assert manufacturer == "BattCorp"
 
 
@@ -795,12 +800,12 @@ def test_table_with_tuple_single_enum() -> None:
 
     result = evaluate_project(project, model_data)
 
-    power = result.values[
+    power = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@battery_power", parts=()),
-        )
-    ]
+        ),
+    )
     assert power == 100.0
 
 
@@ -840,12 +845,12 @@ def test_table_with_four_element_tuple_key() -> None:
 
     result = evaluate_project(project, model_data)
 
-    value = result.values[
+    value = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=CalcPath(root="@specific_value", parts=()),
-        )
-    ]
+        ),
+    )
     # The first combination (BATTERY, LAUNCH, NOMINAL, ACTIVE) should have value 0.0
     assert value == 0.0
 
@@ -891,12 +896,12 @@ def test_table_in_verification() -> None:
     result = evaluate_project(project, model_data)
 
     # Verify verification result - use VerificationPath
-    verification_result = result.values[
+    verification_result = result.get_value(
         ProjectPath(
             scope=scope.name,
             path=VerificationPath(root="?power_within_limits"),
-        )
-    ]
+        ),
+    )
     assert verification_result is True
 
 

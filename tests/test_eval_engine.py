@@ -6,7 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 import veriq as vq
-from veriq._eval_engine import EvaluationResult, evaluate_graph
+from veriq._eval_engine import EvaluationResult, build_scope_trees, evaluate_graph
 from veriq._ir import build_graph_spec
 from veriq._path import (
     AttributePart,
@@ -24,24 +24,25 @@ from veriq._path import (
 
 
 def test_evaluation_result_success_when_no_errors() -> None:
-    result = EvaluationResult(values={}, errors=[])
+    result = EvaluationResult(scopes={}, errors=[])
     assert result.success is True
 
 
 def test_evaluation_result_not_success_when_errors() -> None:
     path = ProjectPath(scope="Test", path=ModelPath(root="$", parts=()))
-    result = EvaluationResult(values={}, errors=[(path, "Some error")])
+    result = EvaluationResult(scopes={}, errors=[(path, "Some error")])
     assert result.success is False
 
 
 def test_evaluation_result_get_value() -> None:
     path = ProjectPath(scope="Test", path=ModelPath(root="$", parts=(AttributePart("x"),)))
-    result = EvaluationResult(values={path: 42.0}, errors=[])
+    scopes = build_scope_trees({path: 42.0})
+    result = EvaluationResult(scopes=scopes, errors=[])
     assert result.get_value(path) == 42.0
 
 
 def test_evaluation_result_get_value_missing() -> None:
-    result = EvaluationResult(values={}, errors=[])
+    result = EvaluationResult(scopes={}, errors=[])
     path = ProjectPath(scope="Test", path=ModelPath(root="$", parts=(AttributePart("x"),)))
     with pytest.raises(KeyError):
         result.get_value(path)
@@ -84,7 +85,7 @@ def test_evaluate_graph_simple_calculation() -> None:
         scope="TestScope",
         path=CalcPath(root="@double_x", parts=()),
     )
-    assert result.values[calc_path] == 10.0
+    assert result.get_value(calc_path) == 10.0
 
 
 def test_evaluate_graph_chained_calculations() -> None:
@@ -122,14 +123,14 @@ def test_evaluate_graph_chained_calculations() -> None:
         scope="TestScope",
         path=CalcPath(root="@double_x", parts=()),
     )
-    assert result.values[double_path] == 10.0
+    assert result.get_value(double_path) == 10.0
 
     # triple_doubled should be 30
     triple_path = ProjectPath(
         scope="TestScope",
         path=CalcPath(root="@triple_doubled", parts=()),
     )
-    assert result.values[triple_path] == 30.0
+    assert result.get_value(triple_path) == 30.0
 
 
 def test_evaluate_graph_verification() -> None:
@@ -163,7 +164,7 @@ def test_evaluate_graph_verification() -> None:
         scope="TestScope",
         path=VerificationPath(root="?x_positive", parts=()),
     )
-    assert result.values[verif_path] is True
+    assert result.get_value(verif_path) is True
 
 
 def test_evaluate_graph_verification_fails() -> None:
@@ -197,7 +198,7 @@ def test_evaluate_graph_verification_fails() -> None:
         scope="TestScope",
         path=VerificationPath(root="?x_positive", parts=()),
     )
-    assert result.values[verif_path] is False
+    assert result.get_value(verif_path) is False
 
 
 def test_evaluate_graph_multiple_inputs() -> None:
@@ -237,7 +238,7 @@ def test_evaluate_graph_multiple_inputs() -> None:
         scope="TestScope",
         path=CalcPath(root="@power", parts=()),
     )
-    assert result.values[calc_path] == 30.0
+    assert result.get_value(calc_path) == 30.0
 
 
 def test_evaluate_graph_nested_model_input() -> None:
@@ -279,7 +280,7 @@ def test_evaluate_graph_nested_model_input() -> None:
         scope="TestScope",
         path=CalcPath(root="@sum_inner", parts=()),
     )
-    assert result.values[calc_path] == 10.0
+    assert result.get_value(calc_path) == 10.0
 
 
 def test_evaluate_graph_missing_initial_value_error() -> None:
@@ -345,8 +346,8 @@ def test_evaluate_graph_calculation_output_with_model() -> None:
         path=CalcPath(root="@compute", parts=(AttributePart("tripled"),)),
     )
 
-    assert result.values[doubled_path] == 10.0
-    assert result.values[tripled_path] == 15.0
+    assert result.get_value(doubled_path) == 10.0
+    assert result.get_value(tripled_path) == 15.0
 
 
 # =============================================================================
@@ -408,11 +409,11 @@ def test_evaluate_graph_matches_existing_evaluation() -> None:
         scope="TestScope",
         path=CalcPath(root="@sum_xy", parts=()),
     )
-    assert new_result.values[calc_path] == old_result.values[calc_path]
+    assert new_result.get_value(calc_path) == old_result.get_value(calc_path)
 
     # Compare results for verification
     verif_path = ProjectPath(
         scope="TestScope",
         path=VerificationPath(root="?sum_positive", parts=()),
     )
-    assert new_result.values[verif_path] == old_result.values[verif_path]
+    assert new_result.get_value(verif_path) == old_result.get_value(verif_path)

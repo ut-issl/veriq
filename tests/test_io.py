@@ -5,6 +5,7 @@ from enum import StrEnum, unique
 from pydantic import BaseModel
 
 import veriq as vq
+from veriq._eval_engine import EvaluationResult, build_scope_trees
 from veriq._io import (
     _parts_to_keys,
     _serialize_value,
@@ -208,38 +209,43 @@ class TestSetNestedValue:
 # --- results_to_dict() Tests ---
 
 
+def _make_eval_result(values: dict) -> EvaluationResult:
+    """Helper to create EvaluationResult from flat dict."""
+    return EvaluationResult(scopes=build_scope_trees(values), errors=[], validity={})
+
+
 class TestResultsToDict:
     def test_model_path(self):
-        results = {
+        values = {
             ProjectPath(
                 scope="Power", path=ModelPath(root="$", parts=(AttributePart("value"),)),
             ): 42.0,
         }
-        result = results_to_dict(results)
+        result = results_to_dict(_make_eval_result(values))
         assert result == {"Power": {"model": {"value": 42.0}}}
 
     def test_calc_path(self):
-        results = {
+        values = {
             ProjectPath(
                 scope="Power",
                 path=CalcPath(root="@my_calc", parts=(AttributePart("output"),)),
             ): 100.0,
         }
-        result = results_to_dict(results)
+        result = results_to_dict(_make_eval_result(values))
         assert result == {"Power": {"calc": {"my_calc": {"output": 100.0}}}}
 
     def test_verification_path_bool(self):
-        results = {
+        values = {
             ProjectPath(
                 scope="Power",
                 path=VerificationPath(root="?my_verif", parts=()),
             ): True,
         }
-        result = results_to_dict(results)
+        result = results_to_dict(_make_eval_result(values))
         assert result == {"Power": {"verification": {"my_verif": True}}}
 
     def test_verification_path_table(self):
-        results = {
+        values = {
             ProjectPath(
                 scope="Power",
                 path=VerificationPath(root="?my_verif", parts=(ItemPart("red"),)),
@@ -249,13 +255,13 @@ class TestResultsToDict:
                 path=VerificationPath(root="?my_verif", parts=(ItemPart("green"),)),
             ): False,
         }
-        result = results_to_dict(results)
+        result = results_to_dict(_make_eval_result(values))
         assert result == {
             "Power": {"verification": {"my_verif": {"red": True, "green": False}}},
         }
 
     def test_multiple_scopes(self):
-        results = {
+        values = {
             ProjectPath(
                 scope="Power", path=ModelPath(root="$", parts=(AttributePart("a"),)),
             ): 1.0,
@@ -263,14 +269,14 @@ class TestResultsToDict:
                 scope="Thermal", path=ModelPath(root="$", parts=(AttributePart("b"),)),
             ): 2.0,
         }
-        result = results_to_dict(results)
+        result = results_to_dict(_make_eval_result(values))
         assert result == {
             "Power": {"model": {"a": 1.0}},
             "Thermal": {"model": {"b": 2.0}},
         }
 
     def test_combined_paths(self):
-        results = {
+        values = {
             ProjectPath(
                 scope="Power", path=ModelPath(root="$", parts=(AttributePart("input"),)),
             ): 10.0,
@@ -283,7 +289,7 @@ class TestResultsToDict:
                 path=VerificationPath(root="?verif", parts=()),
             ): True,
         }
-        result = results_to_dict(results)
+        result = results_to_dict(_make_eval_result(values))
         assert result == {
             "Power": {
                 "model": {"input": 10.0},

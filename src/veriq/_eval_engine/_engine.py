@@ -1,5 +1,7 @@
 """Core evaluation engine for computation graphs."""
 
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -16,8 +18,11 @@ from veriq._path import (
 )
 
 from ._resolution import hydrate_inputs
+from ._tree import PathNode, ScopeTree, build_scope_trees
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from veriq._ir import GraphSpec
 
 logger = logging.getLogger(__name__)
@@ -27,19 +32,24 @@ logger = logging.getLogger(__name__)
 class EvaluationResult:
     """Result of evaluating a computation graph.
 
-    This is an immutable data structure containing all computed values,
-    validity tracking, and any errors that occurred during evaluation.
+    This is an immutable data structure containing all computed values
+    organized as a tree structure, validity tracking, and any errors
+    that occurred during evaluation.
+
+    The tree structure provides:
+    - Natural parent-child navigation for paths
+    - No duplication between composite and leaf values
+    - Extensibility for dependency visualization and interactive exploration
 
     Attributes:
-        values: Mapping from node path to computed value. Invalid verifications
-            are overridden to False in this dict.
+        scopes: Tree-structured values organized by scope name.
         errors: List of (node_path, error_message) for any failed evaluations.
         validity: Mapping from node path to validity status. True means the node's
             assumptions hold, False means an assumed verification failed.
 
     """
 
-    values: dict[ProjectPath, Any] = field(default_factory=dict)
+    scopes: dict[str, ScopeTree] = field(default_factory=dict)
     errors: list[tuple[ProjectPath, str]] = field(default_factory=list)
     validity: dict[ProjectPath, bool] = field(default_factory=dict)
 
@@ -51,6 +61,8 @@ class EvaluationResult:
     def get_value(self, path: ProjectPath) -> Any:
         """Get a computed value by path.
 
+        Navigates the tree structure to find the value at the given path.
+
         Args:
             path: The ProjectPath to look up.
 
@@ -61,7 +73,79 @@ class EvaluationResult:
             KeyError: If no value exists at the given path.
 
         """
-        return self.values[path]
+        scope_tree = self.scopes.get(path.scope)
+        if scope_tree is None:
+            msg = f"Scope '{path.scope}' not found"
+            raise KeyError(msg)
+
+        # Find the root node based on path type
+        root_node: PathNode | None = None
+        if isinstance(path.path, ModelPath):
+            root_node = scope_tree.model
+        elif isinstance(path.path, CalcPath):
+            root_node = scope_tree.get_calculation(path.path.calc_name)
+        elif isinstance(path.path, VerificationPath):
+            root_node = scope_tree.get_verification(path.path.verification_name)
+
+        if root_node is None:
+            msg = f"Path '{path}' not found"
+            raise KeyError(msg)
+
+        # Navigate to the specific node
+        current = root_node
+        for part in path.path.parts:
+            child = current.get_child(part)
+            if child is None:
+                msg = f"Path '{path}' not found"
+                raise KeyError(msg)
+            current = child
+
+        if current.value is None and not current.is_leaf:
+            msg = f"Path '{path}' is an intermediate node with no value"
+            raise KeyError(msg)
+
+        return current.value
+
+    def get_scope_tree(self, scope_name: str) -> ScopeTree | None:
+        """Get the tree for a specific scope.
+
+        Args:
+            scope_name: The name of the scope to look up.
+
+        Returns:
+            The ScopeTree for the scope, or None if not found.
+
+        """
+        return self.scopes.get(scope_name)
+
+    def iter_leaf_values(self) -> Generator[tuple[ProjectPath, Any]]:
+        """Iterate over all leaf path-value pairs.
+
+        Yields:
+            Tuples of (ProjectPath, value) for each leaf node in the tree.
+
+        """
+        for scope_tree in self.scopes.values():
+            for node in scope_tree.iter_all_nodes():
+                for leaf in node.iter_leaves():
+                    yield leaf.path, leaf.value
+
+    def has_value(self, path: ProjectPath) -> bool:
+        """Check if a value exists at the given path.
+
+        Args:
+            path: The ProjectPath to check.
+
+        Returns:
+            True if a value exists at the path, False otherwise.
+
+        """
+        try:
+            self.get_value(path)
+        except KeyError:
+            return False
+        else:
+            return True
 
     def is_valid(self, path: ProjectPath) -> bool:
         """Check if a value at path is valid (all assumptions hold).
@@ -227,7 +311,7 @@ def evaluate_graph(  # noqa: C901
     validation_errors = graph.validate()
     if validation_errors:
         return EvaluationResult(
-            values={},
+            scopes={},
             errors=[
                 (
                     ProjectPath(
@@ -245,7 +329,7 @@ def evaluate_graph(  # noqa: C901
         eval_order = graph.topological_order()
     except ValueError as e:
         return EvaluationResult(
-            values={},
+            scopes={},
             errors=[
                 (
                     ProjectPath(
@@ -331,4 +415,7 @@ def evaluate_graph(  # noqa: C901
     # (invalid verifications are overridden to False)
     validity = _check_validity(graph_spec, values, eval_order)
 
-    return EvaluationResult(values=values, errors=errors, validity=validity)
+    # Build tree structure from flat values
+    scopes = build_scope_trees(values)
+
+    return EvaluationResult(scopes=scopes, errors=errors, validity=validity)

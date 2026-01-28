@@ -69,7 +69,7 @@ def test_table_with_basemodel_values_export_to_toml(tmp_path: Path) -> None:
 
     # Export to TOML - this should now work with the fix
     output_path = tmp_path / "output.toml"
-    vq.export_to_toml(project, input_data, results.values, output_path)
+    vq.export_to_toml(project, input_data, results, output_path)
 
     # Verify the file was created
     assert output_path.exists()
@@ -113,7 +113,7 @@ def test_table_with_basemodel_values_roundtrip(tmp_path: Path) -> None:
 
     # Export to TOML
     output_path = tmp_path / "output.toml"
-    vq.export_to_toml(project, original_data, results.values, output_path)
+    vq.export_to_toml(project, original_data, results, output_path)
 
     # Verify the file was created
     assert output_path.exists()
@@ -168,7 +168,7 @@ def test_table_with_basemodel_values_toml_structure(tmp_path: Path) -> None:
 
     # Export to TOML
     output_path = tmp_path / "output.toml"
-    vq.export_to_toml(project, input_data, results.values, output_path)
+    vq.export_to_toml(project, input_data, results, output_path)
 
     # Read the TOML file and verify its structure
     with output_path.open("rb") as f:
