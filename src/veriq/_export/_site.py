@@ -8,6 +8,7 @@ from veriq._traceability import build_traceability_report
 
 from ._css import CSS
 from ._pages.index import render_index_page
+from ._pages.scope import render_scope_detail_page, render_scope_list_page
 from .html import _group_results_by_scope
 
 if TYPE_CHECKING:
@@ -30,9 +31,8 @@ def generate_site(
     Creates a directory structure with:
     - index.html: Landing page with project overview and summary
     - styles.css: Shared CSS stylesheet
+    - scopes/: Scope listing and detail pages
     - .nojekyll: Marker file for GitHub Pages compatibility
-
-    Future phases will add scope, calculation, verification, and requirement pages.
 
     Args:
         project: The project that was evaluated.
@@ -59,6 +59,17 @@ def generate_site(
         output_dir / "index.html",
         render_index_page(project, scope_data, traceability),
     )
+
+    # Scope pages
+    _write_file(
+        output_dir / "scopes" / "index.html",
+        render_scope_list_page(project, scope_data),
+    )
+    for scope_name in project.scopes:
+        _write_file(
+            output_dir / "scopes" / f"{scope_name}.html",
+            render_scope_detail_page(project, scope_name, scope_data.get(scope_name), traceability),
+        )
 
 
 def _write_file(path: Path, content: str) -> None:
