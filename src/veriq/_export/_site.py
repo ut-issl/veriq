@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 from veriq._traceability import build_traceability_report
 
 from ._css import CSS
+from ._data import group_results_by_scope
 from ._pages.calculation import render_calc_detail_page
 from ._pages.index import render_index_page
 from ._pages.requirement import render_requirement_detail_page, render_requirement_list_page
 from ._pages.scope import render_scope_detail_page, render_scope_list_page
 from ._pages.verification import render_verification_detail_page
-from .html import _group_results_by_scope
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -47,7 +47,7 @@ def generate_site(
     """
     # Prepare shared data
     traceability = build_traceability_report(project, result)
-    scope_data = _group_results_by_scope(project, model_data, result)
+    scope_data = group_results_by_scope(project, model_data, result)
 
     # Ensure output directory exists
     output_dir.mkdir(parents=True, exist_ok=True)
