@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from veriq._eval import evaluate_project
-from veriq._export import render_html
+from veriq._export.html import render_html
 from veriq._io import load_model_data_from_toml
 
 
