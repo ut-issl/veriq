@@ -6,11 +6,9 @@ ruff:
 
 alias tc := typecheck
 
-# Type check with mypy, basedpyright, and ty
+# Type check with ty
 typecheck:
-    # -uv run -- mypy .
-    # -uv run -- basedpyright .
-    -uv run -- ty check .
+    uv run -- ty check .
 
 # Run pytest and generate coverage report
 test:
@@ -24,7 +22,7 @@ license:
     uv run --quiet --no-sync -- pip-licenses
     uv sync --quiet
 
-# Lint the code with ruff, mypy, pyright, lint-imports, deptry, and pip-licenses
+# Lint the code with ruff, ty, and pip-licenses
 lint:
     -just --justfile {{ justfile() }} ruff
     -just --justfile {{ justfile() }} typecheck

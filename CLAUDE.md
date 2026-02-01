@@ -34,12 +34,12 @@ uv run pytest tests/test_table.py::test_function_name -v
 ### Linting and Type Checking
 
 ```bash
-# Run all checks (ruff, mypy, basedpyright, ty, license check)
+# Run all checks (ruff, ty, license check)
 just lint
 
 # Run individual checks
 just ruff          # Ruff linter
-just typecheck     # Run mypy, basedpyright, and ty
+just typecheck     # Run ty
 just license       # Check dependency licenses
 ```
 
