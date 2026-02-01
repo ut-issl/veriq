@@ -194,6 +194,115 @@ def test_generate_site_index_links_to_scopes(tmp_path: Path, scope_name: str):
     assert expected_href in html, f"Missing link to scope: {expected_href}"
 
 
+# ---------------------------------------------------------------------------
+# Scope page tests
+# ---------------------------------------------------------------------------
+
+
+def test_generate_site_creates_scope_listing(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    assert (output_dir / "scopes" / "index.html").is_file()
+
+
+@pytest.mark.parametrize(
+    "scope_name",
+    ["Power", "Thermal", "System", "AOCS", "RWA"],
+)
+def test_generate_site_creates_scope_detail_pages(tmp_path: Path, scope_name: str):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    assert (output_dir / "scopes" / f"{scope_name}.html").is_file()
+
+
+def test_scope_listing_contains_all_scope_names(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "index.html").read_text()
+    for scope_name in ("Power", "Thermal", "System", "AOCS", "RWA"):
+        assert scope_name in html, f"Missing scope in listing: {scope_name}"
+
+
+def test_scope_listing_links_to_detail_pages(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "index.html").read_text()
+    for scope_name in ("Power", "Thermal"):
+        assert url_for_scope(scope_name) in html
+
+
+def test_scope_listing_has_breadcrumbs(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "index.html").read_text()
+    assert "Home" in html
+    assert url_for_index() in html
+
+
+def test_scope_detail_contains_scope_name(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power.html").read_text()
+    assert "Power" in html
+
+
+def test_scope_detail_contains_model_data(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power.html").read_text()
+    assert "Model" in html
+    assert "<table" in html
+
+
+def test_scope_detail_links_to_calculations(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power.html").read_text()
+    assert "Calculations" in html
+    assert "/calculations/Power/" in html
+
+
+def test_scope_detail_shows_verifications(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power.html").read_text()
+    assert "Verifications" in html
+    assert "PASS" in html or "FAIL" in html
+
+
+def test_scope_detail_has_breadcrumbs(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power.html").read_text()
+    assert "Home" in html
+    assert "Scopes" in html
+    assert url_for_scope_list() in html
+
+
+def test_scope_detail_links_external_css(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power.html").read_text()
+    assert 'href="/styles.css"' in html
+    assert "<style>" not in html
+
+
+# ---------------------------------------------------------------------------
+# Idempotency
+# ---------------------------------------------------------------------------
+
+
 def test_generate_site_is_idempotent(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
