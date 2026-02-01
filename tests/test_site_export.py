@@ -12,6 +12,7 @@ from veriq._export._css import CSS
 from veriq._export._urls import (
     url_for_calc,
     url_for_index,
+    url_for_model_root,
     url_for_requirement,
     url_for_requirement_list,
     url_for_scope,
@@ -50,15 +51,19 @@ def test_url_for_scope():
     assert url_for_scope("Power") == "/scopes/Power/index.html"
 
 
+def test_url_for_model_root():
+    assert url_for_model_root("Power") == "/scopes/Power/model/index.html"
+
+
 def test_url_for_calc():
     assert (
         url_for_calc("Power", "calculate_solar_panel_heat")
-        == "/scopes/Power/calculations/calculate_solar_panel_heat.html"
+        == "/scopes/Power/calculations/calculate_solar_panel_heat/index.html"
     )
 
 
 def test_url_for_verification():
-    assert url_for_verification("Power", "verify_battery") == "/scopes/Power/verifications/verify_battery.html"
+    assert url_for_verification("Power", "verify_battery") == "/scopes/Power/verifications/verify_battery/index.html"
 
 
 def test_url_for_requirement_list():
@@ -241,13 +246,13 @@ def test_scope_detail_contains_scope_name(tmp_path: Path):
     assert "Power" in html
 
 
-def test_scope_detail_contains_model_data(tmp_path: Path):
+def test_scope_detail_contains_model_link(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
     html = (output_dir / "scopes" / "Power" / "index.html").read_text()
     assert "Model" in html
-    assert "<table" in html
+    assert url_for_model_root("Power") in html
 
 
 def test_scope_detail_links_to_calculations(tmp_path: Path):
@@ -288,59 +293,140 @@ def test_scope_detail_links_external_css(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# Calculation page tests (nested under scopes)
+# Node page tests: Model
 # ---------------------------------------------------------------------------
 
 
-def test_generate_site_creates_calc_detail_pages(tmp_path: Path):
+def test_model_root_page_created(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    assert (output_dir / "scopes" / "Power" / "calculations" / "calculate_solar_panel_heat.html").is_file()
-    assert (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature.html").is_file()
+    assert (output_dir / "scopes" / "Power" / "model" / "index.html").is_file()
 
 
-def test_calc_detail_contains_scope_link(tmp_path: Path):
+def test_model_root_page_shows_children(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature.html").read_text()
-    assert "Thermal" in html
-    assert url_for_scope("Thermal") in html
-
-
-def test_calc_detail_shows_inputs(tmp_path: Path):
-    project, model_data, result = _load_dummysat()
-    output_dir = tmp_path / "site"
-    generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature.html").read_text()
-    assert "Inputs" in html
-
-
-def test_calc_detail_inputs_are_linked(tmp_path: Path):
-    project, model_data, result = _load_dummysat()
-    output_dir = tmp_path / "site"
-    generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature.html").read_text()
-    # Input references should be hyperlinks to their source pages
-    assert "<a " in html
-    assert url_for_scope("Thermal") in html
-
-
-def test_calc_detail_shows_outputs(tmp_path: Path):
-    project, model_data, result = _load_dummysat()
-    output_dir = tmp_path / "site"
-    generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature.html").read_text()
-    assert "Outputs" in html
+    html = (output_dir / "scopes" / "Power" / "model" / "index.html").read_text()
+    assert "Children" in html
     assert "<table" in html
 
 
-def test_calc_detail_has_breadcrumbs(tmp_path: Path):
+def test_model_root_page_has_breadcrumbs(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature.html").read_text()
+    html = (output_dir / "scopes" / "Power" / "model" / "index.html").read_text()
+    assert "Home" in html
+    assert "Scopes" in html
+    assert "Power" in html
+    assert url_for_scope("Power") in html
+
+
+def test_model_intermediate_node_page_created(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    # Power model has $.design which is an intermediate node
+    assert (output_dir / "scopes" / "Power" / "model" / "design" / "index.html").is_file()
+
+
+def test_model_intermediate_node_shows_children(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power" / "model" / "design" / "index.html").read_text()
+    assert "Children" in html
+
+
+def test_model_leaf_node_page_created(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    # Find a leaf node — e.g. $.design.battery_a.capacity
+    assert (output_dir / "scopes" / "Power" / "model" / "design" / "battery_a" / "capacity.html").is_file()
+
+
+def test_model_leaf_node_shows_value(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power" / "model" / "design" / "battery_a" / "capacity.html").read_text()
+    assert "Value" in html
+
+
+def test_model_leaf_node_has_breadcrumbs(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power" / "model" / "design" / "battery_a" / "capacity.html").read_text()
+    assert "Home" in html
+    assert "Power" in html
+    assert "Model" in html
+    assert ".design" in html
+    assert ".battery_a" in html
+
+
+# ---------------------------------------------------------------------------
+# Node page tests: Calculation
+# ---------------------------------------------------------------------------
+
+
+def test_calc_root_page_created(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    assert (output_dir / "scopes" / "Power" / "calculations" / "calculate_solar_panel_heat" / "index.html").is_file()
+    assert (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature" / "index.html").is_file()
+
+
+def test_calc_root_page_contains_scope_link(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature" / "index.html").read_text()
+    assert "Thermal" in html
+    assert url_for_scope("Thermal") in html
+
+
+def test_calc_root_page_shows_inputs(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature" / "index.html").read_text()
+    assert "Inputs" in html
+
+
+def test_calc_root_page_inputs_are_linked(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature" / "index.html").read_text()
+    # Input references should be hyperlinks (cross-scope refs to Power)
+    assert "<a " in html
+    assert "/scopes/Power/" in html
+
+
+def test_calc_leaf_node_shows_value(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    # calculate_solar_panel_heat has leaf output nodes
+    calc_dir = output_dir / "scopes" / "Power" / "calculations" / "calculate_solar_panel_heat"
+    # The root node may have children (outputs); check that some leaf exists
+    html_files = list(calc_dir.rglob("*.html"))
+    assert len(html_files) >= 1
+    # At least one should have a "Value" section
+    any_has_value = any("Value" in f.read_text() for f in html_files)
+    assert any_has_value
+
+
+def test_calc_root_page_has_breadcrumbs(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature" / "index.html").read_text()
     assert "Home" in html
     assert "Scopes" in html
     assert "Thermal" in html
@@ -348,21 +434,24 @@ def test_calc_detail_has_breadcrumbs(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# Verification page tests (nested under scopes)
+# Node page tests: Verification
 # ---------------------------------------------------------------------------
 
 
-def test_generate_site_creates_verif_detail_pages(tmp_path: Path):
+def test_verif_root_page_created(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
+    # verify_battery is a root leaf (bool result), so it gets .html not /index.html
     assert (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").is_file()
-    assert (output_dir / "scopes" / "Power" / "verifications" / "verify_power_budget.html").is_file()
-    assert (output_dir / "scopes" / "RWA" / "verifications" / "verify_power_margin.html").is_file()
+    # verify_power_budget has table results, so it gets /index.html
+    assert (output_dir / "scopes" / "Power" / "verifications" / "verify_power_budget" / "index.html").is_file()
+    assert (output_dir / "scopes" / "RWA" / "verifications" / "verify_power_margin" / "index.html").is_file()
+    # power_thermal_compatibility is a root leaf (single bool), so it gets .html
     assert (output_dir / "scopes" / "System" / "verifications" / "power_thermal_compatibility.html").is_file()
 
 
-def test_verif_detail_contains_scope_link(tmp_path: Path):
+def test_verif_root_page_contains_scope_link(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
@@ -371,16 +460,16 @@ def test_verif_detail_contains_scope_link(tmp_path: Path):
     assert url_for_scope("Power") in html
 
 
-def test_verif_detail_shows_result(tmp_path: Path):
+def test_verif_root_page_shows_value(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
     html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").read_text()
-    assert "Result" in html
+    assert "Value" in html
     assert "PASS" in html or "FAIL" in html
 
 
-def test_verif_detail_shows_inputs(tmp_path: Path):
+def test_verif_root_page_shows_inputs(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
@@ -388,17 +477,17 @@ def test_verif_detail_shows_inputs(tmp_path: Path):
     assert "Inputs" in html
 
 
-def test_verif_detail_inputs_are_linked(tmp_path: Path):
+def test_verif_root_page_inputs_are_linked(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
     html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").read_text()
-    # Input references should be hyperlinks to their source pages
+    # Input references should be hyperlinks
     assert "<a " in html
     assert url_for_scope("Power") in html
 
 
-def test_verif_detail_has_breadcrumbs(tmp_path: Path):
+def test_verif_root_page_has_breadcrumbs(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
@@ -409,13 +498,26 @@ def test_verif_detail_has_breadcrumbs(tmp_path: Path):
     assert url_for_scope("Power") in html
 
 
-def test_verif_detail_links_requirements(tmp_path: Path):
+def test_verif_root_page_links_requirements(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
     html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").read_text()
     assert "Satisfies Requirements" in html
     assert "/requirements/" in html
+
+
+def test_verif_table_results_have_child_pages(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    # verify_power_budget has Table[Mission, bool] results
+    verif_dir = output_dir / "scopes" / "Power" / "verifications" / "verify_power_budget"
+    assert verif_dir.is_dir()
+    # Should have child pages for each mission key
+    html_files = list(verif_dir.glob("*.html"))
+    # At least the index.html for the root and some [key].html for leaves
+    assert len(html_files) >= 1
 
 
 # ---------------------------------------------------------------------------

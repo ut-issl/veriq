@@ -222,9 +222,7 @@ def _verification_results_section(entry: RequirementTraceEntry) -> Element:
     for vr in entry.verification_results:
         key_display = ""
         if vr.table_key is not None:
-            key_display = (
-                f"[{','.join(vr.table_key)}]" if isinstance(vr.table_key, tuple) else f"[{vr.table_key}]"
-            )
+            key_display = f"[{','.join(vr.table_key)}]" if isinstance(vr.table_key, tuple) else f"[{vr.table_key}]"
 
         rows.append(
             tr[
