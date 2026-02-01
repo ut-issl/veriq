@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from htpy import Element, a, code, h2, h3, h4, li, main, p, section, ul
 
-from veriq._export._components import status_badge, verifications_table
+from veriq._export._components import children_tree, status_badge, verifications_table
 from veriq._export._layout import base_page, site_nav
 from veriq._export._urls import (
     url_for_calc,
@@ -19,6 +19,7 @@ from veriq._export._urls import (
 )
 
 if TYPE_CHECKING:
+    from veriq._eval_engine._tree import PathNode
     from veriq._export._data import ScopeData
     from veriq._models import Project
     from veriq._traceability import RequirementTraceEntry, TraceabilityReport
@@ -77,6 +78,8 @@ def render_scope_detail_page(
     scope_name: str,
     data: ScopeData | None,
     traceability: TraceabilityReport,
+    *,
+    model_tree: PathNode | None = None,
 ) -> str:
     """Render a scope detail page."""
     scope_names = list(project.scopes.keys())
@@ -84,7 +87,7 @@ def render_scope_detail_page(
         project_name=project.name,
         page_title=f"{scope_name} - {project.name}",
         sidebar=site_nav(scope_names=scope_names),
-        content=_scope_detail_content(scope_name, data, traceability),
+        content=_scope_detail_content(scope_name, data, traceability, model_tree=model_tree),
         css_href="/styles.css",
         breadcrumbs=[
             ("Home", url_for_index()),
@@ -98,16 +101,26 @@ def _scope_detail_content(
     scope_name: str,
     data: ScopeData | None,
     traceability: TraceabilityReport,
+    *,
+    model_tree: PathNode | None = None,
 ) -> Element:
     """Render the main content of a scope detail page."""
     sections: list[Element] = []
 
-    # Model section
-    if data and data.model_values:
+    # Model section — embed tree view if available
+    if model_tree is not None and model_tree.children:
         sections.append(
             section(id="model")[
                 h2["Model"],
-                p[a(href=url_for_model_root(scope_name))["View model tree →"]],
+                children_tree(model_tree.children),
+            ],
+        )
+    elif data and data.model_values:
+        # Fallback for models with values but no tree (shouldn't normally happen)
+        sections.append(
+            section(id="model")[
+                h2["Model"],
+                p[a(href=url_for_model_root(scope_name))["View model →"]],
             ],
         )
 
