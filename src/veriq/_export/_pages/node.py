@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from htpy import Element, a, code, h2, h3, li, main, p, section, ul
 
-from veriq._export._components import children_table, format_part, render_value, status_badge
+from veriq._export._components import children_tree, format_part, render_value, status_badge
 from veriq._export._layout import base_page, site_nav
 from veriq._export._urls import (
     url_for_index,
@@ -208,10 +208,10 @@ def _render_leaf_section(node: PathNode) -> Element:
 
 
 def _render_children_section(node: PathNode) -> Element:
-    """Render the children table for a non-leaf node."""
+    """Render the subtree for a non-leaf node."""
     return section(id="children")[
-        h3["Children"],
-        children_table(node.children),
+        h3["Tree"],
+        children_tree(node.children),
     ]
 
 
