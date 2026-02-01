@@ -299,6 +299,167 @@ def test_scope_detail_links_external_css(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
+# Calculation page tests
+# ---------------------------------------------------------------------------
+
+
+def test_generate_site_creates_calc_listing(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    assert (output_dir / "calculations" / "index.html").is_file()
+
+
+def test_generate_site_creates_calc_detail_pages(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    # Power has calculate_solar_panel_heat, Thermal has calculate_temperature
+    assert (output_dir / "calculations" / "Power" / "calculate_solar_panel_heat.html").is_file()
+    assert (output_dir / "calculations" / "Thermal" / "calculate_temperature.html").is_file()
+
+
+def test_calc_listing_contains_calculation_names(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "calculations" / "index.html").read_text()
+    assert "calculate_solar_panel_heat" in html
+    assert "calculate_temperature" in html
+
+
+def test_calc_listing_links_to_detail_pages(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "calculations" / "index.html").read_text()
+    assert url_for_calc("Power", "calculate_solar_panel_heat") in html
+    assert url_for_calc("Thermal", "calculate_temperature") in html
+
+
+def test_calc_detail_contains_scope_link(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "calculations" / "Thermal" / "calculate_temperature.html").read_text()
+    assert "Thermal" in html
+    assert url_for_scope("Thermal") in html
+
+
+def test_calc_detail_shows_inputs(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "calculations" / "Thermal" / "calculate_temperature.html").read_text()
+    assert "Inputs" in html
+
+
+def test_calc_detail_shows_outputs(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "calculations" / "Thermal" / "calculate_temperature.html").read_text()
+    assert "Outputs" in html
+    assert "<table" in html
+
+
+def test_calc_detail_has_breadcrumbs(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "calculations" / "Thermal" / "calculate_temperature.html").read_text()
+    assert "Home" in html
+    assert "Calculations" in html
+    assert url_for_calc_list() in html
+
+
+# ---------------------------------------------------------------------------
+# Verification page tests
+# ---------------------------------------------------------------------------
+
+
+def test_generate_site_creates_verif_listing(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    assert (output_dir / "verifications" / "index.html").is_file()
+
+
+def test_generate_site_creates_verif_detail_pages(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    assert (output_dir / "verifications" / "Power" / "verify_battery.html").is_file()
+    assert (output_dir / "verifications" / "Power" / "verify_power_budget.html").is_file()
+    assert (output_dir / "verifications" / "RWA" / "verify_power_margin.html").is_file()
+    assert (output_dir / "verifications" / "System" / "power_thermal_compatibility.html").is_file()
+
+
+def test_verif_listing_contains_verification_names(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "verifications" / "index.html").read_text()
+    assert "verify_battery" in html
+    assert "verify_power_budget" in html
+    assert "verify_power_margin" in html
+
+
+def test_verif_listing_shows_pass_fail(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "verifications" / "index.html").read_text()
+    assert "PASS" in html or "FAIL" in html
+
+
+def test_verif_detail_contains_scope_link(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "verifications" / "Power" / "verify_battery.html").read_text()
+    assert "Power" in html
+    assert url_for_scope("Power") in html
+
+
+def test_verif_detail_shows_result(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "verifications" / "Power" / "verify_battery.html").read_text()
+    assert "Result" in html
+    assert "PASS" in html or "FAIL" in html
+
+
+def test_verif_detail_shows_inputs(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "verifications" / "Power" / "verify_battery.html").read_text()
+    assert "Inputs" in html
+
+
+def test_verif_detail_has_breadcrumbs(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "verifications" / "Power" / "verify_battery.html").read_text()
+    assert "Home" in html
+    assert "Verifications" in html
+    assert url_for_verification_list() in html
+
+
+def test_verif_detail_links_requirements(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "verifications" / "Power" / "verify_battery.html").read_text()
+    # verify_battery is linked to a requirement
+    assert "Satisfies Requirements" in html
+    assert "/requirements/" in html
+
+
+# ---------------------------------------------------------------------------
 # Idempotency
 # ---------------------------------------------------------------------------
 
