@@ -8,7 +8,7 @@ from markupsafe import Markup
 from ._css import CSS
 
 
-def base_page(
+def base_page(  # noqa: PLR0913
     *,
     project_name: str,
     page_title: str | None = None,
@@ -60,9 +60,7 @@ def site_nav(
             li[a(href=url_for_index())["Home"]],
             li[
                 a(href=url_for_scope_list())["Scopes"],
-                ul[
-                    (li[a(href=url_for_scope(name))[name]] for name in scope_names),
-                ],
+                ul[(li[a(href=url_for_scope(name))[name]] for name in scope_names),],
             ],
             li[a(href=url_for_requirement_list())["Requirements"]],
         ],
@@ -71,11 +69,7 @@ def site_nav(
 
 def _render_head(page_title: str, *, css_href: str | None = None) -> Element:
     """Render HTML <head> with inline or external CSS."""
-    css_node: Node
-    if css_href:
-        css_node = link(rel="stylesheet", href=css_href)
-    else:
-        css_node = style[Markup(CSS)]  # noqa: S704 - CSS is a static constant, not user input
+    css_node: Node = link(rel="stylesheet", href=css_href) if css_href else style[Markup(CSS)]  # noqa: S704
 
     return head[
         meta(charset="UTF-8"),
