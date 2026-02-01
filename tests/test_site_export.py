@@ -317,6 +317,16 @@ def test_calc_detail_shows_inputs(tmp_path: Path):
     assert "Inputs" in html
 
 
+def test_calc_detail_inputs_are_linked(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Thermal" / "calculations" / "calculate_temperature.html").read_text()
+    # Input references should be hyperlinks to their source pages
+    assert "<a " in html
+    assert url_for_scope("Thermal") in html
+
+
 def test_calc_detail_shows_outputs(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
@@ -376,6 +386,16 @@ def test_verif_detail_shows_inputs(tmp_path: Path):
     generate_site(project, model_data, result, output_dir)
     html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").read_text()
     assert "Inputs" in html
+
+
+def test_verif_detail_inputs_are_linked(tmp_path: Path):
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").read_text()
+    # Input references should be hyperlinks to their source pages
+    assert "<a " in html
+    assert url_for_scope("Power") in html
 
 
 def test_verif_detail_has_breadcrumbs(tmp_path: Path):

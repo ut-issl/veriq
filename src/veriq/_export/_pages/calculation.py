@@ -8,11 +8,12 @@ from htpy import Element, a, code, h2, h3, li, main, p, section, ul
 
 from veriq._export._components import values_table
 from veriq._export._layout import base_page, site_nav
-from veriq._export._urls import url_for_calc, url_for_index, url_for_scope, url_for_scope_list
+from veriq._export._urls import url_for_calc, url_for_index, url_for_project_path, url_for_scope, url_for_scope_list
 
 if TYPE_CHECKING:
     from veriq._export._data import ScopeData
     from veriq._models import Project
+    from veriq._path import ProjectPath
 
 
 def render_calc_detail_page(
@@ -57,9 +58,7 @@ def _calc_detail_content(
 
     # Input references
     if calc is not None and hasattr(calc, "dep_ppaths") and calc.dep_ppaths:
-        dep_items = [
-            li[code[f"{param_name}"], " \u2190 ", code[str(ppath)]] for param_name, ppath in calc.dep_ppaths.items()
-        ]
+        dep_items = [_render_input_item(param_name, ppath) for param_name, ppath in calc.dep_ppaths.items()]
         sections.append(
             section(id="inputs")[
                 h3["Inputs"],
@@ -82,3 +81,11 @@ def _calc_detail_content(
         h2[code[f"@{calc_name}"]],
         sections,
     ]
+
+
+def _render_input_item(param_name: str, ppath: ProjectPath) -> Element:
+    """Render a single input reference, linked to its source page if possible."""
+    href = url_for_project_path(ppath)
+    path_display = code[str(ppath)]
+    linked_path = a(href=href)[path_display] if href else path_display
+    return li[code[param_name], " \u2190 ", linked_path]
