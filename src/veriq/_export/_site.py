@@ -79,19 +79,20 @@ def generate_site(
         data = scope_data.get(scope_name)
         scope_dir = output_dir / "scopes" / scope_name
 
-        # Scope detail page
-        _write_file(
-            scope_dir / "index.html",
-            render_scope_detail_page(project, scope_name, data, traceability),
-        )
-
         # Build field descriptions for model nodes
         model_descriptions: dict[str, str] = {}
         if scope_name in model_data:
             model_descriptions = _extract_field_descriptions(model_data[scope_name])
 
-        # Generate per-node pages
+        # Resolve model tree for scope detail page and node pages
         scope_tree = result.scopes.get(scope_name)
+        model_node = scope_tree.model if scope_tree is not None else None
+
+        # Scope detail page (with embedded model tree)
+        _write_file(
+            scope_dir / "index.html",
+            render_scope_detail_page(project, scope_name, data, traceability, model_tree=model_node),
+        )
 
         if scope_tree is not None and scope_tree.model is not None:
             _generate_node_pages(
