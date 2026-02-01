@@ -246,13 +246,15 @@ def test_scope_detail_contains_scope_name(tmp_path: Path):
     assert "Power" in html
 
 
-def test_scope_detail_contains_model_link(tmp_path: Path):
+def test_scope_detail_contains_model_tree(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
     html = (output_dir / "scopes" / "Power" / "index.html").read_text()
     assert "Model" in html
-    assert url_for_model_root("Power") in html
+    assert "data-tree" in html
+    # Should show nested fields inline, not just a link
+    assert ".design" in html
 
 
 def test_scope_detail_links_to_calculations(tmp_path: Path):
