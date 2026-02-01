@@ -11,7 +11,7 @@ from veriq._export._layout import base_page, site_nav
 from veriq._export._urls import url_for_requirement, url_for_scope, url_for_verification
 
 if TYPE_CHECKING:
-    from veriq._export.html import ScopeData
+    from veriq._export._data import ScopeData
     from veriq._models import Project
     from veriq._traceability import TraceabilityReport
 
