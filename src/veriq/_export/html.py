@@ -537,44 +537,48 @@ def _group_results_by_scope(  # noqa: C901, PLR0912
         if scope_name in scope_data:
             scope_data[scope_name].model_descriptions = _extract_field_descriptions(model)
 
-    for ppath, value in result.values.items():
-        scope_name = ppath.scope
+    for scope_name, scope_tree in result.scopes.items():
         if scope_name not in scope_data:
             scope_data[scope_name] = ScopeData()
 
         data = scope_data[scope_name]
 
-        if isinstance(ppath.path, ModelPath):
-            # Model value
-            path_str = str(ppath.path)
-            data.model_values[path_str] = value
+        for node in scope_tree.iter_all_nodes():
+            for leaf in node.iter_leaves():
+                ppath = leaf.path
+                value = leaf.value
 
-        elif isinstance(ppath.path, CalcPath):
-            # Calculation output
-            calc_name = ppath.path.calc_name
-            if calc_name not in data.calc_values:
-                data.calc_values[calc_name] = {}
+                if isinstance(ppath.path, ModelPath):
+                    # Model value
+                    path_str = str(ppath.path)
+                    data.model_values[path_str] = value
 
-            # Build path string without the calculation name prefix
-            if ppath.path.parts:
-                parts_str = "".join(_format_part(p) for p in ppath.path.parts)
-                data.calc_values[calc_name][parts_str] = value
-            else:
-                # Root calculation output
-                data.calc_values[calc_name]["(output)"] = value
+                elif isinstance(ppath.path, CalcPath):
+                    # Calculation output
+                    calc_name = ppath.path.calc_name
+                    if calc_name not in data.calc_values:
+                        data.calc_values[calc_name] = {}
 
-        elif isinstance(ppath.path, VerificationPath):
-            # Verification result
-            verif_name = ppath.path.verification_name
-            if ppath.path.parts:
-                # Table[K, bool] verification
-                if verif_name not in data.verification_values:
-                    data.verification_values[verif_name] = {}
-                key_str = "".join(_format_part(p) for p in ppath.path.parts)
-                data.verification_values[verif_name][key_str] = value  # type: ignore[index]
-            else:
-                # Simple bool verification
-                data.verification_values[verif_name] = value
+                    # Build path string without the calculation name prefix
+                    if ppath.path.parts:
+                        parts_str = "".join(_format_part(p) for p in ppath.path.parts)
+                        data.calc_values[calc_name][parts_str] = value
+                    else:
+                        # Root calculation output
+                        data.calc_values[calc_name]["(output)"] = value
+
+                elif isinstance(ppath.path, VerificationPath):
+                    # Verification result
+                    verif_name = ppath.path.verification_name
+                    if ppath.path.parts:
+                        # Table[K, bool] verification
+                        if verif_name not in data.verification_values:
+                            data.verification_values[verif_name] = {}
+                        key_str = "".join(_format_part(p) for p in ppath.path.parts)
+                        data.verification_values[verif_name][key_str] = value  # type: ignore[index]
+                    else:
+                        # Simple bool verification
+                        data.verification_values[verif_name] = value
 
     return scope_data
 
