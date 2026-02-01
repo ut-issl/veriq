@@ -368,6 +368,28 @@ def test_model_leaf_node_has_breadcrumbs(tmp_path: Path):
     assert ".battery_a" in html
 
 
+def test_empty_model_root_page_created(tmp_path: Path):
+    """Scopes with empty models (no fields) should still have a model root page."""
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    # Thermal and System have empty models (no fields), but are registered root models
+    assert (output_dir / "scopes" / "Thermal" / "model" / "index.html").is_file()
+    assert (output_dir / "scopes" / "System" / "model" / "index.html").is_file()
+    # AOCS has a model but no evaluation results — should still get a model page
+    assert (output_dir / "scopes" / "AOCS" / "model" / "index.html").is_file()
+
+
+def test_empty_model_root_page_has_scope_link(tmp_path: Path):
+    """Empty model root page should link back to its scope."""
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Thermal" / "model" / "index.html").read_text()
+    assert "Thermal" in html
+    assert url_for_scope("Thermal") in html
+
+
 # ---------------------------------------------------------------------------
 # Node page tests: Calculation
 # ---------------------------------------------------------------------------
@@ -442,20 +464,20 @@ def test_verif_root_page_created(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    # verify_battery is a root leaf (bool result), so it gets .html not /index.html
-    assert (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").is_file()
-    # verify_power_budget has table results, so it gets /index.html
+    # All verification root nodes use directory-style index.html
+    assert (output_dir / "scopes" / "Power" / "verifications" / "verify_battery" / "index.html").is_file()
     assert (output_dir / "scopes" / "Power" / "verifications" / "verify_power_budget" / "index.html").is_file()
     assert (output_dir / "scopes" / "RWA" / "verifications" / "verify_power_margin" / "index.html").is_file()
-    # power_thermal_compatibility is a root leaf (single bool), so it gets .html
-    assert (output_dir / "scopes" / "System" / "verifications" / "power_thermal_compatibility.html").is_file()
+    assert (
+        output_dir / "scopes" / "System" / "verifications" / "power_thermal_compatibility" / "index.html"
+    ).is_file()
 
 
 def test_verif_root_page_contains_scope_link(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").read_text()
+    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery" / "index.html").read_text()
     assert "Power" in html
     assert url_for_scope("Power") in html
 
@@ -464,7 +486,7 @@ def test_verif_root_page_shows_value(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").read_text()
+    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery" / "index.html").read_text()
     assert "Value" in html
     assert "PASS" in html or "FAIL" in html
 
@@ -473,7 +495,7 @@ def test_verif_root_page_shows_inputs(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").read_text()
+    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery" / "index.html").read_text()
     assert "Inputs" in html
 
 
@@ -481,7 +503,7 @@ def test_verif_root_page_inputs_are_linked(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").read_text()
+    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery" / "index.html").read_text()
     # Input references should be hyperlinks
     assert "<a " in html
     assert url_for_scope("Power") in html
@@ -491,7 +513,7 @@ def test_verif_root_page_has_breadcrumbs(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").read_text()
+    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery" / "index.html").read_text()
     assert "Home" in html
     assert "Scopes" in html
     assert "Power" in html
@@ -502,7 +524,7 @@ def test_verif_root_page_links_requirements(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery.html").read_text()
+    html = (output_dir / "scopes" / "Power" / "verifications" / "verify_battery" / "index.html").read_text()
     assert "Satisfies Requirements" in html
     assert "/requirements/" in html
 
