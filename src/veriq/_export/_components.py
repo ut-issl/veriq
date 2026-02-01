@@ -248,6 +248,17 @@ def children_table(children: tuple[PathNode, ...]) -> Element:
     ]
 
 
+def _tree_node_name(part: object) -> str:
+    """Format a path part for display in the tree view (no leading dot)."""
+    if isinstance(part, AttributePart):
+        return part.name
+    if isinstance(part, ItemPart):
+        if isinstance(part.key, tuple):
+            return f"[{','.join(str(k) for k in part.key)}]"
+        return f"[{part.key}]"
+    return str(part)
+
+
 def children_tree(children: tuple[PathNode, ...], *, depth: int = 0) -> Element:
     """Render a recursive tree of child nodes using <details>/<summary>.
 
@@ -261,7 +272,7 @@ def children_tree(children: tuple[PathNode, ...], *, depth: int = 0) -> Element:
     items: list[Element] = []
     for child in children:
         last_part = child.path.path.parts[-1] if child.path.path.parts else child.path.path.root
-        name = format_part(last_part) if isinstance(last_part, (AttributePart, ItemPart)) else str(last_part)
+        name = _tree_node_name(last_part)
         child_url = url_for_node(child)
 
         if child.is_leaf:
