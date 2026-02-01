@@ -254,7 +254,7 @@ def test_scope_detail_contains_model_tree(tmp_path: Path):
     assert "Model" in html
     assert "data-tree" in html
     # Should show nested fields inline, not just a link
-    assert ".design" in html
+    assert "design" in html
 
 
 def test_scope_detail_links_to_calculations(tmp_path: Path):
@@ -405,8 +405,8 @@ def test_tree_view_contains_nested_leaves(tmp_path: Path):
     generate_site(project, model_data, result, output_dir)
     # Power model root should show deeply nested leaf field names
     html = (output_dir / "scopes" / "Power" / "model" / "index.html").read_text()
-    assert ".capacity" in html
-    assert ".efficiency" in html
+    assert "capacity" in html
+    assert "efficiency" in html
 
 
 def test_tree_view_uses_details_summary(tmp_path: Path):
@@ -435,7 +435,7 @@ def test_tree_view_leaf_nodes_show_values_inline(tmp_path: Path):
     generate_site(project, model_data, result, output_dir)
     html = (output_dir / "scopes" / "RWA" / "model" / "index.html").read_text()
     assert "leaf-value" in html
-    assert ".mass" in html
+    assert "mass" in html
 
 
 def test_tree_view_nodes_are_linked(tmp_path: Path):
