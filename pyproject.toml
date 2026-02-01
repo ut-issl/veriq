@@ -19,6 +19,7 @@ classifiers = [
 ]
 dependencies = [
   "bounded-models>=0.0.3",
+  "htpy>=25.12.0",
   "pydantic>=2.11.7",
   "rich>=14.0.0",
   "scoped-context>=0.0.1",
