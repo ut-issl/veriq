@@ -8,11 +8,11 @@ from veriq._traceability import build_traceability_report
 
 from ._css import CSS
 from ._data import group_results_by_scope
-from ._pages.calculation import render_calc_detail_page
 from ._pages.index import render_index_page
+from ._pages.node import render_node_page
 from ._pages.requirement import render_requirement_detail_page, render_requirement_list_page
 from ._pages.scope import render_scope_detail_page, render_scope_list_page
-from ._pages.verification import render_verification_detail_page
+from ._urls import url_for_node
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -20,7 +20,9 @@ if TYPE_CHECKING:
     from pydantic import BaseModel
 
     from veriq._eval_engine import EvaluationResult
+    from veriq._eval_engine._tree import PathNode
     from veriq._models import Project
+    from veriq._traceability import TraceabilityReport
 
 
 def generate_site(
@@ -34,7 +36,7 @@ def generate_site(
     Creates a directory structure with:
     - index.html: Landing page with project overview and summary
     - styles.css: Shared CSS stylesheet
-    - scopes/: Scope listing, detail, calculation, and verification pages
+    - scopes/: Scope listing, detail, and per-node pages
     - requirements/: Requirement listing and detail pages
     - .nojekyll: Marker file for GitHub Pages compatibility
 
@@ -64,12 +66,16 @@ def generate_site(
         render_index_page(project, scope_data, traceability),
     )
 
-    # Scope pages (with nested calculation and verification pages)
+    # Scope pages (with nested per-node pages)
     _write_file(
         output_dir / "scopes" / "index.html",
         render_scope_list_page(project, scope_data),
     )
-    for scope_name, scope in project.scopes.items():
+
+    # Extract field descriptions for model nodes
+    from veriq._export._data import _extract_field_descriptions  # noqa: PLC0415
+
+    for scope_name in project.scopes:
         data = scope_data.get(scope_name)
         scope_dir = output_dir / "scopes" / scope_name
 
@@ -79,19 +85,28 @@ def generate_site(
             render_scope_detail_page(project, scope_name, data, traceability),
         )
 
-        # Calculation pages under scope
-        for calc_name in scope.calculations:
-            _write_file(
-                scope_dir / "calculations" / f"{calc_name}.html",
-                render_calc_detail_page(project, scope_name, calc_name, data),
-            )
+        # Generate per-node pages if scope has evaluation results
+        scope_tree = result.scopes.get(scope_name)
+        if scope_tree is None:
+            continue
 
-        # Verification pages under scope
-        for verif_name in scope.verifications:
-            _write_file(
-                scope_dir / "verifications" / f"{verif_name}.html",
-                render_verification_detail_page(project, scope_name, verif_name, data, traceability),
-            )
+        # Build field descriptions for model nodes
+        model_descriptions: dict[str, str] = {}
+        if scope_name in model_data:
+            model_descriptions = _extract_field_descriptions(model_data[scope_name])
+
+        # Generate per-node pages via DFS traversal
+        _generate_node_pages(
+            output_dir,
+            project,
+            scope_tree.model,
+            traceability,
+            descriptions=model_descriptions,
+        )
+        for calc_node in scope_tree.calculations:
+            _generate_node_pages(output_dir, project, calc_node, traceability)
+        for verif_node in scope_tree.verifications:
+            _generate_node_pages(output_dir, project, verif_node, traceability)
 
     # Requirement pages
     _write_file(
@@ -103,6 +118,33 @@ def generate_site(
             output_dir / "requirements" / f"{entry.requirement_id}.html",
             render_requirement_detail_page(project, entry, traceability),
         )
+
+
+def _generate_node_pages(
+    output_dir: Path,
+    project: Project,
+    node: PathNode | None,
+    traceability: TraceabilityReport,
+    *,
+    descriptions: dict[str, str] | None = None,
+) -> None:
+    """Recursively generate pages for a node and all its descendants."""
+    if node is None:
+        return
+
+    # Map node URL to filesystem path
+    node_url = url_for_node(node)
+    # URL starts with /, strip it to get relative path
+    file_path = output_dir / node_url.lstrip("/")
+
+    _write_file(
+        file_path,
+        render_node_page(project, node, traceability, descriptions=descriptions),
+    )
+
+    # Recurse into children
+    for child in node.children:
+        _generate_node_pages(output_dir, project, child, traceability, descriptions=descriptions)
 
 
 def _write_file(path: Path, content: str) -> None:
