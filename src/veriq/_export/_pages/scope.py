@@ -6,11 +6,12 @@ from typing import TYPE_CHECKING
 
 from htpy import Element, a, code, h2, h3, h4, li, main, p, section, ul
 
-from veriq._export._components import status_badge, values_table, verifications_table
+from veriq._export._components import status_badge, verifications_table
 from veriq._export._layout import base_page, site_nav
 from veriq._export._urls import (
     url_for_calc,
     url_for_index,
+    url_for_model_root,
     url_for_requirement,
     url_for_scope,
     url_for_scope_list,
@@ -106,7 +107,7 @@ def _scope_detail_content(
         sections.append(
             section(id="model")[
                 h2["Model"],
-                values_table(data.model_values, "model", data.model_descriptions),
+                p[a(href=url_for_model_root(scope_name))["View model tree →"]],
             ],
         )
 

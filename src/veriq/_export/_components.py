@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from htpy import Element, Node, code, em, fragment, span, table, tbody, td, th, thead, tr
+from htpy import Element, Node, a, code, em, fragment, span, table, tbody, td, th, thead, tr
 
 from veriq._path import AttributePart, ItemPart
 from veriq._table import Table
 from veriq._traceability import RequirementStatus
+
+if TYPE_CHECKING:
+    from veriq._eval_engine._tree import PathNode
 
 
 def status_badge(*, passed: bool) -> Element:
@@ -213,3 +216,33 @@ def format_part(part: Any) -> str:
             return f"[{','.join(str(k) for k in part.key)}]"
         return f"[{part.key}]"
     return str(part)
+
+
+def children_table(children: tuple[PathNode, ...]) -> Element:
+    """Render a table of child nodes with links to their pages."""
+    from veriq._export._urls import url_for_node  # noqa: PLC0415
+
+    rows: list[Element] = []
+    for child in children:
+        last_part = child.path.path.parts[-1] if child.path.path.parts else child.path.path.root
+        name = format_part(last_part) if isinstance(last_part, (AttributePart, ItemPart)) else str(last_part)
+
+        child_url = url_for_node(child)
+
+        if child.is_leaf:
+            info = render_value(child.value)
+        else:
+            child_count = len(child.children)
+            info = f"{child_count} children"
+
+        rows.append(
+            tr[
+                td[a(href=child_url)[code[name]]],
+                td[info],
+            ],
+        )
+
+    return table(".data-table")[
+        thead[tr[th["Name"], th["Value / Children"]]],
+        tbody[rows],
+    ]
