@@ -65,12 +65,13 @@ def url_for_requirement(req_id: str) -> str:
 def url_for_node(node: PathNode) -> str:
     """URL for any PathNode in the tree.
 
+    All nodes use directory-style URLs (index.html) for consistency with
+    url_for_project_path(), which cannot distinguish leaf from non-leaf nodes.
+
     Rules:
     - AttributePart("name") → directory segment `name/`
     - ItemPart("key") → directory segment `[key]/` (or `[a,b]/` for tuple keys)
-    - Non-leaf nodes → `index.html` inside their directory
-    - Leaf nodes → `{last_segment}.html` (no subdirectory)
-    - Root leaf nodes (no parts) → `{name}.html` at type level
+    - All nodes → `index.html` inside their directory
     """
     from veriq._path import CalcPath, ModelPath, VerificationPath  # noqa: PLC0415
 
@@ -92,21 +93,9 @@ def url_for_node(node: PathNode) -> str:
     parts = path.parts
 
     if not parts:
-        # Root node always uses index.html (consistent with url_for_calc/url_for_verification)
         return f"{base}/index.html"
 
-    # Build path segments from parts
-    segments = [_part_to_segment(part) for part in parts[:-1]]
-
-    last_part = parts[-1]
-
-    if node.is_leaf:
-        # Leaf node → last segment becomes filename
-        last_segment = _part_to_segment(last_part)
-        return f"{base}/{'/'.join(segments)}/{last_segment}.html" if segments else f"{base}/{last_segment}.html"
-
-    # Non-leaf node → index.html inside directory
-    segments.append(_part_to_segment(last_part))
+    segments = [_part_to_segment(part) for part in parts]
     return f"{base}/{'/'.join(segments)}/index.html"
 
 
@@ -148,11 +137,7 @@ def url_for_project_path(ppath: ProjectPath) -> str | None:
     parts = path.parts
 
     if not parts:
-        # Root — link to the root node's index page
         return f"{base}/index.html"
 
-    # Build segments from all parts, link to the deepest node page
-    # We don't know if it's a leaf or not, so we link to the directory index
-    # (the node page renderer will handle both leaf and non-leaf)
     segments = [_part_to_segment(p) for p in parts]
     return f"{base}/{'/'.join(segments)}/index.html"

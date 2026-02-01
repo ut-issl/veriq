@@ -345,14 +345,14 @@ def test_model_leaf_node_page_created(tmp_path: Path):
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
     # Find a leaf node — e.g. $.design.battery_a.capacity
-    assert (output_dir / "scopes" / "Power" / "model" / "design" / "battery_a" / "capacity.html").is_file()
+    assert (output_dir / "scopes" / "Power" / "model" / "design" / "battery_a" / "capacity" / "index.html").is_file()
 
 
 def test_model_leaf_node_shows_value(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Power" / "model" / "design" / "battery_a" / "capacity.html").read_text()
+    html = (output_dir / "scopes" / "Power" / "model" / "design" / "battery_a" / "capacity" / "index.html").read_text()
     assert "Value" in html
 
 
@@ -360,7 +360,7 @@ def test_model_leaf_node_has_breadcrumbs(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
-    html = (output_dir / "scopes" / "Power" / "model" / "design" / "battery_a" / "capacity.html").read_text()
+    html = (output_dir / "scopes" / "Power" / "model" / "design" / "battery_a" / "capacity" / "index.html").read_text()
     assert "Home" in html
     assert "Power" in html
     assert "Model" in html
