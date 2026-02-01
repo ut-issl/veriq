@@ -304,6 +304,52 @@ code {
     margin-top: 0.5rem;
 }
 
+/* Data tree (model/calculation/verification subtree view) */
+.data-tree {
+    list-style: none;
+    padding-left: 0;
+}
+
+.data-tree .data-tree {
+    margin-left: 1.5rem;
+    border-left: 2px solid var(--border-color);
+    padding-left: 1rem;
+}
+
+.data-node {
+    margin: 0.25rem 0;
+}
+
+.data-node details {
+    border: none;
+    background: transparent;
+    margin-bottom: 0;
+}
+
+.data-node summary {
+    padding: 0.35rem 0.5rem;
+    background: transparent;
+    border-radius: 4px;
+    display: list-item;
+}
+
+.data-node summary:hover {
+    background: var(--bg-color);
+}
+
+.data-node.leaf {
+    padding: 0.35rem 0.5rem;
+}
+
+.data-node .leaf-value {
+    color: #6c757d;
+}
+
+.data-node .child-count {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
 @media (max-width: 768px) {
     .container {
         flex-direction: column;
