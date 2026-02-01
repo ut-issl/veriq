@@ -92,15 +92,7 @@ def url_for_node(node: PathNode) -> str:
     parts = path.parts
 
     if not parts:
-        # Root node (e.g., $, @calc_name, ?verif_name)
-        if node.is_leaf:
-            # Root leaf (e.g., ?verify_battery = True) → {verif_name}.html at type level
-            if isinstance(path, CalcPath):
-                return f"/scopes/{scope_name}/calculations/{path.calc_name}.html"
-            if isinstance(path, VerificationPath):
-                return f"/scopes/{scope_name}/verifications/{path.verification_name}.html"
-            # Model root is never a leaf in practice, but handle it
-            return f"/scopes/{scope_name}/model.html"
+        # Root node always uses index.html (consistent with url_for_calc/url_for_verification)
         return f"{base}/index.html"
 
     # Build path segments from parts
