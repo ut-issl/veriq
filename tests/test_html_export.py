@@ -11,7 +11,7 @@ from veriq._io import load_model_data_from_toml
 
 def _load_dummysat() -> tuple:
     """Load the dummysat example project, model data, and evaluation result."""
-    from veriq._cli.discover import load_project_from_script  # noqa: PLC0415
+    from veriq._cli.discover import load_project_from_script
 
     script_path = Path(__file__).parent.parent / "examples" / "dummysat.py"
     project = load_project_from_script(script_path)

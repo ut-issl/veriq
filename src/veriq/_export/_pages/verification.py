@@ -1,4 +1,4 @@
-"""Verification listing and detail pages for multi-page static site export."""
+"""Verification detail pages for multi-page static site export."""
 
 from __future__ import annotations
 
@@ -6,74 +6,20 @@ from typing import TYPE_CHECKING
 
 from htpy import Element, a, code, h2, h3, li, main, p, section, ul
 
-from veriq._export._components import status_badge, verifications_table
+from veriq._export._components import verifications_table
 from veriq._export._layout import base_page, site_nav
 from veriq._export._urls import (
     url_for_index,
     url_for_requirement,
     url_for_scope,
+    url_for_scope_list,
     url_for_verification,
-    url_for_verification_list,
 )
 
 if TYPE_CHECKING:
     from veriq._export.html import ScopeData
     from veriq._models import Project
     from veriq._traceability import TraceabilityReport
-
-
-# ---------------------------------------------------------------------------
-# Verification listing page
-# ---------------------------------------------------------------------------
-
-
-def render_verification_list_page(
-    project: Project,
-    scope_data: dict[str, ScopeData],
-) -> str:
-    """Render the verification listing page."""
-    scope_names = list(project.scopes.keys())
-    return base_page(
-        project_name=project.name,
-        page_title=f"Verifications - {project.name}",
-        sidebar=site_nav(scope_names=scope_names),
-        content=_verif_list_content(project, scope_data),
-        css_href="/styles.css",
-        breadcrumbs=[("Home", url_for_index()), ("Verifications", url_for_verification_list())],
-    )
-
-
-def _verif_list_content(project: Project, scope_data: dict[str, ScopeData]) -> Element:
-    """Render verification listing grouped by scope."""
-    sections: list[Element] = []
-    for scope_name in project.scopes:
-        data = scope_data.get(scope_name)
-        if not data or not data.verification_values:
-            continue
-        items = [
-            li[
-                a(href=url_for_verification(scope_name, name))[code[f"?{name}"]],
-                " ",
-                status_badge(passed=all(value.values()) if isinstance(value, dict) else value),
-            ]
-            for name, value in data.verification_values.items()
-        ]
-        sections.append(
-            section[
-                h3[a(href=url_for_scope(scope_name))[scope_name]],
-                ul[items],
-            ],
-        )
-
-    return main(".content")[
-        h2["Verifications"],
-        sections if sections else p["No verifications defined."],
-    ]
-
-
-# ---------------------------------------------------------------------------
-# Verification detail page
-# ---------------------------------------------------------------------------
 
 
 def render_verification_detail_page(
@@ -96,7 +42,8 @@ def render_verification_detail_page(
         css_href="/styles.css",
         breadcrumbs=[
             ("Home", url_for_index()),
-            ("Verifications", url_for_verification_list()),
+            ("Scopes", url_for_scope_list()),
+            (scope_name, url_for_scope(scope_name)),
             (f"?{verif_name}", url_for_verification(scope_name, verif_name)),
         ],
     )

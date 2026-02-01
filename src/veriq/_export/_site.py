@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING
 from veriq._traceability import build_traceability_report
 
 from ._css import CSS
-from ._pages.calculation import render_calc_detail_page, render_calc_list_page
+from ._pages.calculation import render_calc_detail_page
 from ._pages.index import render_index_page
+from ._pages.requirement import render_requirement_detail_page, render_requirement_list_page
 from ._pages.scope import render_scope_detail_page, render_scope_list_page
-from ._pages.verification import render_verification_detail_page, render_verification_list_page
+from ._pages.verification import render_verification_detail_page
 from .html import _group_results_by_scope
 
 if TYPE_CHECKING:
@@ -33,9 +34,8 @@ def generate_site(
     Creates a directory structure with:
     - index.html: Landing page with project overview and summary
     - styles.css: Shared CSS stylesheet
-    - scopes/: Scope listing and detail pages
-    - calculations/: Calculation listing and detail pages
-    - verifications/: Verification listing and detail pages
+    - scopes/: Scope listing, detail, calculation, and verification pages
+    - requirements/: Requirement listing and detail pages
     - .nojekyll: Marker file for GitHub Pages compatibility
 
     Args:
@@ -64,42 +64,45 @@ def generate_site(
         render_index_page(project, scope_data, traceability),
     )
 
-    # Scope pages
+    # Scope pages (with nested calculation and verification pages)
     _write_file(
         output_dir / "scopes" / "index.html",
         render_scope_list_page(project, scope_data),
     )
-    for scope_name in project.scopes:
-        _write_file(
-            output_dir / "scopes" / f"{scope_name}.html",
-            render_scope_detail_page(project, scope_name, scope_data.get(scope_name), traceability),
-        )
-
-    # Calculation pages
-    _write_file(
-        output_dir / "calculations" / "index.html",
-        render_calc_list_page(project, scope_data),
-    )
     for scope_name, scope in project.scopes.items():
         data = scope_data.get(scope_name)
+        scope_dir = output_dir / "scopes" / scope_name
+
+        # Scope detail page
+        _write_file(
+            scope_dir / "index.html",
+            render_scope_detail_page(project, scope_name, data, traceability),
+        )
+
+        # Calculation pages under scope
         for calc_name in scope.calculations:
             _write_file(
-                output_dir / "calculations" / scope_name / f"{calc_name}.html",
+                scope_dir / "calculations" / f"{calc_name}.html",
                 render_calc_detail_page(project, scope_name, calc_name, data),
             )
 
-    # Verification pages
-    _write_file(
-        output_dir / "verifications" / "index.html",
-        render_verification_list_page(project, scope_data),
-    )
-    for scope_name, scope in project.scopes.items():
-        data = scope_data.get(scope_name)
+        # Verification pages under scope
         for verif_name in scope.verifications:
             _write_file(
-                output_dir / "verifications" / scope_name / f"{verif_name}.html",
+                scope_dir / "verifications" / f"{verif_name}.html",
                 render_verification_detail_page(project, scope_name, verif_name, data, traceability),
             )
+
+    # Requirement pages
+    _write_file(
+        output_dir / "requirements" / "index.html",
+        render_requirement_list_page(project, traceability),
+    )
+    for entry in traceability.entries:
+        _write_file(
+            output_dir / "requirements" / f"{entry.requirement_id}.html",
+            render_requirement_detail_page(project, entry, traceability),
+        )
 
 
 def _write_file(path: Path, content: str) -> None:
