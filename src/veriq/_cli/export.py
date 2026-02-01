@@ -9,7 +9,7 @@ import typer
 from rich.console import Console
 
 from veriq._eval import evaluate_project
-from veriq._export import render_html
+from veriq._export import generate_site, render_html
 from veriq._io import load_model_data_from_toml
 
 from .config import ConfigError, get_config
@@ -38,10 +38,7 @@ def _load_project(
 
     # No CLI path - try config
     if not hasattr(config, "project") or config.project is None:
-        msg = (
-            "No project specified. Provide a path argument or configure "
-            "[tool.veriq].project in pyproject.toml."
-        )
+        msg = "No project specified. Provide a path argument or configure [tool.veriq].project in pyproject.toml."
         raise typer.BadParameter(msg)
 
     # Load from config
@@ -72,12 +69,16 @@ def export_command(  # noqa: PLR0913
     ] = None,
     output: Annotated[
         Path | None,
-        typer.Option("-o", "--output", help="Path to output HTML file"),
+        typer.Option("-o", "--output", help="Path to output file or directory"),
     ] = None,
     project_var: Annotated[
         str | None,
         typer.Option("--project", help="Name of the project variable (for script paths only)"),
     ] = None,
+    site: Annotated[
+        bool,
+        typer.Option("--site", help="Generate a multi-page static site (output is a directory)"),
+    ] = False,
     serve: Annotated[
         bool,
         typer.Option("--serve", help="Start HTTP server after generating the report"),
@@ -87,13 +88,16 @@ def export_command(  # noqa: PLR0913
         typer.Option("--port", help="Port for HTTP server (used with --serve)"),
     ] = 8000,
 ) -> None:
-    """Export evaluation results as an interactive HTML report.
+    """Export evaluation results as an HTML report.
 
-    Generates a self-contained HTML file with:
-    - Model data, calculations, and verifications grouped by scope
-    - Interactive Table display for multi-dimensional data
-    - Requirement traceability tree with status indicators
-    - Navigation sidebar with links to all sections
+    By default, generates a single self-contained HTML file.
+    With --site, generates a multi-page static site in a directory.
+
+    Examples:
+        veriq export -o report.html          # Single-page HTML
+        veriq export --site -o report/       # Multi-page site
+        veriq export --site --serve          # Generate and serve locally
+
     """
     err_console.print()
 
@@ -104,13 +108,18 @@ def export_command(  # noqa: PLR0913
         err_console.print(f"[red]Configuration error: {e}[/red]")
         raise typer.Exit(code=1) from e
 
-    # Resolve input/output from config if not provided
+    # Resolve input from config if not provided
     effective_input = input if input is not None else config.input
-    effective_output = output if output is not None else Path("report.html")
 
     if effective_input is None:
         err_console.print("[red]Error: Input file required. Use -i/--input or configure [tool.veriq].input[/red]")
         raise typer.Exit(code=1)
+
+    # Resolve output: default depends on mode
+    if site:
+        effective_output = output if output is not None else Path("report")
+    else:
+        effective_output = output if output is not None else Path("report.html")
 
     # Load the project
     try:
@@ -131,14 +140,18 @@ def export_command(  # noqa: PLR0913
     result = evaluate_project(project, model_data)
     err_console.print()
 
-    # Generate HTML
-    err_console.print("[cyan]Generating HTML report...[/cyan]")
-    html_content = render_html(project, model_data, result)
-
-    # Write to file
-    err_console.print(f"[cyan]Writing report to:[/cyan] {effective_output}")
-    effective_output.parent.mkdir(parents=True, exist_ok=True)
-    effective_output.write_text(html_content)
+    if site:
+        # Multi-page static site
+        err_console.print("[cyan]Generating static site...[/cyan]")
+        generate_site(project, model_data, result, effective_output)
+        err_console.print(f"[cyan]Site written to:[/cyan] {effective_output}/")
+    else:
+        # Single-page HTML
+        err_console.print("[cyan]Generating HTML report...[/cyan]")
+        html_content = render_html(project, model_data, result)
+        err_console.print(f"[cyan]Writing report to:[/cyan] {effective_output}")
+        effective_output.parent.mkdir(parents=True, exist_ok=True)
+        effective_output.write_text(html_content)
 
     err_console.print()
     err_console.print("[green]✓ Export complete[/green]")
@@ -146,24 +159,23 @@ def export_command(  # noqa: PLR0913
 
     # Serve if requested
     if serve:
-        _serve_file(effective_output, port)
+        serve_path = effective_output if site else effective_output.parent
+        serve_index = "index.html" if site else effective_output.name
+        _serve_directory(serve_path, serve_index, port)
 
     raise typer.Exit(code=0)
 
 
-def _serve_file(file_path: Path, port: int) -> None:
-    """Start a simple HTTP server to serve the HTML file."""
+def _serve_directory(directory: Path, index_file: str, port: int) -> None:
+    """Start a simple HTTP server to serve HTML files from a directory."""
     import http.server  # noqa: PLC0415
     import socketserver  # noqa: PLC0415
     import webbrowser  # noqa: PLC0415
     from functools import partial  # noqa: PLC0415
 
-    directory = file_path.parent
-    filename = file_path.name
-
     handler = partial(http.server.SimpleHTTPRequestHandler, directory=str(directory))
 
-    url = f"http://localhost:{port}/{filename}"
+    url = f"http://localhost:{port}/{index_file}"
     err_console.print(f"[cyan]Starting server at:[/cyan] {url}")
     err_console.print("[dim]Press Ctrl+C to stop[/dim]")
     err_console.print()
