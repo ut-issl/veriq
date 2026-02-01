@@ -304,13 +304,13 @@ def test_model_root_page_created(tmp_path: Path):
     assert (output_dir / "scopes" / "Power" / "model" / "index.html").is_file()
 
 
-def test_model_root_page_shows_children(tmp_path: Path):
+def test_model_root_page_shows_tree(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
     html = (output_dir / "scopes" / "Power" / "model" / "index.html").read_text()
-    assert "Children" in html
-    assert "<table" in html
+    assert "Tree" in html
+    assert "data-tree" in html
 
 
 def test_model_root_page_has_breadcrumbs(tmp_path: Path):
@@ -332,12 +332,13 @@ def test_model_intermediate_node_page_created(tmp_path: Path):
     assert (output_dir / "scopes" / "Power" / "model" / "design" / "index.html").is_file()
 
 
-def test_model_intermediate_node_shows_children(tmp_path: Path):
+def test_model_intermediate_node_shows_tree(tmp_path: Path):
     project, model_data, result = _load_dummysat()
     output_dir = tmp_path / "site"
     generate_site(project, model_data, result, output_dir)
     html = (output_dir / "scopes" / "Power" / "model" / "design" / "index.html").read_text()
-    assert "Children" in html
+    assert "Tree" in html
+    assert "data-tree" in html
 
 
 def test_model_leaf_node_page_created(tmp_path: Path):
@@ -388,6 +389,60 @@ def test_empty_model_root_page_has_scope_link(tmp_path: Path):
     html = (output_dir / "scopes" / "Thermal" / "model" / "index.html").read_text()
     assert "Thermal" in html
     assert url_for_scope("Thermal") in html
+
+
+# ---------------------------------------------------------------------------
+# Tree view tests
+# ---------------------------------------------------------------------------
+
+
+def test_tree_view_contains_nested_leaves(tmp_path: Path):
+    """Tree view should render leaf values from the full subtree."""
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    # Power model root should show deeply nested leaf field names
+    html = (output_dir / "scopes" / "Power" / "model" / "index.html").read_text()
+    assert ".capacity" in html
+    assert ".efficiency" in html
+
+
+def test_tree_view_uses_details_summary(tmp_path: Path):
+    """Tree view should use <details>/<summary> for non-leaf nodes."""
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power" / "model" / "index.html").read_text()
+    assert "<details" in html
+    assert "<summary" in html
+
+
+def test_tree_view_direct_children_open_by_default(tmp_path: Path):
+    """Direct children (depth 0) should have <details open>."""
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power" / "model" / "index.html").read_text()
+    assert "<details open" in html
+
+
+def test_tree_view_leaf_nodes_show_values_inline(tmp_path: Path):
+    """Leaf nodes in tree should display their value inline."""
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "RWA" / "model" / "index.html").read_text()
+    assert "leaf-value" in html
+    assert ".mass" in html
+
+
+def test_tree_view_nodes_are_linked(tmp_path: Path):
+    """Each node name in the tree should be a hyperlink to its dedicated page."""
+    project, model_data, result = _load_dummysat()
+    output_dir = tmp_path / "site"
+    generate_site(project, model_data, result, output_dir)
+    html = (output_dir / "scopes" / "Power" / "model" / "index.html").read_text()
+    assert "/scopes/Power/model/design/index.html" in html
 
 
 # ---------------------------------------------------------------------------
