@@ -1,6 +1,15 @@
 """URL resolution for multi-page static site export.
 
 All URLs are root-relative (start with /) for GitHub Pages compatibility.
+
+Structure:
+    /index.html
+    /scopes/index.html
+    /scopes/{scope}/index.html
+    /scopes/{scope}/calculations/{calc}.html
+    /scopes/{scope}/verifications/{verif}.html
+    /requirements/index.html
+    /requirements/{id}.html
 """
 
 from __future__ import annotations
@@ -18,27 +27,17 @@ def url_for_scope_list() -> str:
 
 def url_for_scope(scope_name: str) -> str:
     """URL for a scope detail page."""
-    return f"/scopes/{scope_name}.html"
-
-
-def url_for_calc_list() -> str:
-    """URL for the calculation listing page."""
-    return "/calculations/index.html"
+    return f"/scopes/{scope_name}/index.html"
 
 
 def url_for_calc(scope_name: str, calc_name: str) -> str:
-    """URL for a calculation detail page."""
-    return f"/calculations/{scope_name}/{calc_name}.html"
-
-
-def url_for_verification_list() -> str:
-    """URL for the verification listing page."""
-    return "/verifications/index.html"
+    """URL for a calculation detail page (under its scope)."""
+    return f"/scopes/{scope_name}/calculations/{calc_name}.html"
 
 
 def url_for_verification(scope_name: str, verif_name: str) -> str:
-    """URL for a verification detail page."""
-    return f"/verifications/{scope_name}/{verif_name}.html"
+    """URL for a verification detail page (under its scope)."""
+    return f"/scopes/{scope_name}/verifications/{verif_name}.html"
 
 
 def url_for_requirement_list() -> str:
