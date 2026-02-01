@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from htpy import Element, Node, a, code, em, fragment, span, table, tbody, td, th, thead, tr
+from htpy import Element, Node, a, code, details, em, fragment, li, span, summary, table, tbody, td, th, thead, tr, ul
 
 from veriq._path import AttributePart, ItemPart
 from veriq._table import Table
@@ -246,3 +246,44 @@ def children_table(children: tuple[PathNode, ...]) -> Element:
         thead[tr[th["Name"], th["Value / Children"]]],
         tbody[rows],
     ]
+
+
+def children_tree(children: tuple[PathNode, ...], *, depth: int = 0) -> Element:
+    """Render a recursive tree of child nodes using <details>/<summary>.
+
+    Args:
+        children: The direct children to render.
+        depth: Current nesting depth. Depth 0 nodes are expanded by default.
+
+    """
+    from veriq._export._urls import url_for_node  # noqa: PLC0415
+
+    items: list[Element] = []
+    for child in children:
+        last_part = child.path.path.parts[-1] if child.path.path.parts else child.path.path.root
+        name = format_part(last_part) if isinstance(last_part, (AttributePart, ItemPart)) else str(last_part)
+        child_url = url_for_node(child)
+
+        if child.is_leaf:
+            items.append(
+                li(".data-node.leaf")[
+                    a(href=child_url)[code[name]],
+                    span(".leaf-value")[" = ", render_value(child.value)],
+                ],
+            )
+        else:
+            child_count = len(child.children)
+            open_attr: dict[str, bool] = {"open": True} if depth == 0 else {}
+            items.append(
+                li(".data-node")[
+                    details(**open_attr)[
+                        summary[
+                            a(href=child_url)[code[name]],
+                            span(".child-count")[f" ({child_count})"],
+                        ],
+                        children_tree(child.children, depth=depth + 1),
+                    ],
+                ],
+            )
+
+    return ul(".data-tree")[items]
