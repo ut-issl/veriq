@@ -9,7 +9,7 @@ import typer
 from rich.console import Console
 
 from veriq._eval import evaluate_project
-from veriq._export import generate_site, render_html
+from veriq._export import generate_site
 from veriq._io import load_model_data_from_toml
 
 from .config import ConfigError, get_config
@@ -69,16 +69,12 @@ def export_command(  # noqa: PLR0913
     ] = None,
     output: Annotated[
         Path | None,
-        typer.Option("-o", "--output", help="Path to output file or directory"),
+        typer.Option("-o", "--output", help="Path to output directory"),
     ] = None,
     project_var: Annotated[
         str | None,
         typer.Option("--project", help="Name of the project variable (for script paths only)"),
     ] = None,
-    site: Annotated[
-        bool,
-        typer.Option("--site", help="Generate a multi-page static site (output is a directory)"),
-    ] = False,
     serve: Annotated[
         bool,
         typer.Option("--serve", help="Start HTTP server after generating the report"),
@@ -88,15 +84,14 @@ def export_command(  # noqa: PLR0913
         typer.Option("--port", help="Port for HTTP server (used with --serve)"),
     ] = 8000,
 ) -> None:
-    """Export evaluation results as an HTML report.
+    """Export evaluation results as a multi-page static site.
 
-    By default, generates a single self-contained HTML file.
-    With --site, generates a multi-page static site in a directory.
+    Generates a directory of interlinked HTML pages suitable for
+    GitHub Pages deployment.
 
     Examples:
-        veriq export -o report.html          # Single-page HTML
-        veriq export --site -o report/       # Multi-page site
-        veriq export --site --serve          # Generate and serve locally
+        veriq export -o report/              # Generate site
+        veriq export --serve                 # Generate and serve locally
 
     """
     err_console.print()
@@ -108,18 +103,13 @@ def export_command(  # noqa: PLR0913
         err_console.print(f"[red]Configuration error: {e}[/red]")
         raise typer.Exit(code=1) from e
 
-    # Resolve input from config if not provided
+    # Resolve input/output from config if not provided
     effective_input = input if input is not None else config.input
+    effective_output = output if output is not None else Path("report")
 
     if effective_input is None:
         err_console.print("[red]Error: Input file required. Use -i/--input or configure [tool.veriq].input[/red]")
         raise typer.Exit(code=1)
-
-    # Resolve output: default depends on mode
-    if site:
-        effective_output = output if output is not None else Path("report")
-    else:
-        effective_output = output if output is not None else Path("report.html")
 
     # Load the project
     try:
@@ -140,18 +130,10 @@ def export_command(  # noqa: PLR0913
     result = evaluate_project(project, model_data)
     err_console.print()
 
-    if site:
-        # Multi-page static site
-        err_console.print("[cyan]Generating static site...[/cyan]")
-        generate_site(project, model_data, result, effective_output)
-        err_console.print(f"[cyan]Site written to:[/cyan] {effective_output}/")
-    else:
-        # Single-page HTML
-        err_console.print("[cyan]Generating HTML report...[/cyan]")
-        html_content = render_html(project, model_data, result)
-        err_console.print(f"[cyan]Writing report to:[/cyan] {effective_output}")
-        effective_output.parent.mkdir(parents=True, exist_ok=True)
-        effective_output.write_text(html_content)
+    # Generate static site
+    err_console.print("[cyan]Generating static site...[/cyan]")
+    generate_site(project, model_data, result, effective_output)
+    err_console.print(f"[cyan]Site written to:[/cyan] {effective_output}/")
 
     err_console.print()
     err_console.print("[green]✓ Export complete[/green]")
@@ -159,9 +141,7 @@ def export_command(  # noqa: PLR0913
 
     # Serve if requested
     if serve:
-        serve_path = effective_output if site else effective_output.parent
-        serve_index = "index.html" if site else effective_output.name
-        _serve_directory(serve_path, serve_index, port)
+        _serve_directory(effective_output, "index.html", port)
 
     raise typer.Exit(code=0)
 
