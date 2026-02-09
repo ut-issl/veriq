@@ -223,7 +223,7 @@ def iter_leaf_path_parts(  # noqa: PLR0912, C901
 
             # Determine the actual enum type(s)
             key_type_args = get_args(key_type_arg)
-            enum_types = key_type_args if key_type_args else (key_type_arg,)
+            enum_types = key_type_args or (key_type_arg,)
 
             # Generate expected keys based on enum types
             if len(enum_types) == 1:
@@ -382,7 +382,7 @@ def hydrate_value_by_leaf_values[T](model: type[T], leaf_values: Mapping[tuple[P
 
             # Determine the actual enum type(s)
             key_type_args = get_args(key_type_arg)
-            enum_types = key_type_args if key_type_args else (key_type_arg,)
+            enum_types = key_type_args or (key_type_arg,)
 
             table_mapping = {}
             for parts, value in leaf_values.items():

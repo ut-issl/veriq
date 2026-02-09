@@ -55,7 +55,7 @@ class Table[K: (StrEnum, tuple[StrEnum, ...]), V](dict[K, V]):
 
         # Determine the actual enum type(s)
         key_type_args = get_args(key_type_arg)
-        enum_types = key_type_args if key_type_args else (key_type_arg,)
+        enum_types = key_type_args or (key_type_arg,)
 
         # Validate that all are StrEnum subclasses
         for enum_type in enum_types:
