@@ -130,7 +130,7 @@ def _load_project(
         case ScriptSource(script=script, name=name):
             err_console.print(f"[cyan]Loading project from script:[/cyan] {script}")
             # CLI --project overrides config name
-            effective_name = project_var if project_var else name
+            effective_name = project_var or name
             return load_project_from_script(script, effective_name)
         case ModuleSource(module_path=module_path):
             err_console.print(f"[cyan]Loading project from module:[/cyan] {module_path}")

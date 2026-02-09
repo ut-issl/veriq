@@ -125,7 +125,7 @@ class TableFieldHandler(FieldHandler[Table[Any, Any]]):
 
         # Determine enum types from key type
         key_type_args = get_args(key_type_arg)
-        enum_types: tuple[type[StrEnum], ...] = key_type_args if key_type_args else (key_type_arg,)
+        enum_types: tuple[type[StrEnum], ...] = key_type_args or (key_type_arg,)
 
         # Count expected keys (cartesian product of enum members)
         num_keys = 1
@@ -159,7 +159,7 @@ class TableFieldHandler(FieldHandler[Table[Any, Any]]):
 
         # Determine enum types from key type
         key_type_args = get_args(key_type_arg)
-        enum_types: tuple[type[StrEnum], ...] = key_type_args if key_type_args else (key_type_arg,)
+        enum_types: tuple[type[StrEnum], ...] = key_type_args or (key_type_arg,)
 
         # Generate all expected keys
         if len(enum_types) == 1:
