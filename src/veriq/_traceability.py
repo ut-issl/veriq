@@ -362,7 +362,7 @@ def _expand_verification_names(verification: Verification[Any, ...]) -> list[str
                     names.append(f"{base_name}[{key_str}]")
 
     # If we couldn't expand the keys (unknown key type), fall back to base name
-    return names if names else [base_name]
+    return names or [base_name]
 
 
 def detect_circular_dependencies(
