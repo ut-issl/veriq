@@ -4,7 +4,7 @@ import inspect
 import logging
 from annotationlib import ForwardRef
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, get_args, get_origin
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, get_args, get_origin
 
 from pydantic import BaseModel, create_model
 from scoped_context import NoContextError, ScopedContext
@@ -17,6 +17,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
 logger = logging.getLogger(__name__)
+
+# Module-level TypeVar/ParamSpec as workaround for ty bug with PEP 695 ParamSpec in closures.
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 def _get_dep_refs_from_signature(sig: inspect.Signature) -> dict[str, Ref]:
@@ -545,7 +549,7 @@ class Scope:
 
         return decorator
 
-    def verification[T, **P](
+    def verification(
         self,
         name: str | None = None,
         imports: Iterable[str] = (),
@@ -581,7 +585,7 @@ class Scope:
 
         return decorator
 
-    def calculation[T, **P](
+    def calculation(
         self,
         name: str | None = None,
         imports: Iterable[str] = (),

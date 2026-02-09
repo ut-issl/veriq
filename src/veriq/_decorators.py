@@ -1,12 +1,15 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from ._models import Ref
 
+T = TypeVar("T")
+P = ParamSpec("P")
 
-def assume[T, **P](ref: Ref) -> Callable[[Callable[P, T]], Callable[P, T]]:
+
+def assume(ref: Ref) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorator to mark that a calculation assumes a verification.
 
     Args:
