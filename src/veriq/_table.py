@@ -178,12 +178,12 @@ class Table[K: (StrEnum, tuple[StrEnum, ...]), V](dict[K, V]):
         self._key_type = type(key_sample)
         self._expected_keys = expected_keys  # ty: ignore[invalid-assignment]
 
-        missing_keys = expected_keys - set(mapping.keys())  # ty: ignore[unsupported-operator]
+        missing_keys = expected_keys - set(mapping.keys())
         if missing_keys:
             msg = f"Table is missing keys: {missing_keys}"
             raise ValueError(msg)
 
-        disallowed_keys = set(mapping.keys()) - expected_keys  # ty: ignore[unsupported-operator]
+        disallowed_keys = set(mapping.keys()) - expected_keys
         if disallowed_keys:
             msg = f"Table has disallowed keys: {disallowed_keys}"
             raise ValueError(msg)
