@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from pydantic_core import CoreSchema
 
 
-class Table[K: (StrEnum, tuple[StrEnum, ...]), V](dict[K, V]):
+class Table[K: StrEnum | tuple[StrEnum, ...], V](dict[K, V]):
     """Exhaustive mapping from keys of type K to values of type V."""
 
     _key_type: type[K]
