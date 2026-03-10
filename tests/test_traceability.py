@@ -441,7 +441,7 @@ class TestExtractVerificationResults:
         def verify_power(
             power: Annotated[vq.Table[Mode, float], vq.Ref("$.power")],
         ) -> vq.Table[Mode, bool]:
-            return vq.Table({mode: power[mode] > 0 for mode in Mode})  # ty: ignore[invalid-return-type]
+            return vq.Table({mode: power[mode] > 0 for mode in Mode})
 
         # Simulate evaluation results including both:
         # - Non-leaf aggregate result (no parts) - should be excluded

@@ -76,7 +76,7 @@ def test_table_with_pydantic_model_value_serialization() -> None:
     )
 
     # Verify we can create a model with it
-    model = Model(component_specs=table)  # ty: ignore[invalid-argument-type]
+    model = Model(component_specs=table)
     assert model.component_specs[Component.BATTERY].power == 100.0
     assert model.component_specs[Component.SOLAR].mass == 3.0
 
@@ -104,7 +104,7 @@ def test_table_with_pydantic_model_value_in_root_model() -> None:
     # Create test data
     model_data = {
         scope.name: RootModel(
-            component_specs=vq.Table(  # ty: ignore[invalid-argument-type]
+            component_specs=vq.Table(
                 {
                     Component.BATTERY: ComponentSpec(power=100.0, mass=5.0, efficiency=0.95),
                     Component.SOLAR: ComponentSpec(power=200.0, mass=3.0, efficiency=0.85),
@@ -150,7 +150,7 @@ def test_table_with_pydantic_model_value_in_calculation() -> None:
         base_power: Annotated[float, vq.Ref("$.base_power")],
     ) -> vq.Table[Mode, PowerProfile]:
         # Generate power profiles for different modes
-        return vq.Table(  # ty: ignore[invalid-return-type]
+        return vq.Table(
             {
                 Mode.NOMINAL: PowerProfile(
                     avg_power=base_power,
@@ -203,7 +203,7 @@ def test_table_with_pydantic_model_value_nested_access() -> None:
 
     model_data = {
         scope.name: RootModel(
-            thermal_specs=vq.Table(  # ty: ignore[invalid-argument-type]
+            thermal_specs=vq.Table(
                 {
                     Component.BATTERY: ThermalSpec(min_temp=-20.0, max_temp=60.0, heat_capacity=100.0),
                     Component.SOLAR: ThermalSpec(min_temp=-40.0, max_temp=80.0, heat_capacity=50.0),
@@ -257,7 +257,7 @@ def test_table_with_complex_pydantic_model_value() -> None:
 
     model_data = {
         scope.name: RootModel(
-            component_info=vq.Table(  # ty: ignore[invalid-argument-type]
+            component_info=vq.Table(
                 {
                     Component.BATTERY: ComponentInfo(
                         dimensions=Dimensions(length=10.0, width=5.0, height=3.0),
@@ -314,7 +314,7 @@ def test_nested_table_single_to_single() -> None:
 
     model_data = {
         scope.name: RootModel(
-            power_matrix=vq.Table(  # ty: ignore[invalid-argument-type]
+            power_matrix=vq.Table(
                 {
                     Component.BATTERY: vq.Table(
                         {
@@ -385,7 +385,7 @@ def test_nested_table_tuple_to_single() -> None:
             )
 
     model_data = {
-        scope.name: RootModel(power_matrix=vq.Table(outer_table_data)),  # ty: ignore[invalid-argument-type]
+        scope.name: RootModel(power_matrix=vq.Table(outer_table_data)),
     }
 
     result = evaluate_project(project, model_data)
@@ -418,7 +418,7 @@ def test_nested_table_as_calculation_output() -> None:
         base_value: Annotated[float, vq.Ref("$.base_value")],
     ) -> vq.Table[Component, vq.Table[Mode, float]]:
         # Generate nested table as calculation output
-        return vq.Table(  # ty: ignore[invalid-return-type]
+        return vq.Table(
             {
                 Component.BATTERY: vq.Table(
                     {
@@ -483,7 +483,7 @@ def test_nested_table_chained_calculations() -> None:
             for mode in Mode:
                 inner_table[mode] = nested_table[component][mode] * 2
             result[component] = vq.Table(inner_table)
-        return vq.Table(result)  # ty: ignore[invalid-return-type]
+        return vq.Table(result)
 
     @scope.calculation()
     def battery_safe_doubled(
@@ -493,7 +493,7 @@ def test_nested_table_chained_calculations() -> None:
 
     model_data = {
         scope.name: RootModel(
-            nested_table=vq.Table(  # ty: ignore[invalid-argument-type]
+            nested_table=vq.Table(
                 {
                     Component.BATTERY: vq.Table({Mode.NOMINAL: 10.0, Mode.SAFE: 5.0}),
                     Component.SOLAR: vq.Table({Mode.NOMINAL: 20.0, Mode.SAFE: 10.0}),
@@ -553,7 +553,7 @@ def test_triple_nested_table() -> None:
         outer_data[component] = vq.Table(middle_data)
 
     model_data = {
-        scope.name: RootModel(power_cube=vq.Table(outer_data)),  # ty: ignore[invalid-argument-type]
+        scope.name: RootModel(power_cube=vq.Table(outer_data)),
     }
 
     result = evaluate_project(project, model_data)
@@ -591,7 +591,7 @@ def test_table_with_string_value() -> None:
 
     model_data = {
         scope.name: RootModel(
-            component_names=vq.Table(  # ty: ignore[invalid-argument-type]
+            component_names=vq.Table(
                 {
                     Component.BATTERY: "Lithium-Ion Battery",
                     Component.SOLAR: "Solar Panel Array",
@@ -630,7 +630,7 @@ def test_table_with_int_value() -> None:
 
     model_data = {
         scope.name: RootModel(
-            component_ids=vq.Table(  # ty: ignore[invalid-argument-type]
+            component_ids=vq.Table(
                 {
                     Component.BATTERY: 1001,
                     Component.SOLAR: 2002,
@@ -669,7 +669,7 @@ def test_table_with_bool_value() -> None:
 
     model_data = {
         scope.name: RootModel(
-            component_active=vq.Table(  # ty: ignore[invalid-argument-type]
+            component_active=vq.Table(
                 {
                     Component.BATTERY: True,
                     Component.SOLAR: True,
@@ -709,7 +709,7 @@ def test_table_with_list_value() -> None:
 
     model_data = {
         scope.name: RootModel(
-            component_measurements=vq.Table(  # ty: ignore[invalid-argument-type]
+            component_measurements=vq.Table(
                 {
                     Component.BATTERY: [100.0, 105.0, 110.0],
                     Component.SOLAR: [200.0, 210.0, 220.0],
@@ -748,7 +748,7 @@ def test_table_with_dict_value() -> None:
 
     model_data = {
         scope.name: RootModel(
-            component_metadata=vq.Table(  # ty: ignore[invalid-argument-type]
+            component_metadata=vq.Table(
                 {
                     Component.BATTERY: {"manufacturer": "BattCorp", "model": "LC-100"},
                     Component.SOLAR: {"manufacturer": "SolarTech", "model": "SP-200"},
@@ -788,7 +788,7 @@ def test_table_with_tuple_single_enum() -> None:
 
     model_data = {
         scope.name: RootModel(
-            power_table=vq.Table(  # ty: ignore[invalid-argument-type]
+            power_table=vq.Table(
                 {
                     (Component.BATTERY,): 100.0,
                     (Component.SOLAR,): 200.0,
@@ -840,7 +840,7 @@ def test_table_with_four_element_tuple_key() -> None:
                     counter += 1.0
 
     model_data = {
-        scope.name: RootModel(complex_table=vq.Table(table_data)),  # ty: ignore[invalid-argument-type]
+        scope.name: RootModel(complex_table=vq.Table(table_data)),
     }
 
     result = evaluate_project(project, model_data)
@@ -876,14 +876,14 @@ def test_table_in_verification() -> None:
 
     model_data = {
         scope.name: RootModel(
-            power_limits=vq.Table(  # ty: ignore[invalid-argument-type]
+            power_limits=vq.Table(
                 {
                     Component.BATTERY: 120.0,
                     Component.SOLAR: 250.0,
                     Component.PAYLOAD: 60.0,
                 },
             ),
-            actual_power=vq.Table(  # ty: ignore[invalid-argument-type]
+            actual_power=vq.Table(
                 {
                     Component.BATTERY: 100.0,
                     Component.SOLAR: 200.0,
@@ -924,7 +924,7 @@ def test_table_serialization_with_pydantic_model_value() -> None:
         },
     )
 
-    model = Model(specs=table)  # ty: ignore[invalid-argument-type]
+    model = Model(specs=table)
 
     # Serialize
     serialized = model.model_dump()
@@ -959,7 +959,7 @@ def test_table_serialization_with_nested_table() -> None:
         },
     )
 
-    model = Model(nested=table)  # ty: ignore[invalid-argument-type]
+    model = Model(nested=table)
 
     # Serialize
     serialized = model.model_dump()

@@ -148,7 +148,7 @@ def verify_power_budget(
     power_consumption: Annotated[vq.Table[OperationMode, float], vq.Ref("$.design.power_consumption")],
 ) -> vq.Table[OperationMode, bool]:
     """Verify that power generation exceeds consumption for each operation mode."""
-    return vq.Table({mode: power_generation[mode] > power_consumption[mode] for mode in OperationMode})  # ty: ignore[invalid-return-type]
+    return vq.Table({mode: power_generation[mode] > power_consumption[mode] for mode in OperationMode})
 
 
 # Verification returning Table[K, bool]: verify power margins per operation mode.
@@ -159,7 +159,7 @@ def verify_power_margin(
     power_limit: Annotated[vq.Table[OperationMode, float], vq.Ref("$.power_limit")],
 ) -> vq.Table[OperationMode, bool]:
     """Verify that power consumption is within limits for each operation mode."""
-    return vq.Table({mode: power_consumption[mode] < power_limit[mode] for mode in OperationMode})  # ty: ignore[invalid-return-type]
+    return vq.Table({mode: power_consumption[mode] < power_limit[mode] for mode in OperationMode})
 
 
 @thermal.calculation(imports=["Power"])

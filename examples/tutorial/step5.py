@@ -43,7 +43,7 @@ def calculate_power_margin(
 ) -> PowerMarginOutput:
     """Calculate power margin for each operation mode."""
     margin = vq.Table({mode: generation[mode] - consumption[mode] for mode in OperationMode})
-    return PowerMarginOutput(margin=margin)  # type: ignore[arg-type]
+    return PowerMarginOutput(margin=margin)
 
 
 @power.verification()
@@ -51,4 +51,4 @@ def verify_positive_margin(
     margin: Annotated[vq.Table[OperationMode, float], vq.Ref("@calculate_power_margin.margin")],
 ) -> vq.Table[OperationMode, bool]:
     """Verify positive power margin for each mode."""
-    return vq.Table({mode: margin[mode] > 0 for mode in OperationMode})  # type: ignore[return-value]
+    return vq.Table({mode: margin[mode] > 0 for mode in OperationMode})

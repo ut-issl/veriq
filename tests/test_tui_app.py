@@ -214,7 +214,7 @@ class TestCellEditing:
                 editor.post_message(
                     TableEditor.CellSelected(
                         editor,
-                        value=cast("CellType", "10"),  # ty: ignore[invalid-argument-type]
+                        value=cast("CellType", "10"),
                         coordinate=Coordinate(0, 1),
                         cell_key=CellKey(
                             row_key=RowKey("nominal"),
@@ -233,7 +233,7 @@ class TestCellEditing:
                 editor.post_message(
                     TableEditor.CellSelected(
                         editor,
-                        value=cast("CellType", "5"),  # ty: ignore[invalid-argument-type]
+                        value=cast("CellType", "5"),
                         coordinate=Coordinate(1, 1),
                         cell_key=CellKey(
                             row_key=RowKey("safe"),
@@ -286,7 +286,7 @@ class TestCellEditing:
                 editor.post_message(
                     TableEditor.CellSelected(
                         editor,
-                        value=cast("CellType", "10"),  # ty: ignore[invalid-argument-type]
+                        value=cast("CellType", "10"),
                         coordinate=Coordinate(0, 1),
                         cell_key=CellKey(
                             row_key=RowKey("nominal"),

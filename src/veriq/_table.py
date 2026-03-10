@@ -31,8 +31,11 @@ class Table[K: StrEnum | tuple[StrEnum, ...], V](dict[K, V]):
     def _serialize_key(key: K) -> str:
         """Serialize a key to a string for JSON representation."""
         if isinstance(key, tuple):
-            return ",".join(str(k.value) for k in key)  # ty: ignore[unresolved-attribute] # k is `StrEnum` but ty cannot infer it
-        return str(key.value)
+            return ",".join(str(k.value) for k in key)
+        if isinstance(key, StrEnum):
+            return str(key.value)
+        msg = f"Unexpected key type: {type(key)}"  # pragma: no cover
+        raise TypeError(msg)  # pragma: no cover
 
     def _serialize_for_pydantic(self) -> dict[str, V]:
         """Serialize the table to a dict with string keys for Pydantic."""
