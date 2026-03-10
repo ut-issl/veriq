@@ -33,7 +33,7 @@ def test_table_in_pydantic_model_single_key() -> None:
     )
 
     # Test that the model accepts the table
-    model = Model(table=table)  # ty: ignore[invalid-argument-type]
+    model = Model(table=table)
     assert model.table == table
     assert model.table[Option.OPTION_A] == 3.14
     assert model.table[Option.OPTION_B] == 2.71
@@ -56,7 +56,7 @@ def test_table_in_pydantic_model_tuple_key() -> None:
     )
 
     # Test that the model accepts the table
-    model = Model(table=table)  # ty: ignore[invalid-argument-type]
+    model = Model(table=table)  # ty: ignore[invalid-argument-type]  # tuple-key Table inference limitation
     assert model.table == table
     assert model.table[(Mode.NOMINAL, Option.OPTION_A)] == 1.0
     assert model.table[(Mode.NOMINAL, Option.OPTION_B)] == 0.8
@@ -77,7 +77,7 @@ def test_table_serialization_single_key() -> None:
         },
     )
 
-    model = Model(table=table)  # ty: ignore[invalid-argument-type]
+    model = Model(table=table)
     serialized = model.model_dump()
 
     expected = {
@@ -105,7 +105,7 @@ def test_table_serialization_tuple_key() -> None:
         },
     )
 
-    model = Model(table=table)  # ty: ignore[invalid-argument-type]
+    model = Model(table=table)  # ty: ignore[invalid-argument-type]  # tuple-key Table inference limitation
     serialized = model.model_dump()
 
     expected = {
@@ -133,7 +133,7 @@ def test_table_deserialization_single_key() -> None:
         },
     }
 
-    model = Model(**data)  # ty: ignore[invalid-argument-type]
+    model = Model(**data)  # ty: ignore[invalid-argument-type]  # Pydantic handles dict-to-Table conversion
     assert model.table[Option.OPTION_A] == 3.14
     assert model.table[Option.OPTION_B] == 2.71
 
@@ -153,7 +153,7 @@ def test_table_deserialization_tuple_key() -> None:
         },
     }
 
-    model = Model(**data)  # ty: ignore[invalid-argument-type]
+    model = Model(**data)  # ty: ignore[invalid-argument-type]  # Pydantic handles dict-to-Table conversion
     assert model.table[(Mode.NOMINAL, Option.OPTION_A)] == 1.0
     assert model.table[(Mode.NOMINAL, Option.OPTION_B)] == 0.8
     assert model.table[(Mode.SAFE, Option.OPTION_A)] == 0.5
@@ -174,7 +174,7 @@ def test_table_validation_missing_keys() -> None:
     }
 
     with pytest.raises(pydantic.ValidationError):
-        Model(**data)  # ty: ignore[invalid-argument-type]
+        Model(**data)  # ty: ignore[invalid-argument-type]  # Pydantic handles dict-to-Table conversion
 
 
 def test_table_validation_extra_keys() -> None:
@@ -192,7 +192,7 @@ def test_table_validation_extra_keys() -> None:
     }
 
     with pytest.raises(pydantic.ValidationError):
-        Model(**data)  # ty: ignore[invalid-argument-type]
+        Model(**data)  # ty: ignore[invalid-argument-type]  # Pydantic handles dict-to-Table conversion
 
 
 def test_table_roundtrip_single_key() -> None:
@@ -208,7 +208,7 @@ def test_table_roundtrip_single_key() -> None:
         },
     )
 
-    model = Model(table=original_table)  # ty: ignore[invalid-argument-type]
+    model = Model(table=original_table)
     serialized = model.model_dump()
     deserialized_model = Model(**serialized)
 
@@ -230,7 +230,7 @@ def test_table_roundtrip_tuple_key() -> None:
         },
     )
 
-    model = Model(table=original_table)  # ty: ignore[invalid-argument-type]
+    model = Model(table=original_table)  # ty: ignore[invalid-argument-type]  # tuple-key Table inference limitation
     serialized = model.model_dump()
     deserialized_model = Model(**serialized)
 

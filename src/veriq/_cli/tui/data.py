@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from veriq._table import Table
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from enum import StrEnum
 
     from veriq._models import Project
@@ -52,7 +53,7 @@ class TableData:
         """Serialize a tuple of enum values to a comma-separated string."""
         return ",".join(k.value for k in key)
 
-    def get_slice_keys(self, fixed_dims: dict[int, StrEnum]) -> list[tuple[StrEnum, ...]]:
+    def get_slice_keys(self, fixed_dims: Mapping[int, StrEnum]) -> list[tuple[StrEnum, ...]]:
         """Get all keys matching the fixed dimensions.
 
         Args:
@@ -91,7 +92,7 @@ class TableData:
 
         return result
 
-    def row_labels(self, fixed_dims: dict[int, StrEnum]) -> list[str]:
+    def row_labels(self, fixed_dims: Mapping[int, StrEnum]) -> list[str]:
         """Get row labels for the grid view.
 
         For 2D: first dimension values
@@ -109,7 +110,7 @@ class TableData:
 
         return [e.value for e in self.key_types[row_dim]]
 
-    def column_labels(self, fixed_dims: dict[int, StrEnum]) -> list[str]:
+    def column_labels(self, fixed_dims: Mapping[int, StrEnum]) -> list[str]:
         """Get column labels for the grid view.
 
         For 2D: second dimension values
@@ -130,7 +131,7 @@ class TableData:
 
     def get_cell(
         self,
-        fixed_dims: dict[int, StrEnum],
+        fixed_dims: Mapping[int, StrEnum],
         row_label: str,
         col_label: str,
     ) -> Any:
@@ -151,7 +152,7 @@ class TableData:
 
     def _build_full_key(
         self,
-        fixed_dims: dict[int, StrEnum],
+        fixed_dims: Mapping[int, StrEnum],
         row_label: str,
         col_label: str,
     ) -> tuple[StrEnum, ...]:
@@ -183,7 +184,7 @@ class TableData:
 
     def update_cell(
         self,
-        fixed_dims: dict[int, StrEnum],
+        fixed_dims: Mapping[int, StrEnum],
         row_label: str,
         col_label: str,
         value: Any,

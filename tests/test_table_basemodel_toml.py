@@ -48,7 +48,7 @@ def test_table_with_basemodel_values_export_to_toml(tmp_path: Path) -> None:
         "Component": ComponentModel(
             design=ComponentDesign(
                 name="TestComponent",
-                configs=vq.Table(  # ty: ignore[invalid-argument-type]
+                configs=vq.Table(
                     {
                         OperationMode.NOMINAL: ComponentConfig(
                             power_consumption=100.0,
@@ -92,7 +92,7 @@ def test_table_with_basemodel_values_roundtrip(tmp_path: Path) -> None:
         "Component": ComponentModel(
             design=ComponentDesign(
                 name="TestComponent",
-                configs=vq.Table(  # ty: ignore[invalid-argument-type]
+                configs=vq.Table(
                     {
                         OperationMode.NOMINAL: ComponentConfig(
                             power_consumption=100.0,
@@ -147,7 +147,7 @@ def test_table_with_basemodel_values_toml_structure(tmp_path: Path) -> None:
         "Component": ComponentModel(
             design=ComponentDesign(
                 name="TestComponent",
-                configs=vq.Table(  # ty: ignore[invalid-argument-type]
+                configs=vq.Table(
                     {
                         OperationMode.NOMINAL: ComponentConfig(
                             power_consumption=100.0,

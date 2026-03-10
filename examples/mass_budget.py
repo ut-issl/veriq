@@ -144,7 +144,7 @@ def calculate_cog(
     cog_vector = np.sum(masses[:, np.newaxis] * positions, axis=0) / total_mass
 
     return CogResult(
-        cog=vq.Table(  # ty: ignore[invalid-argument-type]
+        cog=vq.Table(
             {
                 Axis.X: float(cog_vector[0]),
                 Axis.Y: float(cog_vector[1]),
@@ -174,7 +174,7 @@ def verify_cog_envelope(
     cog_limit: Annotated[vq.Table[Axis, float], vq.Ref("$.requirement.cog_limit")],
 ) -> vq.Table[Axis, bool]:
     """Verify that CoG is within the allowed envelope for each axis."""
-    return vq.Table({axis: abs(cog[axis]) <= cog_limit[axis] for axis in Axis})  # ty: ignore[invalid-return-type]
+    return vq.Table({axis: abs(cog[axis]) <= cog_limit[axis] for axis in Axis})
 
 
 # -----------------------------------------------------------------------------

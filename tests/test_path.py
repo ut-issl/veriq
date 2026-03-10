@@ -1,6 +1,7 @@
 """Tests for path parsing and navigation logic in veriq._path."""
 
 from enum import StrEnum, unique
+from typing import Any
 
 import pytest
 from pydantic import BaseModel
@@ -11,6 +12,7 @@ from veriq._path import (
     CalcPath,
     ItemPart,
     ModelPath,
+    PartBase,
     Path,
     ProjectPath,
     VerificationPath,
@@ -302,7 +304,7 @@ class TestGetValueByParts:
 
     def test_table_single_key(self):
         table = vq.Table({Color.RED: 1.0, Color.GREEN: 2.0, Color.BLUE: 3.0})
-        model = ModelWithTable(data=table)  # ty: ignore[invalid-argument-type]
+        model = ModelWithTable(data=table)
         parts = (AttributePart("data"), ItemPart("red"))
         result = get_value_by_parts(model, parts)
         assert result == 1.0
@@ -318,7 +320,7 @@ class TestGetValueByParts:
                 (Color.BLUE, Size.LARGE): 6.0,
             },
         )
-        model = ModelWithTupleTable(matrix=table)  # ty: ignore[invalid-argument-type]
+        model = ModelWithTupleTable(matrix=table)  # ty: ignore[invalid-argument-type]  # tuple-key Table inference limitation
         parts = (AttributePart("matrix"), ItemPart(("green", "large")))
         result = get_value_by_parts(model, parts)
         assert result == 4.0
@@ -370,12 +372,12 @@ class TestIterLeafPathParts:
 
 class TestHydrateValueByLeafValues:
     def test_primitive(self):
-        leaf_values = {(): 42.0}
+        leaf_values: dict[tuple[PartBase, ...], Any] = {(): 42.0}
         result = hydrate_value_by_leaf_values(float, leaf_values)
         assert result == 42.0
 
     def test_basemodel_simple(self):
-        leaf_values = {
+        leaf_values: dict[tuple[PartBase, ...], Any] = {
             (AttributePart("value"),): 3.14,
             (AttributePart("name"),): "pi",
         }
@@ -385,7 +387,7 @@ class TestHydrateValueByLeafValues:
         assert result.name == "pi"
 
     def test_basemodel_nested(self):
-        leaf_values = {
+        leaf_values: dict[tuple[PartBase, ...], Any] = {
             (AttributePart("inner"), AttributePart("value")): 2.71,
             (AttributePart("inner"), AttributePart("name")): "e",
             (AttributePart("count"),): 5,
@@ -397,7 +399,7 @@ class TestHydrateValueByLeafValues:
         assert result.count == 5
 
     def test_table_single_key(self):
-        leaf_values = {
+        leaf_values: dict[tuple[PartBase, ...], Any] = {
             (ItemPart("red"),): 1.0,
             (ItemPart("green"),): 2.0,
             (ItemPart("blue"),): 3.0,
@@ -409,7 +411,7 @@ class TestHydrateValueByLeafValues:
         assert result[Color.BLUE] == 3.0
 
     def test_table_tuple_key(self):
-        leaf_values = {
+        leaf_values: dict[tuple[PartBase, ...], Any] = {
             (ItemPart(("red", "small")),): 1.0,
             (ItemPart(("red", "large")),): 2.0,
             (ItemPart(("green", "small")),): 3.0,
@@ -428,7 +430,7 @@ class TestHydrateValueByLeafValues:
     def test_empty_path_returns_value_directly(self):
         """When () is in leaf_values, it should return that value directly."""
         table = vq.Table({Color.RED: 1.0, Color.GREEN: 2.0, Color.BLUE: 3.0})
-        leaf_values = {(): table}
+        leaf_values: dict[tuple[PartBase, ...], Any] = {(): table}
         result = hydrate_value_by_leaf_values(vq.Table[Color, float], leaf_values)
         assert result is table
 
@@ -438,7 +440,7 @@ class TestHydrateValueByLeafValues:
         This tests the fix for the issubclass() error when field_type
         is a generic alias like Table[Color, float] instead of a class.
         """
-        leaf_values = {
+        leaf_values: dict[tuple[PartBase, ...], Any] = {
             (AttributePart("data"), ItemPart("red")): 1.0,
             (AttributePart("data"), ItemPart("green")): 2.0,
             (AttributePart("data"), ItemPart("blue")): 3.0,

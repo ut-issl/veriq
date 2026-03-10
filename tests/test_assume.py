@@ -269,7 +269,7 @@ def test_assume_table_verification_all_entries_must_pass() -> None:
 
     @scope.verification()
     def all_positive(values: Annotated[vq.Table[Mode, float], vq.Ref("$.values")]) -> vq.Table[Mode, bool]:
-        return vq.Table({mode: values[mode] > 0 for mode in Mode})  # ty: ignore[invalid-return-type]
+        return vq.Table({mode: values[mode] > 0 for mode in Mode})
 
     @scope.calculation()
     @vq.assume(vq.Ref("?all_positive"))
@@ -279,7 +279,7 @@ def test_assume_table_verification_all_entries_must_pass() -> None:
     # One value is negative - not all verifications pass
     model_data = {
         "TestScope": TestModel(
-            values=vq.Table({Mode.NOMINAL: 10.0, Mode.SAFE: -5.0}),  # ty: ignore[invalid-argument-type]
+            values=vq.Table({Mode.NOMINAL: 10.0, Mode.SAFE: -5.0}),
         ),
     }
     result = evaluate_project(project, model_data)
