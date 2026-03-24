@@ -297,6 +297,7 @@ def get_value_by_parts(data: BaseModel, parts: tuple[PartBase, ...]) -> Any:
                     if key_type is tuple:
                         # Tuple key - get the enum types from the key sample
                         key_sample = next(iter(current.keys()))
+                        assert isinstance(key_sample, tuple)
                         enum_types = tuple(type(k) for k in key_sample)
                         # Parse the string key
                         parts_str = key if isinstance(key, tuple) else key.split(",")
