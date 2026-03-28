@@ -102,7 +102,7 @@ def _serialize_value(value: Any) -> Any:
     return value
 
 
-def _set_nested_value(data: dict[str, Any], keys: list[str], value: Any) -> None:
+def _set_nested_value(data: dict[str, Any], keys: list[str], value: Any, *, skip_none: bool = True) -> None:
     """Set a value in a nested dictionary using a list of keys."""
     current = data
     for key in keys[:-1]:
@@ -111,7 +111,7 @@ def _set_nested_value(data: dict[str, Any], keys: list[str], value: Any) -> None
         current = current[key]
     serialized = _serialize_value(value)
     # TOML does not support None/null values, so skip them
-    if serialized is not None:
+    if serialized is not None or not skip_none:
         current[keys[-1]] = serialized
 
 
