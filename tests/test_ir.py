@@ -54,7 +54,7 @@ def test_node_spec_is_frozen() -> None:
         output_type=float,
     )
     with pytest.raises(AttributeError):
-        node.kind = NodeKind.CALCULATION  # type: ignore[misc]
+        node.kind = NodeKind.CALCULATION  # type: ignore[misc]  # ty: ignore[invalid-assignment]
 
 
 # =============================================================================

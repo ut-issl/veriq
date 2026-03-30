@@ -6,7 +6,7 @@ It is kept separate to avoid circular imports.
 
 from __future__ import annotations
 
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 from pathlib import Path  # noqa: TC003 - Used at runtime for ContextVar type
 
 # Base directory for resolving relative paths in input data (e.g., FileRef paths).
@@ -22,7 +22,7 @@ def get_input_base_dir() -> Path | None:
     return _input_base_dir_var.get()
 
 
-def set_input_base_dir(path: Path | None) -> object:
+def set_input_base_dir(path: Path | None) -> Token[Path | None]:
     """Set the input base directory in context.
 
     Returns a token that can be used to reset the value.
@@ -30,6 +30,6 @@ def set_input_base_dir(path: Path | None) -> object:
     return _input_base_dir_var.set(path)
 
 
-def reset_input_base_dir(token: object) -> None:
+def reset_input_base_dir(token: Token[Path | None]) -> None:
     """Reset the input base directory using a token from set_input_base_dir."""
-    _input_base_dir_var.reset(token)  # type: ignore[arg-type]
+    _input_base_dir_var.reset(token)

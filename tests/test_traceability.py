@@ -258,7 +258,7 @@ class TestVerificationResult:
             xfail=False,
         )
         with pytest.raises(AttributeError):
-            result.passed = False  # type: ignore[misc]
+            result.passed = False  # type: ignore[misc]  # ty: ignore[invalid-assignment]
 
 
 class TestRequirementStatus:

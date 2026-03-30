@@ -273,7 +273,7 @@ class TestVeriqConfigDataclass:
         config = VeriqConfig()
 
         with pytest.raises(AttributeError):
-            config.project = ModuleSource("pkg:proj")  # type: ignore[misc]
+            config.project = ModuleSource("pkg:proj")  # type: ignore[misc]  # ty: ignore[invalid-assignment]
 
 
 class TestProjectSourceTypes:
