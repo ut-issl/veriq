@@ -32,9 +32,10 @@ def assume(ref: Ref) -> Callable[[Callable[P, T]], Callable[P, T]]:
         # HACK: We should avoid modifying the function object directly,
         # but this is a simple way to attach metadata.
         # In the future, we might implement a builder class for calculations/verifications.
-        if not hasattr(func, "__veriq_assumed_refs__"):
-            func.__veriq_assumed_refs__ = []  # type: ignore[attr-defined]
-        func.__veriq_assumed_refs__.append(ref)  # type: ignore[attr-defined]
+        attr = "__veriq_assumed_refs__"
+        if not hasattr(func, attr):
+            setattr(func, attr, [])
+        getattr(func, attr).append(ref)
         return func
 
     return decorator

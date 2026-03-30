@@ -1,7 +1,7 @@
 """Module providing a decorator to create IntEnum with range-based members."""
 
 from enum import IntEnum
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, cast
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -68,6 +68,6 @@ def with_range(
         }
         members.update(existing_members)
 
-        return IntEnum(cls.__name__, members)  # type: ignore[return-value]
+        return cast("type[_IntEnumT]", IntEnum(cls.__name__, members))
 
     return decorator
