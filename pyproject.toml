@@ -182,3 +182,6 @@ project = { script = "examples/dummysat.py" }
 # Optional: Default input/output TOML files for calc/edit commands
 input = "examples/dummysat.in.toml"
 output = "examples/dummysat.out.toml"
+
+[tool.uv]
+exclude-newer = "7 days"
