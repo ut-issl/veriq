@@ -99,3 +99,64 @@ def test_mixed_changes():
         DiffEntry(path=("c",), kind=DiffKind.REMOVED, left=3, right=None),
         DiffEntry(path=("d",), kind=DiffKind.ADDED, left=None, right=4),
     ]
+
+
+# --- Tolerance tests ---
+
+
+def test_rel_tol_suppresses_small_difference():
+    left = {"x": 1.0}
+    right = {"x": 1.0 + 1e-10}
+    assert diff_dicts(left, right, rel_tol=1e-9) == []
+
+
+def test_rel_tol_reports_large_difference():
+    left = {"x": 1.0}
+    right = {"x": 1.1}
+    result = diff_dicts(left, right, rel_tol=1e-9)
+    assert len(result) == 1
+    assert result[0].kind is DiffKind.CHANGED
+
+
+def test_rel_tol_suppresses_close_values():
+    left = {"x": 1000.0}
+    right = {"x": 1000.0 * (1 + 1e-10)}
+    assert diff_dicts(left, right, rel_tol=1e-9) == []
+
+
+def test_tolerance_nested():
+    left = {"scope": {"voltage": 3.3, "current": 1.0}}
+    right = {"scope": {"voltage": 3.3 * (1 + 1e-12), "current": 1.0}}
+    assert diff_dicts(left, right, rel_tol=1e-9) == []
+
+
+def test_tolerance_does_not_affect_non_numeric():
+    left = {"name": "foo"}
+    right = {"name": "bar"}
+    result = diff_dicts(left, right, rel_tol=1e-9)
+    assert len(result) == 1
+    assert result[0].kind is DiffKind.CHANGED
+
+
+def test_tolerance_int_and_float():
+    left = {"x": 1}
+    right = {"x": 1.0 + 1e-12}
+    assert diff_dicts(left, right, rel_tol=1e-9) == []
+
+
+def test_tolerance_does_not_affect_booleans():
+    """Booleans should always be compared exactly, even with tolerance."""
+    left = {"flag": True}
+    right = {"flag": False}
+    result = diff_dicts(left, right, rel_tol=1e9)
+    assert result == [DiffEntry(path=("flag",), kind=DiffKind.CHANGED, left=True, right=False)]
+
+
+def test_zero_tolerance_is_default_exact():
+    """With default tolerances (0.0), behavior is exact comparison."""
+    left = {"x": 1.0}
+    right = {"x": 1.0 + 1e-15}
+    result = diff_dicts(left, right)
+    # 1.0 + 1e-15 != 1.0 in Python, so this should be reported
+    if left["x"] != right["x"]:
+        assert len(result) == 1

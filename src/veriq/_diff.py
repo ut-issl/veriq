@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -54,7 +55,21 @@ def _quote_toml_key(key: str) -> str:
     return f'"{escaped}"'
 
 
-def diff_dicts(left: dict[str, Any], right: dict[str, Any]) -> list[DiffEntry]:
+def _values_close(lv: Any, rv: Any, *, rel_tol: float) -> bool:
+    """Return True if both values are numeric and close within tolerance."""
+    if isinstance(lv, bool) or isinstance(rv, bool):
+        return False
+    if isinstance(lv, (int, float)) and isinstance(rv, (int, float)):
+        return math.isclose(lv, rv, rel_tol=rel_tol)
+    return False
+
+
+def diff_dicts(
+    left: dict[str, Any],
+    right: dict[str, Any],
+    *,
+    rel_tol: float = 0.0,
+) -> list[DiffEntry]:
     """Compare two nested dictionaries and return a list of differences.
 
     Keys present only in *left* are reported as REMOVED.
@@ -62,10 +77,14 @@ def diff_dicts(left: dict[str, Any], right: dict[str, Any]) -> list[DiffEntry]:
     Keys present in both with different values are reported as CHANGED;
     if both values are dicts, the comparison recurses.
 
+    When *rel_tol* is non-zero, numeric values that are close within
+    the given relative tolerance (per :func:`math.isclose`) are treated
+    as equal.
+
     Returns an empty list when the dicts are equal.
     """
     entries: list[DiffEntry] = []
-    _diff_recursive(left, right, prefix=(), out=entries)
+    _diff_recursive(left, right, prefix=(), out=entries, rel_tol=rel_tol)
     return entries
 
 
@@ -75,6 +94,7 @@ def _diff_recursive(
     *,
     prefix: tuple[str, ...],
     out: list[DiffEntry],
+    rel_tol: float,
 ) -> None:
     all_keys = sorted(set(left) | set(right))
     for key in all_keys:
@@ -89,6 +109,6 @@ def _diff_recursive(
         elif left[key] != right[key]:
             lv, rv = left[key], right[key]
             if isinstance(lv, dict) and isinstance(rv, dict):
-                _diff_recursive(lv, rv, prefix=path, out=out)
-            else:
+                _diff_recursive(lv, rv, prefix=path, out=out, rel_tol=rel_tol)
+            elif not _values_close(lv, rv, rel_tol=rel_tol):
                 out.append(DiffEntry(path=path, kind=DiffKind.CHANGED, left=lv, right=rv))

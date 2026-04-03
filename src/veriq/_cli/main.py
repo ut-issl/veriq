@@ -634,13 +634,17 @@ def diff(
         Path,
         typer.Argument(help="Path to the second TOML file"),
     ],
+    rel_tol: Annotated[
+        float,
+        typer.Option("--rel-tol", help="Relative tolerance for numeric comparison (e.g. 1e-9)"),
+    ] = 0.0,
 ) -> None:
     """Compare two TOML files and check if they are identical."""
     with file1.open("rb") as f1, file2.open("rb") as f2:
         toml1 = tomllib.load(f1)
         toml2 = tomllib.load(f2)
 
-    entries = diff_dicts(toml1, toml2)
+    entries = diff_dicts(toml1, toml2, rel_tol=rel_tol)
 
     if not entries:
         err_console.print("[green]✓ The TOML files are identical.[/green]")
