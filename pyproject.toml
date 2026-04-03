@@ -54,7 +54,7 @@ ruff = ["ruff>=0.11.13"]
 test = [
   "coverage>=7.10.4",
   "jsonschema>=4.26.0",
-  "pytest>=8.4.0",
+  "pytest>=9.0.0",
   "pytest-asyncio>=1.3.0",
 ]
 typing = [
@@ -166,6 +166,9 @@ unfixable = [
   "ERA001",  # Commented out code
 ]
 
+[tool.uv]
+exclude-newer = "7 days"
+
 [tool.veriq]
 # Configure default project, input, and output files for veriq CLI commands.
 # All paths are relative to the project root (directory containing pyproject.toml).
@@ -182,6 +185,3 @@ project = { script = "examples/dummysat.py" }
 # Optional: Default input/output TOML files for calc/edit commands
 input = "examples/dummysat.in.toml"
 output = "examples/dummysat.out.toml"
-
-[tool.uv]
-exclude-newer = "7 days"
