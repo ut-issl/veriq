@@ -18,6 +18,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from veriq._default import default
+from veriq._diff import DiffKind, diff_dicts, format_toml_path
 from veriq._eval import evaluate_project
 from veriq._external_data import validate_external_data
 from veriq._io import export_to_toml, load_model_data_from_toml
@@ -117,10 +118,7 @@ def _load_project(
 
     # No CLI path - try config
     if config.project is None:
-        msg = (
-            "No project specified. Provide a path argument or configure "
-            "[tool.veriq].project in pyproject.toml."
-        )
+        msg = "No project specified. Provide a path argument or configure [tool.veriq].project in pyproject.toml."
         raise typer.BadParameter(msg)
 
     # Load from config
@@ -320,9 +318,7 @@ def calc(  # noqa: C901, PLR0912, PLR0915
                 err_console.print(f"[dim]Summary: {total_passed}/{total_count} passed[/dim]")
             err_console.print()
 
-        has_failures = any(
-            not passed for results in grouped_results.values() for _, passed, _ in results
-        )
+        has_failures = any(not passed for results in grouped_results.values() for _, passed, _ in results)
         if has_failures:
             err_console.print("[red]✗ Some verifications failed[/red]")
 
@@ -644,11 +640,35 @@ def diff(
         toml1 = tomllib.load(f1)
         toml2 = tomllib.load(f2)
 
-    if toml1 == toml2:
+    entries = diff_dicts(toml1, toml2)
+
+    if not entries:
         err_console.print("[green]✓ The TOML files are identical.[/green]")
         raise typer.Exit(0)
 
-    err_console.print("[red]✗ The TOML files differ.[/red]")
+    err_console.print(f"[red]✗ The TOML files differ ({len(entries)} difference(s)):[/red]\n")
+
+    diff_table = Table(show_header=True, header_style="bold")
+    diff_table.add_column("Path")
+    diff_table.add_column("Status")
+    diff_table.add_column(escape(str(file1)))
+    diff_table.add_column(escape(str(file2)))
+
+    for entry in entries:
+        path = escape(format_toml_path(entry.path))
+        if entry.kind is DiffKind.REMOVED:
+            diff_table.add_row(path, "[red]removed[/red]", escape(repr(entry.left)), "—")
+        elif entry.kind is DiffKind.ADDED:
+            diff_table.add_row(path, "[green]added[/green]", "—", escape(repr(entry.right)))
+        else:
+            diff_table.add_row(
+                path,
+                "[yellow]changed[/yellow]",
+                escape(repr(entry.left)),
+                escape(repr(entry.right)),
+            )
+
+    err_console.print(diff_table)
     raise typer.Exit(1)
 
 
@@ -1032,9 +1052,7 @@ def show(
             "kind": detail.kind.value,
             "scope": detail.path.scope,
             "output_type": (
-                detail.output_type.__name__
-                if hasattr(detail.output_type, "__name__")
-                else str(detail.output_type)
+                detail.output_type.__name__ if hasattr(detail.output_type, "__name__") else str(detail.output_type)
             ),
             "dependencies": [str(d) for d in sorted(detail.direct_dependencies, key=str)],
             "dependents": [str(d) for d in sorted(detail.direct_dependents, key=str)],
