@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.14"
 
 [options]
-exclude-newer = "2026-03-27T00:24:36.010308Z"
+exclude-newer = "2026-03-27T00:51:21.045594Z"
 exclude-newer-span = "P7D"
 
 [[package]]
@@ -684,7 +684,7 @@ wheels = [
 
 [[package]]
 name = "veriq"
-version = "0.4.0"
+version = "0.4.1"
 source = { editable = "." }
 dependencies = [
     { name = "bounded-models" },
