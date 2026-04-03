@@ -18,7 +18,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from veriq._default import default
-from veriq._diff import DiffKind, diff_dicts
+from veriq._diff import DiffKind, diff_dicts, format_toml_path
 from veriq._eval import evaluate_project
 from veriq._external_data import validate_external_data
 from veriq._io import export_to_toml, load_model_data_from_toml
@@ -655,7 +655,7 @@ def diff(
     diff_table.add_column(escape(str(file2)))
 
     for entry in entries:
-        path = escape(entry.path)
+        path = escape(format_toml_path(entry.path))
         if entry.kind is DiffKind.REMOVED:
             diff_table.add_row(path, "[red]removed[/red]", escape(repr(entry.left)), "—")
         elif entry.kind is DiffKind.ADDED:
