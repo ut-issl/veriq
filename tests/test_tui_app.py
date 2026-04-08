@@ -690,7 +690,9 @@ class TestSaveAndQuit:
                 assert isinstance(app.screen, ConfirmQuitScreen)
 
                 # Click 'Cancel' button (query from the active screen)
-                cancel_button = app.screen.query_one("#cancel")
+                from textual.widgets import Button
+
+                cancel_button = app.screen.query_one("#cancel", Button)
                 cancel_button.press()
                 await pilot.pause()
 
