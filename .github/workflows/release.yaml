@@ -3,6 +3,8 @@ name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 on:
   workflow_dispatch:
 
+permissions: {}
+
 env:
   UV_VERSION: "0.11.x"
 
@@ -16,6 +18,8 @@ jobs:
       version: ${{ steps.get-version.outputs.version }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -34,15 +38,20 @@ jobs:
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions"
-          git fetch --tags
-          git tag --annotate "v${{ steps.get-version.outputs.version }}" --message="v${{ steps.get-version.outputs.version }}"
-          git push origin "v${{ steps.get-version.outputs.version }}"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: bearer ${GITHUB_TOKEN}" fetch --tags
+          git tag --annotate "v${STEPS_GET_VERSION_OUTPUTS_VERSION}" --message="v${STEPS_GET_VERSION_OUTPUTS_VERSION}"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: bearer ${GITHUB_TOKEN}" push origin "v${STEPS_GET_VERSION_OUTPUTS_VERSION}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          STEPS_GET_VERSION_OUTPUTS_VERSION: ${{ steps.get-version.outputs.version }}
 
   build:
     name: Build distribution 📦
     needs:
       - create-tag
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -116,9 +125,10 @@ jobs:
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          NEEDS_CREATE_TAG_OUTPUTS_VERSION: ${{ needs.create-tag.outputs.version }}
         run: >-
           gh release create
-          v${{ needs.create-tag.outputs.version }}
+          v${NEEDS_CREATE_TAG_OUTPUTS_VERSION}
           --draft
           --verify-tag
           --generate-notes
@@ -127,12 +137,13 @@ jobs:
       - name: Upload artifact signatures to GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          NEEDS_CREATE_TAG_OUTPUTS_VERSION: ${{ needs.create-tag.outputs.version }}
         # Upload to GitHub Release using the `gh` CLI.
         # `dist/` contains the built packages, and the
         # sigstore-produced signatures and certificates.
         run: >-
           gh release upload
-          v${{ needs.create-tag.outputs.version }} dist/**
+          v${NEEDS_CREATE_TAG_OUTPUTS_VERSION} dist/**
           --repo ${{ github.repository }}
 
   publish-to-testpypi:

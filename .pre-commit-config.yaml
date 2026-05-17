@@ -39,3 +39,8 @@ repos:
     rev: v0.47.0
     hooks:
       - id: markdownlint
+
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.25.2
+    hooks:
+      - id: zizmor
