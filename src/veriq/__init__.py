@@ -17,11 +17,14 @@ __all__ = [
     "RequirementStatus",
     "RequirementTraceEntry",
     "Scope",
+    "ScopeScaffold",
     "ScopeTree",
+    "ScopeValidation",
     "StrEnumWithDoc",
     "Table",
     "TableFieldHandler",
     "TraceabilityReport",
+    "ValidationReport",
     "VerificationResult",
     "assume",
     "build_graph_spec",
@@ -34,7 +37,9 @@ __all__ = [
     "is_valid_verification_return_type",
     "load_model_data",
     "load_model_data_from_toml",
+    "scaffold_input",
     "validate_external_data",
+    "validate_model_data",
     "with_range",
 ]
 
@@ -51,11 +56,20 @@ from ._external_data import (
     validate_external_data,
 )
 from ._graph import DependencyGraph
-from ._io import export_to_toml, input_base_dir, load_model_data, load_model_data_from_toml
+from ._io import (
+    ScopeValidation,
+    ValidationReport,
+    export_to_toml,
+    input_base_dir,
+    load_model_data,
+    load_model_data_from_toml,
+    validate_model_data,
+)
 from ._ir import GraphSpec, NodeKind, NodeSpec, build_graph_spec
 from ._models import Project, Ref, Requirement, Scope, is_valid_verification_return_type
 from ._range_enum import with_range
 from ._relations import depends
+from ._scaffold import ScopeScaffold, scaffold_input
 from ._str_enum_with_doc import StrEnumWithDoc
 from ._table import Table
 from ._traceability import (

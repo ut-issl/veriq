@@ -21,9 +21,10 @@ from veriq._default import default
 from veriq._diff import DiffKind, diff_dicts, format_toml_path
 from veriq._eval import evaluate_project
 from veriq._external_data import validate_external_data
-from veriq._io import export_to_toml, load_model_data_from_toml
+from veriq._io import export_to_toml, load_model_data_from_toml, validate_model_data
 from veriq._ir import build_graph_spec
 from veriq._path import VerificationPath
+from veriq._scaffold import scaffold_input
 from veriq._toml_edit import dumps_toml, merge_into_document, parse_toml_preserving
 from veriq._traceability import RequirementStatus, build_traceability_report
 from veriq._update import update_input_data
@@ -451,6 +452,123 @@ def schema(
 
     err_console.print()
     err_console.print("[green]✓ Schema generation complete[/green]")
+    err_console.print()
+
+
+@app.command()
+def validate(
+    path: Annotated[
+        str | None,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ] = None,
+    *,
+    input: Annotated[  # noqa: A002
+        Path | None,
+        typer.Option("-i", "--input", help="Combined input TOML filling scopes without their own file"),
+    ] = None,
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+) -> None:
+    """Validate each scope's input against its model, without evaluating."""
+    err_console.print()
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    effective_input = input if input is not None else config.input
+    err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
+    err_console.print()
+
+    report = validate_model_data(project, input=effective_input)
+
+    table = Table(show_header=True, header_style="bold cyan", box=None)
+    table.add_column("Scope", style="bold")
+    table.add_column("Result")
+    table.add_column("Source", style="dim")
+    for entry in report.results:
+        status = "[green]✓ ok[/green]" if entry.ok else "[red]✗ invalid[/red]"
+        table.add_row(entry.scope, status, str(entry.source) if entry.source else "-")
+    err_console.print(table)
+
+    for entry in report.results:
+        if not entry.ok:
+            err_console.print()
+            err_console.print(f"[red]✗ {entry.scope}:[/red]")
+            err_console.print(escape(entry.error or ""))
+
+    err_console.print()
+    if not report.ok:
+        err_console.print("[red]✗ Some inputs are invalid[/red]")
+        raise typer.Exit(code=1)
+    err_console.print("[green]✓ All inputs valid[/green]")
+    err_console.print()
+
+
+@app.command()
+def scaffold(
+    path: Annotated[
+        str | None,
+        typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ] = None,
+    *,
+    overwrite: Annotated[
+        bool,
+        typer.Option("--overwrite", help="Reset existing files to schema defaults (destructive)"),
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Show what would change without writing"),
+    ] = False,
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+) -> None:
+    """Generate/refresh each scope's input TOML from its model defaults."""
+    err_console.print()
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
+    err_console.print()
+
+    results = scaffold_input(project, overwrite=overwrite, dry_run=dry_run)
+    if not results:
+        err_console.print("[yellow]No scope declares an input file (Scope(input=...)).[/yellow]")
+        err_console.print()
+        return
+
+    for entry in results:
+        if entry.created:
+            tag = "[green]created[/green]"
+        elif entry.updated:
+            tag = "[cyan]updated[/cyan]"
+        else:
+            tag = "[dim]unchanged[/dim]"
+        suffix = " [yellow](dry-run)[/yellow]" if dry_run else ""
+        err_console.print(f"  {tag} {entry.scope}: {entry.path}{suffix}")
+        for warning in entry.warnings:
+            err_console.print(f"    [yellow]! {escape(warning)}[/yellow]")
+
+    err_console.print()
+    err_console.print("[green]✓ Scaffold complete[/green]")
     err_console.print()
 
 

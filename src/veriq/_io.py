@@ -1,10 +1,12 @@
 import logging
 import tomllib
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import tomli_w
+from pydantic import ValidationError
 
 from ._context import (  # noqa: F401 - get_input_base_dir re-exported
     get_input_base_dir,
@@ -20,7 +22,7 @@ if TYPE_CHECKING:
     from pydantic import BaseModel
 
     from ._eval_engine import EvaluationResult
-    from ._models import Project
+    from ._models import Project, Scope
 
 logger = logging.getLogger(__name__)
 
@@ -237,7 +239,7 @@ def toml_to_model_data(
         A dictionary mapping scope names to their validated root model instances
 
     """
-    from pydantic import BaseModel as PydanticBaseModel  # noqa: PLC0415, TC002
+    from pydantic import BaseModel as PydanticBaseModel  # noqa: PLC0415
 
     model_data: dict[str, PydanticBaseModel] = {}
     for scope_name, scope in project.scopes.items():
@@ -249,6 +251,36 @@ def toml_to_model_data(
             logger.debug(f"No model data found for scope '{scope_name}'")
 
     return model_data
+
+
+def _load_combined(input: Path | str | None) -> tuple[dict[str, Any], Path | None]:  # noqa: A002
+    """Load the optional combined input TOML, returning (contents, base dir)."""
+    if input is None:
+        return {}, None
+    combined_path = Path(input).resolve()
+    with combined_path.open("rb") as f:
+        return tomllib.load(f), combined_path
+
+
+def _resolve_scope_raw(
+    scope: Scope,
+    scope_name: str,
+    combined: dict[str, Any],
+    combined_path: Path | None,
+) -> tuple[dict[str, Any], Path, Path] | None:
+    """Resolve a scope's raw input dict, FileRef base dir, and source file.
+
+    A scope's own ``input`` file is authoritative (it holds the root model
+    directly); otherwise the combined input's ``[scope.model]`` section is used.
+    Returns None when neither provides data for the scope.
+    """
+    scope_file = scope.input_path
+    if scope_file is not None:
+        with scope_file.open("rb") as f:
+            return tomllib.load(f), scope_file.parent, scope_file
+    if combined_path is not None and scope_name in combined and "model" in combined[scope_name]:
+        return combined[scope_name]["model"], combined_path.parent, combined_path
+    return None
 
 
 def load_model_data(
@@ -274,30 +306,15 @@ def load_model_data(
         A dictionary mapping scope names to their validated root model instances
 
     """
-    combined: dict[str, Any] = {}
-    combined_base: Path | None = None
-    if input is not None:
-        combined_path = Path(input).resolve()
-        combined_base = combined_path.parent
-        with combined_path.open("rb") as f:
-            combined = tomllib.load(f)
+    combined, combined_path = _load_combined(input)
 
     model_data: dict[str, BaseModel] = {}
     for scope_name, scope in project.scopes.items():
-        scope_file = scope.input_path
-        if scope_file is not None:
-            with scope_file.open("rb") as f:
-                raw = tomllib.load(f)
-            base = scope_file.parent
-        elif scope_name in combined and "model" in combined[scope_name]:
-            raw = combined[scope_name]["model"]
-            # combined is only populated when input was provided, so base is set.
-            assert combined_base is not None
-            base = combined_base
-        else:
+        resolved = _resolve_scope_raw(scope, scope_name, combined, combined_path)
+        if resolved is None:
             logger.debug("No model data found for scope '%s'", scope_name)
             continue
-
+        raw, base, _source = resolved
         root_model = scope.get_root_model()
         # FileRef resolves relative to the file that contained the data.
         with input_base_dir(base):
@@ -325,3 +342,63 @@ def load_model_data_from_toml(
 
     """
     return load_model_data(project, input=input_path)
+
+
+@dataclass(frozen=True, slots=True)
+class ScopeValidation:
+    """Validation outcome for a single scope's input data."""
+
+    scope: str
+    ok: bool
+    source: Path | None
+    error: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ValidationReport:
+    """Per-scope input validation results (no graph evaluation)."""
+
+    results: tuple[ScopeValidation, ...]
+
+    @property
+    def ok(self) -> bool:
+        """True if every scope with input data validated successfully."""
+        return all(r.ok for r in self.results)
+
+
+def validate_model_data(
+    project: Project,
+    input: Path | str | None = None,  # noqa: A002 - mirrors CLI -i/--input
+) -> ValidationReport:
+    """Validate each scope's input against its root model, without evaluating.
+
+    Resolves each scope's data the same way as :func:`load_model_data`
+    (per-scope ``Scope.input`` file first, then the combined ``input``), then
+    runs Pydantic validation only. Scopes with no input data are skipped.
+
+    Args:
+        project: The project containing scope definitions
+        input: Optional combined input TOML filling scopes without their own file
+
+    Returns:
+        A ValidationReport with one entry per scope that had input data.
+
+    """
+    combined, combined_path = _load_combined(input)
+
+    results: list[ScopeValidation] = []
+    for scope_name, scope in project.scopes.items():
+        resolved = _resolve_scope_raw(scope, scope_name, combined, combined_path)
+        if resolved is None:
+            continue
+        raw, base, source = resolved
+        root_model = scope.get_root_model()
+        try:
+            with input_base_dir(base):
+                root_model.model_validate(raw)
+        except ValidationError as e:
+            results.append(ScopeValidation(scope=scope_name, ok=False, source=source, error=str(e)))
+        else:
+            results.append(ScopeValidation(scope=scope_name, ok=True, source=source))
+
+    return ValidationReport(results=tuple(results))
