@@ -17,6 +17,7 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 
+from veriq._atomic import atomic_write_bytes, atomic_write_text
 from veriq._default import default
 from veriq._diff import DiffKind, diff_dicts, format_toml_path
 from veriq._eval import evaluate_project
@@ -617,10 +618,7 @@ def init(
     import tomli_w  # noqa: PLC0415
 
     err_console.print(f"[cyan]Writing sample input to:[/cyan] {output}")
-    output.parent.mkdir(parents=True, exist_ok=True)
-
-    with output.open("wb") as f:
-        tomli_w.dump(input_default_data.model_dump(), f)
+    atomic_write_bytes(output, tomli_w.dumps(input_default_data.model_dump()).encode())
 
     err_console.print()
     err_console.print("[green]✓ Sample input file generated[/green]")
@@ -732,9 +730,7 @@ def update(  # noqa: PLR0915
     else:
         # Write the updated data (comments are now preserved)
         err_console.print(f"[cyan]Writing updated input to:[/cyan] {output}")
-        output.parent.mkdir(parents=True, exist_ok=True)
-
-        output.write_text(dumps_toml(toml_doc))
+        atomic_write_text(output, dumps_toml(toml_doc))
 
         err_console.print()
         err_console.print("[green]✓ Input file updated successfully[/green]")

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 import tomli_w
 from pydantic import ValidationError
 
+from ._atomic import atomic_write_bytes
 from ._context import (  # noqa: F401 - get_input_base_dir re-exported
     get_input_base_dir,
     reset_input_base_dir,
@@ -214,10 +215,9 @@ def export_to_toml(
     """
     toml_data = results_to_dict(result)
 
-    # Write to TOML file
+    # Write atomically so a crash mid-write never corrupts the output file.
     output_path = Path(output_path)
-    with output_path.open("wb") as f:
-        tomli_w.dump(toml_data, f)
+    atomic_write_bytes(output_path, tomli_w.dumps(toml_data).encode())
 
     logger.debug(f"Exported results to {output_path}")
 

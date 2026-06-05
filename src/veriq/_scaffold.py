@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 import tomli_w
 
+from ._atomic import atomic_write_text
 from ._default import default
 from ._toml_edit import dumps_toml, merge_into_document, parse_toml_preserving
 from ._update import update_input_data
@@ -83,8 +84,7 @@ def scaffold_input(
 
         updated = not target.exists() or content != target.read_text()
         if not dry_run:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(content)
+            atomic_write_text(target, content)
 
         results.append(
             ScopeScaffold(
