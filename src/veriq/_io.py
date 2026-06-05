@@ -251,14 +251,70 @@ def toml_to_model_data(
     return model_data
 
 
+def load_model_data(
+    project: Project,
+    input: Path | str | None = None,  # noqa: A002 - mirrors CLI -i/--input
+) -> dict[str, BaseModel]:
+    """Load model data for each scope, composing per-scope input files.
+
+    Each scope may declare its own input TOML via ``Scope(input=...)``. That
+    file holds the scope's root model directly (no ``[Scope.model]`` prefix)
+    and is authoritative. The optional project-level ``input`` is a combined
+    TOML (``[Scope.model]`` sections) that fills only the scopes that do not
+    declare their own file.
+
+    FileRef paths resolve relative to the directory of the file they appear in
+    (a scope's own file, or the combined input file), keeping projects portable.
+
+    Args:
+        project: The project containing scope definitions
+        input: Optional combined input TOML filling scopes without their own file
+
+    Returns:
+        A dictionary mapping scope names to their validated root model instances
+
+    """
+    combined: dict[str, Any] = {}
+    combined_base: Path | None = None
+    if input is not None:
+        combined_path = Path(input).resolve()
+        combined_base = combined_path.parent
+        with combined_path.open("rb") as f:
+            combined = tomllib.load(f)
+
+    model_data: dict[str, BaseModel] = {}
+    for scope_name, scope in project.scopes.items():
+        scope_file = scope.input_path
+        if scope_file is not None:
+            with scope_file.open("rb") as f:
+                raw = tomllib.load(f)
+            base = scope_file.parent
+        elif scope_name in combined and "model" in combined[scope_name]:
+            raw = combined[scope_name]["model"]
+            # combined is only populated when input was provided, so base is set.
+            assert combined_base is not None
+            base = combined_base
+        else:
+            logger.debug("No model data found for scope '%s'", scope_name)
+            continue
+
+        root_model = scope.get_root_model()
+        # FileRef resolves relative to the file that contained the data.
+        with input_base_dir(base):
+            model_data[scope_name] = root_model.model_validate(raw)
+        logger.debug("Loaded model data for scope '%s'", scope_name)
+
+    return model_data
+
+
 def load_model_data_from_toml(
     project: Project,
     input_path: Path | str,
 ) -> dict[str, BaseModel]:
-    """Load model data from a TOML file for each scope in the project.
+    """Load model data from a single combined TOML file.
 
-    FileRef paths in the TOML are resolved relative to the TOML file's directory,
-    making projects portable and self-contained.
+    Backward-compatible wrapper over :func:`load_model_data`. FileRef paths in
+    the TOML are resolved relative to the TOML file's directory.
 
     Args:
         project: The project containing scope definitions
@@ -268,15 +324,4 @@ def load_model_data_from_toml(
         A dictionary mapping scope names to their validated root model instances
 
     """
-    input_path = Path(input_path).resolve()
-    base_dir = input_path.parent
-
-    with input_path.open("rb") as f:
-        toml_contents = tomllib.load(f)
-
-    # Use context manager so FileRef resolves paths relative to TOML directory
-    with input_base_dir(base_dir):
-        model_data = toml_to_model_data(project, toml_contents)
-
-    logger.debug(f"Loaded model data from {input_path}")
-    return model_data
+    return load_model_data(project, input=input_path)

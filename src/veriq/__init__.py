@@ -32,6 +32,7 @@ __all__ = [
     "export_to_toml",
     "input_base_dir",
     "is_valid_verification_return_type",
+    "load_model_data",
     "load_model_data_from_toml",
     "validate_external_data",
     "with_range",
@@ -50,7 +51,7 @@ from ._external_data import (
     validate_external_data,
 )
 from ._graph import DependencyGraph
-from ._io import export_to_toml, input_base_dir, load_model_data_from_toml
+from ._io import export_to_toml, input_base_dir, load_model_data, load_model_data_from_toml
 from ._ir import GraphSpec, NodeKind, NodeSpec, build_graph_spec
 from ._models import Project, Ref, Requirement, Scope, is_valid_verification_return_type
 from ._range_enum import with_range

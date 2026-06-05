@@ -4,6 +4,7 @@ import inspect
 import logging
 from annotationlib import ForwardRef
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, get_args, get_origin
 
 from pydantic import BaseModel, create_model
@@ -21,6 +22,26 @@ logger = logging.getLogger(__name__)
 # Module-level TypeVar/ParamSpec as workaround for ty bug with PEP 695 ParamSpec in closures.
 T = TypeVar("T")
 P = ParamSpec("P")
+
+
+def _caller_definition_dir() -> Path | None:
+    """Directory of the first stack frame outside the veriq package.
+
+    Used to resolve a Scope's relative ``input`` path against the module that
+    defined the scope, so data files can live next to their scope definition.
+    """
+    package_dir = Path(__file__).resolve().parent
+    for frame_info in inspect.stack():
+        filename = frame_info.filename
+        # Skip synthetic frames such as the dataclass-generated __init__ ("<string>").
+        if filename.startswith("<"):
+            continue
+        frame_path = Path(filename).resolve()
+        try:
+            frame_path.relative_to(package_dir)
+        except ValueError:
+            return frame_path.parent
+    return None
 
 
 def _get_dep_refs_from_signature(sig: inspect.Signature) -> dict[str, Ref]:
@@ -510,10 +531,32 @@ class Requirement(ScopedContext):
 @dataclass(slots=True)
 class Scope:
     name: str
+    input: str | Path | None = field(default=None, kw_only=True)  # mirrors CLI -i/--input
     _root_model: type[BaseModel] | None = field(default=None)
     _requirements: dict[str, Requirement] = field(default_factory=dict)
     _verifications: dict[str, Verification[Any, ...]] = field(default_factory=dict)
     _calculations: dict[str, Calculation[Any, ...]] = field(default_factory=dict)
+    _definition_dir: Path | None = field(default=None, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Capture the defining module's directory for relative input resolution."""
+        if self.input is not None and self._definition_dir is None:
+            self._definition_dir = _caller_definition_dir()
+
+    @property
+    def input_path(self) -> Path | None:
+        """Resolved path to this scope's own input TOML, or None if unset.
+
+        Absolute paths are used as-is; relative paths resolve against the
+        directory of the module that defined the scope.
+        """
+        if self.input is None:
+            return None
+        path = Path(self.input)
+        if path.is_absolute():
+            return path
+        base = self._definition_dir or Path.cwd()
+        return (base / path).resolve()
 
     def get_root_model(self) -> type[BaseModel]:
         """Get the root model of the scope."""
