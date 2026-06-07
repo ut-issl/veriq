@@ -17,7 +17,7 @@ from veriq._path import (
     iter_leaf_path_parts,
 )
 
-from ._resolution import hydrate_inputs
+from ._resolution import hydrate_collect_inputs, hydrate_inputs
 from ._tree import PathNode, ScopeTree, build_scope_trees
 
 if TYPE_CHECKING:
@@ -215,9 +215,7 @@ def _check_validity(  # noqa: C901, PLR0912
             # Check ALL leaf paths of the verification (for Table[K, bool])
             # The assumed_path is the root verification path, we need to find all leaves
             verif_results = [
-                values.get(p)
-                for p in values
-                if p.scope == assumed_path.scope and p.path.root == assumed_path.path.root
+                values.get(p) for p in values if p.scope == assumed_path.scope and p.path.root == assumed_path.path.root
             ]
             # Assumption holds only if ALL verification results are True
             if not all(v is True for v in verif_results if v is not None):
@@ -302,10 +300,9 @@ def evaluate_graph(  # noqa: C901
     for node in graph_spec.nodes.values():
         edges.extend((dep, node.id) for dep in node.dependencies)
 
-    graph = DependencyGraph.from_edges(edges)
-
-    # Add isolated nodes (MODEL nodes with no dependents may not have edges)
-    # We need to ensure all nodes are in the graph for proper ordering
+    # Include isolated nodes so zero-dependency calculations/verifications are
+    # still evaluated.
+    graph = DependencyGraph.from_edges(edges, nodes=graph_spec.nodes)
 
     # Validate the graph
     validation_errors = graph.validate()
@@ -385,6 +382,13 @@ def evaluate_graph(  # noqa: C901
                 spec.param_mapping,
                 values,
                 graph_spec,
+            )
+            input_values.update(
+                hydrate_collect_inputs(
+                    spec.collect_mapping,
+                    values,
+                    graph_spec,
+                ),
             )
         except KeyError as e:
             errors.append((node_path, f"Missing dependency value: {e}"))

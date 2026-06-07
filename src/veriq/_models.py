@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, get_args, get_origin
 
 from pydantic import BaseModel, create_model
 from scoped_context import NoContextError, ScopedContext
-from typing_extensions import _AnnotatedAlias
 
 from ._path import AttributePart, CalcPath, ItemPart, ModelPath, ProjectPath, VerificationPath, parse_path
 from ._table import Table
@@ -57,23 +56,51 @@ def _get_dep_refs_from_signature(sig: inspect.Signature) -> dict[str, Ref]:
         TypeError: If a parameter is missing a Ref annotation.
 
     """
+    dep_refs: dict[str, Ref] = {}
+    for param in sig.parameters.values():
+        ref, _collect = _get_signature_marker(param.name, param.annotation)
+        if ref is not None:
+            dep_refs[param.name] = ref
+    return dep_refs
 
-    def _get_dep_ref_from_annotation(
-        name: str,
-        annotations: _AnnotatedAlias,
-    ) -> Ref | None:
-        args = get_args(annotations)
-        try:
-            return next(iter(arg for arg in args if isinstance(arg, Ref)))
-        except StopIteration:
-            msg = f"Parameter '{name}' must be annotated with Fetch or Calc."
-            raise TypeError(msg) from None
 
-    return {
-        param.name: dep
-        for param in sig.parameters.values()
-        if (dep := _get_dep_ref_from_annotation(param.name, param.annotation)) is not None
-    }
+def _get_collect_specs_from_signature(sig: inspect.Signature) -> dict[str, Collect]:
+    """Extract Collect annotations from the function signature.
+
+    Args:
+        sig: The function signature to extract collect specs from.
+
+    Returns:
+        A dictionary mapping parameter names to their Collect annotations.
+
+    Raises:
+        TypeError: If a parameter is missing both Ref and Collect metadata, or
+            contains both markers at once.
+
+    """
+    collect_specs: dict[str, Collect] = {}
+    for param in sig.parameters.values():
+        _ref, collect = _get_signature_marker(param.name, param.annotation)
+        if collect is not None:
+            collect_specs[param.name] = collect
+    return collect_specs
+
+
+def _get_signature_marker(name: str, annotation: Any) -> tuple[Ref | None, Collect | None]:
+    """Extract the veriq dependency marker from one parameter annotation."""
+    args = get_args(annotation)
+    ref = next((arg for arg in args if isinstance(arg, Ref)), None)
+    collect = next((arg for arg in args if isinstance(arg, Collect)), None)
+
+    if ref is not None and collect is not None:
+        msg = f"Parameter '{name}' cannot be annotated with both Ref and Collect."
+        raise TypeError(msg)
+
+    if ref is None and collect is None:
+        msg = f"Parameter '{name}' must be annotated with Ref or Collect."
+        raise TypeError(msg)
+
+    return ref, collect
 
 
 def _get_return_type_from_signature(sig: inspect.Signature) -> type:
@@ -417,6 +444,30 @@ class Ref:
     scope: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class Tag:
+    """Opaque label attached to a root model field.
+
+    veriq treats tag names as strings and assigns no domain semantics to them.
+    Domain libraries should map their own classifications to these labels before
+    passing models to veriq.
+    """
+
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class Collect:
+    """Collect every root model field carrying a tag.
+
+    The v1 API supports one tag at a time. The shape leaves room for future
+    extensions such as all/any tag matching and explicit scope filters without
+    coupling veriq to any domain-specific classification system.
+    """
+
+    tag: str
+
+
 @dataclass(slots=True)
 class Calculation[T, **P]:
     """A class to represent a calculation in the verification process."""
@@ -428,12 +479,14 @@ class Calculation[T, **P]:
 
     # Fields initialized in __post_init__
     dep_ppaths: dict[str, ProjectPath] = field(init=False)
+    collect_specs: dict[str, Collect] = field(init=False)
     output_type: type[T] = field(init=False)
     assumed_refs: list[Ref] = field(init=False)
 
     def __post_init__(self) -> None:
         sig = inspect.signature(self.func)
         dep_refs = _get_dep_refs_from_signature(sig)
+        self.collect_specs = _get_collect_specs_from_signature(sig)
         self.dep_ppaths = _validate_and_convert_refs(
             dep_refs,
             self.default_scope_name,
@@ -468,12 +521,14 @@ class Verification[T, **P]:
 
     # Fields initialized in __post_init__
     dep_ppaths: dict[str, ProjectPath] = field(init=False)
+    collect_specs: dict[str, Collect] = field(init=False)
     output_type: type[T] = field(init=False)
     assumed_refs: list[Ref] = field(init=False)
 
     def __post_init__(self) -> None:
         sig = inspect.signature(self.func)
         dep_refs = _get_dep_refs_from_signature(sig)
+        self.collect_specs = _get_collect_specs_from_signature(sig)
         self.dep_ppaths = _validate_and_convert_refs(
             dep_refs,
             self.default_scope_name,

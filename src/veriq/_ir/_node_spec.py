@@ -34,6 +34,9 @@ class NodeSpec:
         compute_fn: Function to compute the value. None for MODEL nodes.
         param_mapping: Maps function parameter names to dependency ProjectPaths.
             This is the high-level mapping before leaf expansion.
+        collect_mapping: Maps collective parameter names to member dictionaries.
+            Each member dictionary maps stable member keys to dependency
+            ProjectPaths.
         metadata: Optional metadata (e.g., xfail flag, assumed verifications).
 
     Example:
@@ -62,6 +65,7 @@ class NodeSpec:
     output_type: type
     compute_fn: Callable[..., Any] | None = None
     param_mapping: dict[str, ProjectPath] = field(default_factory=dict)
+    collect_mapping: dict[str, dict[str, ProjectPath]] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def is_input(self) -> bool:

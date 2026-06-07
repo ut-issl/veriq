@@ -3,6 +3,7 @@
 __all__ = [
     "ChecksumValidationEntry",
     "ChecksumValidationResult",
+    "Collect",
     "DependencyGraph",
     "EvaluationResult",
     "ExternalData",
@@ -23,6 +24,7 @@ __all__ = [
     "StrEnumWithDoc",
     "Table",
     "TableFieldHandler",
+    "Tag",
     "TraceabilityReport",
     "ValidationReport",
     "VerificationResult",
@@ -66,7 +68,7 @@ from ._io import (
     validate_model_data,
 )
 from ._ir import GraphSpec, NodeKind, NodeSpec, build_graph_spec
-from ._models import Project, Ref, Requirement, Scope, is_valid_verification_return_type
+from ._models import Collect, Project, Ref, Requirement, Scope, Tag, is_valid_verification_return_type
 from ._range_enum import with_range
 from ._relations import depends
 from ._scaffold import ScopeScaffold, scaffold_input

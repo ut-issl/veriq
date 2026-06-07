@@ -2,6 +2,10 @@
 
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 from ._algorithms import topological_sort
 
@@ -27,13 +31,14 @@ class DependencyGraph[T]:
     _successors: dict[T, frozenset[T]] = field(default_factory=dict)
 
     @classmethod
-    def from_edges(cls, edges: list[tuple[T, T]]) -> DependencyGraph[T]:
+    def from_edges(cls, edges: list[tuple[T, T]], nodes: Iterable[T] = ()) -> DependencyGraph[T]:
         """Build a graph from a list of (source, target) edges.
 
         An edge (a, b) means "b depends on a" (a -> b in the DAG).
 
         Args:
             edges: List of (source, target) tuples.
+            nodes: Additional isolated nodes to include in the graph.
 
         Returns:
             A new DependencyGraph instance.
@@ -54,6 +59,10 @@ class DependencyGraph[T]:
             # Ensure both nodes exist in the graph
             predecessors.setdefault(src, set())
             successors.setdefault(dst, set())
+
+        for node in nodes:
+            predecessors.setdefault(node, set())
+            successors.setdefault(node, set())
 
         return cls(
             _predecessors={k: frozenset(v) for k, v in predecessors.items()},
