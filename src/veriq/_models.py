@@ -476,6 +476,10 @@ class Calculation[T, **P]:
     func: Callable[P, T] = field(repr=False)
     default_scope_name: str = field()
     imported_scope_names: list[str] = field(default_factory=list)
+    # When True, the result is computed and passed to dependent calculations
+    # in Python (in-memory) but excluded from the exported TOML. Use for large
+    # analysis results that the function persists itself (e.g. to CSV).
+    transient: bool = field(default=False)
 
     # Fields initialized in __post_init__
     dep_ppaths: dict[str, ProjectPath] = field(init=False)
@@ -687,8 +691,16 @@ class Scope:
         self,
         name: str | None = None,
         imports: Iterable[str] = (),
+        *,
+        transient: bool = False,
     ) -> Callable[[Callable[P, T]], Calculation[T, P]]:
-        """Decorator to mark a function as a calculation in the scope."""
+        """Decorator to mark a function as a calculation in the scope.
+
+        When ``transient=True`` the result is still computed and passed to
+        dependent calculations in Python, but is excluded from the exported
+        TOML. Use it for large analysis results that the function persists
+        itself (e.g. writing a CSV inside the calculation).
+        """
 
         def decorator(func: Callable[P, T]) -> Calculation[T, P]:
             if name is None:
@@ -704,6 +716,7 @@ class Scope:
                 func=func,
                 imported_scope_names=list(imports),
                 default_scope_name=self.name,
+                transient=transient,
             )
             if calculation_name in self._calculations:
                 msg = f"Calculation with name '{calculation_name}' already exists in scope '{self.name}'."

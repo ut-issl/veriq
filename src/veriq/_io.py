@@ -138,7 +138,10 @@ def _parts_to_keys(parts: tuple[PartBase, ...]) -> list[str]:
     return keys
 
 
-def results_to_dict(result: EvaluationResult) -> dict[str, Any]:
+def results_to_dict(
+    result: EvaluationResult,
+    exclude_calcs: set[tuple[str, str]] | None = None,
+) -> dict[str, Any]:
     """Convert evaluation results to a nested dictionary structure.
 
     This is a pure function that converts the tree-based evaluation result
@@ -146,6 +149,9 @@ def results_to_dict(result: EvaluationResult) -> dict[str, Any]:
 
     Args:
         result: The EvaluationResult from evaluate_project
+        exclude_calcs: Optional set of ``(scope_name, calc_name)`` pairs whose
+            calculation outputs are omitted from the result (e.g. transient
+            calculations that should not be written to TOML).
 
     Returns:
         A nested dictionary with the structure:
@@ -158,6 +164,7 @@ def results_to_dict(result: EvaluationResult) -> dict[str, Any]:
         }
 
     """
+    excluded = exclude_calcs or set()
     toml_data: dict[str, Any] = {}
 
     # Process all leaf values from the tree
@@ -172,6 +179,8 @@ def results_to_dict(result: EvaluationResult) -> dict[str, Any]:
             field_keys = _parts_to_keys(path.parts)
         elif isinstance(path, CalcPath):
             # Calculation paths: {scope}.calc.{calc_name}.{field_path}
+            if (scope_name, path.calc_name) in excluded:
+                continue
             section_keys = [scope_name, "calc", path.calc_name]
             field_keys = _parts_to_keys(path.parts)
         elif isinstance(path, VerificationPath):
@@ -199,12 +208,15 @@ def results_to_dict(result: EvaluationResult) -> dict[str, Any]:
 
 
 def export_to_toml(
-    _project: Project,
+    project: Project,
     _model_data: Mapping[str, BaseModel],
     result: EvaluationResult,
     output_path: Path | str,
 ) -> None:
     """Export model data and evaluation results to a TOML file.
+
+    Calculations marked ``transient=True`` are excluded from the output; they
+    are still computed and passed to dependent calculations in memory.
 
     Args:
         project: The project containing scope definitions
@@ -213,7 +225,13 @@ def export_to_toml(
         output_path: Path to the output TOML file
 
     """
-    toml_data = results_to_dict(result)
+    exclude_calcs = {
+        (scope_name, calc_name)
+        for scope_name, scope in project.scopes.items()
+        for calc_name, calc in scope.calculations.items()
+        if calc.transient
+    }
+    toml_data = results_to_dict(result, exclude_calcs=exclude_calcs)
 
     # Write atomically so a crash mid-write never corrupts the output file.
     output_path = Path(output_path)
