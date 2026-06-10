@@ -373,7 +373,7 @@ def test_nested_table_tuple_to_single() -> None:
         return power_matrix[(Component.BATTERY, Phase.LAUNCH)][Mode.NOMINAL]
 
     # Create test data - need all combinations of Component and Phase
-    outer_table_data = {}
+    outer_table_data: dict[tuple[Component, Phase], vq.Table[Mode, float]] = {}
     for component in Component:
         for phase in Phase:
             # Create inner table for each (component, phase) combination
@@ -385,7 +385,7 @@ def test_nested_table_tuple_to_single() -> None:
             )
 
     model_data = {
-        scope.name: RootModel(power_matrix=vq.Table(outer_table_data)),
+        scope.name: RootModel(power_matrix=vq.Table(outer_table_data.items())),
     }
 
     result = evaluate_project(project, model_data)

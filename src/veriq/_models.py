@@ -194,7 +194,7 @@ class Project:
         }
         """
         # Create a model for each scope that contains just the root model
-        scope_models = {}
+        scope_models: dict[str, Any] = {}
         for scope_name, scope in self._scopes.items():
             root_model_type = scope.get_root_model()
             # Create a model with a "model" field
@@ -230,7 +230,7 @@ class Project:
         }
         """
         # Create a model for each scope
-        scope_models = {}
+        scope_models: dict[str, Any] = {}
         for scope_name, scope in self._scopes.items():
             root_model_type = scope.get_root_model()
 
@@ -249,7 +249,7 @@ class Project:
             )
 
             # Create scope output model
-            scope_output_fields = {
+            scope_output_fields: dict[str, Any] = {
                 "model": (root_model_type, ...),
             }
             if calc_model is not None:
@@ -257,7 +257,7 @@ class Project:
             if verification_model is not None:
                 scope_output_fields["verification"] = (verification_model, ...)
 
-            scope_output_model = create_model(  # ty: ignore[no-matching-overload]
+            scope_output_model = create_model(
                 f"{scope_name}Output",
                 **scope_output_fields,
             )
