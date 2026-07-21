@@ -5,12 +5,17 @@ import json
 import logging
 import tomllib
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any, NoReturn
 
 if TYPE_CHECKING:
+    from pydantic import BaseModel
+
+    from veriq._diff import DiffEntry
     from veriq._models import Project
+    from veriq._update import UpdateResult
 
 import typer
+from pydantic import ValidationError
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.markup import escape
@@ -48,6 +53,10 @@ logger = logging.getLogger(__name__)
 err_console = Console(stderr=True)
 # Console for stdout (results)
 out_console = Console()
+
+# Exit codes for `update --check`
+CHECK_EXIT_STALE = 1
+CHECK_EXIT_INVALID = 2
 
 
 def _version_callback(value: bool) -> None:  # noqa: FBT001
@@ -509,8 +518,79 @@ def init(
     err_console.print()
 
 
+def _build_check_diff_table(entries: list[DiffEntry]) -> Table:
+    """Build a table describing the changes `update` would apply to the input file."""
+    diff_table = Table(show_header=True, header_style="bold")
+    diff_table.add_column("Path")
+    diff_table.add_column("Status")
+    diff_table.add_column("Current")
+    diff_table.add_column("Updated")
+
+    for entry in entries:
+        entry_path = escape(format_toml_path(entry.path))
+        if entry.kind is DiffKind.ADDED:
+            diff_table.add_row(entry_path, "[green]missing (new field)[/green]", "—", escape(repr(entry.right)))
+        elif entry.kind is DiffKind.REMOVED:
+            diff_table.add_row(entry_path, "[red]obsolete[/red]", escape(repr(entry.left)), "—")
+        else:
+            diff_table.add_row(
+                entry_path,
+                "[yellow]changed[/yellow]",
+                escape(repr(entry.left)),
+                escape(repr(entry.right)),
+            )
+
+    return diff_table
+
+
+def _run_update_check(
+    input_model: type[BaseModel],
+    existing_data: dict[str, Any],
+    update_result: UpdateResult,
+) -> NoReturn:
+    """Report input drift and schema validity, then exit with a CI-friendly code.
+
+    Exit codes:
+    - 0: input is valid and up to date
+    - CHECK_EXIT_STALE (1): input is valid but stale (`update` would change it)
+    - CHECK_EXIT_INVALID (2): input is invalid against the current schema
+    """
+    # Validate the input against the current schema
+    validation_error: ValidationError | None = None
+    try:
+        input_model.model_validate(existing_data)
+    except ValidationError as e:
+        validation_error = e
+
+    # Semantic diff between the input and what `update` would produce
+    entries = diff_dicts(existing_data, update_result.updated_data)
+
+    if entries:
+        err_console.print(f"[yellow]⚠ Input is out of date ({len(entries)} change(s) required):[/yellow]")
+        err_console.print(_build_check_diff_table(entries))
+        err_console.print()
+
+    if validation_error is not None:
+        n_errors = validation_error.error_count()
+        err_console.print(f"[red]✗ Input is invalid against the current schema ({n_errors} error(s)):[/red]")
+        for error in validation_error.errors():
+            loc = ".".join(str(part) for part in error["loc"])
+            err_console.print(f"  [red]•[/red] {escape(loc)}: {escape(error['msg'])}")
+        err_console.print()
+        raise typer.Exit(code=CHECK_EXIT_INVALID)
+
+    if entries:
+        err_console.print("[yellow]i Run 'veriq update' without --check to apply these changes[/yellow]")
+        err_console.print()
+        raise typer.Exit(code=CHECK_EXIT_STALE)
+
+    err_console.print("[green]✓ Input file is valid and up to date[/green]")
+    err_console.print()
+    raise typer.Exit(code=0)
+
+
 @app.command()
-def update(  # noqa: PLR0915
+def update(
     path: Annotated[
         str | None,
         typer.Argument(help="Path to Python script or module path (e.g., examples.dummysat:project)"),
@@ -528,9 +608,9 @@ def update(  # noqa: PLR0915
         str | None,
         typer.Option("--project", help="Name of the project variable (for script paths only)"),
     ] = None,
-    dry_run: Annotated[
+    check: Annotated[
         bool,
-        typer.Option("--dry-run", help="Preview changes without writing to file"),
+        typer.Option("--check", help="Check that the input is valid and up to date without writing (CI gate)"),
     ] = False,
 ) -> None:
     """Update an existing input TOML file with new schema defaults.
@@ -538,7 +618,15 @@ def update(  # noqa: PLR0915
     This command intelligently merges your existing input file with the current
     project schema. It preserves all your existing values while adding new fields
     with default values and warning about removed fields.
+
+    With --check, nothing is written: the command exits 0 when the input is
+    valid and up to date, 1 when it is stale (update would change it), and
+    2 when it is invalid against the current schema.
     """
+    if check and output is not None:
+        err_console.print("[red]Error: --check does not write output; remove -o/--output[/red]")
+        raise typer.Exit(code=1)
+
     # Default output to input if not specified
     if output is None:
         output = input
@@ -562,11 +650,8 @@ def update(  # noqa: PLR0915
     err_console.print(f"[cyan]Project:[/cyan] [bold]{project.name}[/bold]")
     err_console.print()
 
-    # Load existing input file (preserving comments with tomlkit)
+    # Load existing input file (dict-based, for the update logic)
     err_console.print(f"[cyan]Loading existing input from:[/cyan] {input}")
-    original_content = input.read_text()
-    toml_doc = parse_toml_preserving(original_content)
-    # Also parse with tomllib for the update logic (dict-based)
     with input.open("rb") as f:
         existing_data = tomllib.load(f)
 
@@ -580,7 +665,12 @@ def update(  # noqa: PLR0915
     new_default_dict = new_default_data.model_dump()
     result = update_input_data(new_default_dict, existing_data)
 
-    # Also merge into the TOML document to preserve comments
+    if check:
+        # Report drift/validity and exit with a CI-friendly code; writes nothing
+        _run_update_check(project_input_model, existing_data, result)
+
+    # Merge into the TOML document (parsed with tomlkit) to preserve comments
+    toml_doc = parse_toml_preserving(input.read_text())
     merge_into_document(toml_doc, new_default_dict, existing_data)
 
     # Display warnings if any
@@ -591,35 +681,14 @@ def update(  # noqa: PLR0915
             err_console.print(f"  [yellow]•[/yellow] {warning.message}")
         err_console.print()
 
-    # Preview or write
-    if dry_run:
-        err_console.print("[yellow]🔍 Dry run - no files will be modified[/yellow]")
-        err_console.print()
-        err_console.print("[cyan]Preview of updated data:[/cyan]")
+    # Write the updated data (comments are now preserved)
+    err_console.print(f"[cyan]Writing updated input to:[/cyan] {output}")
+    output.parent.mkdir(parents=True, exist_ok=True)
 
-        # Show a preview using TOML format (with comments preserved)
-        preview_text = dumps_toml(toml_doc)
+    output.write_text(dumps_toml(toml_doc))
 
-        # Display first 50 lines
-        max_preview_lines = 50
-        lines = preview_text.split("\n")
-        if len(lines) > max_preview_lines:
-            err_console.print("\n".join(lines[:max_preview_lines]))
-            err_console.print(f"\n[dim]... ({len(lines) - max_preview_lines} more lines)[/dim]")
-        else:
-            err_console.print(preview_text)
-
-        err_console.print()
-        err_console.print("[yellow]i Run without --dry-run to write changes[/yellow]")
-    else:
-        # Write the updated data (comments are now preserved)
-        err_console.print(f"[cyan]Writing updated input to:[/cyan] {output}")
-        output.parent.mkdir(parents=True, exist_ok=True)
-
-        output.write_text(dumps_toml(toml_doc))
-
-        err_console.print()
-        err_console.print("[green]✓ Input file updated successfully[/green]")
+    err_console.print()
+    err_console.print("[green]✓ Input file updated successfully[/green]")
 
     err_console.print()
 
