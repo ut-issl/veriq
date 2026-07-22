@@ -65,6 +65,23 @@ def test_check_up_to_date_input_exits_zero(project_file: Path, tmp_path: Path) -
     assert result.returncode == EXIT_OK, f"stderr: {result.stderr}"
 
 
+def test_check_is_semantic_not_textual(project_file: Path, tmp_path: Path) -> None:
+    """Comments, key order, whitespace, and int-for-float values do not fail the check."""
+    input_file = tmp_path / "input.toml"
+    input_file.write_text(
+        """# Design parameters for the Power scope
+
+[Power.model]
+capacity = 200   # int stored for a float field, keys out of schema order
+voltage  = 3.3
+""",
+    )
+
+    result = run_update_check(project_file, input_file)
+
+    assert result.returncode == EXIT_OK, f"stderr: {result.stderr}"
+
+
 def test_check_missing_field_exits_stale_and_reports_field(project_file: Path, tmp_path: Path) -> None:
     """An input missing a schema field (with model default) is stale: exit 1, field named."""
     input_file = tmp_path / "input.toml"
