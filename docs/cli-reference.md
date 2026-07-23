@@ -140,6 +140,19 @@ veriq schema PROJECT_PATH -o OUTPUT [OPTIONS]
 | `--output PATH` | `-o` | Path to output JSON schema file (required) |
 | `--project NAME` | | Name of the project variable |
 | `--indent N` | | JSON indentation spaces (default: 2) |
+| `--check` | | Check that the schema file is up to date without writing (CI gate) |
+
+**Check mode:**
+
+With `--check`, nothing is written. The command compares the file at
+`--output` against the freshly generated schema and reports any differences.
+The comparison is semantic (parsed JSON), so indentation or key order does
+not matter.
+
+| Exit code | Meaning |
+|-----------|---------|
+| `0` | Schema file is up to date |
+| `1` | Schema file is missing, not valid JSON, or out of date |
 
 **Examples:**
 
@@ -149,6 +162,16 @@ veriq schema my_project.py -o schema.json
 
 # With custom indentation
 veriq schema my_project.py -o schema.json --indent 4
+
+# CI gate: fail if the committed schema was not regenerated after model changes
+veriq schema my_project.py -o schema.json --check
+```
+
+**CI example (GitHub Actions):**
+
+```yaml
+- name: Check committed schema is in sync with the models
+  run: uv run veriq schema my_project.py -o schema.json --check
 ```
 
 The generated schema can be used for:
