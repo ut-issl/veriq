@@ -218,7 +218,21 @@ This command intelligently merges your existing input file with the current proj
 | `--input PATH` | `-i` | Path to existing input TOML file (required) |
 | `--output PATH` | `-o` | Path to output TOML file (defaults to input file) |
 | `--project NAME` | | Name of the project variable |
-| `--dry-run` | | Preview changes without writing to file |
+| `--check` | | Check that the input is valid and up to date without writing (CI gate) |
+
+**Check mode:**
+
+With `--check`, nothing is written. The command reports the changes `update`
+would apply (missing new fields, obsolete fields, type mismatches) and any
+schema validation errors, then exits with a CI-friendly code:
+
+| Exit code | Meaning |
+|-----------|---------|
+| `0` | Input is valid and up to date |
+| `1` | Input is valid but stale (`update` would change it) |
+| `2` | Input is invalid against the current schema |
+
+`--check` cannot be combined with `-o/--output`.
 
 **Examples:**
 
@@ -229,8 +243,15 @@ veriq update my_project.py -i input.toml
 # Update to a new file
 veriq update my_project.py -i input.toml -o updated_input.toml
 
-# Preview changes without writing
-veriq update my_project.py -i input.toml --dry-run
+# CI gate: fail if the input is stale or invalid, without writing
+veriq update my_project.py -i input.toml --check
+```
+
+**CI example (GitHub Actions):**
+
+```yaml
+- name: Check input files are in sync with the schema
+  run: uv run veriq update my_project.py -i input.toml --check
 ```
 
 ---
