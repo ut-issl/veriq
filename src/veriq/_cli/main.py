@@ -5,7 +5,7 @@ import json
 import logging
 import tomllib
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any, NoReturn
 
 if TYPE_CHECKING:
     from veriq._models import Project
@@ -398,6 +398,93 @@ def check(
     err_console.print()
 
 
+def _load_committed_schema(output: Path) -> dict[str, Any]:
+    """Load the committed schema file for checking, exiting with a clear message on failure."""
+    if not output.exists():
+        err_console.print(f"[red]✗ Schema file not found: {output}[/red]")
+        err_console.print("[yellow]i Run 'veriq schema' without --check to generate it[/yellow]")
+        raise typer.Exit(code=1)
+
+    try:
+        committed_schema = json.loads(output.read_text())
+    except OSError as e:
+        err_console.print(f"[red]✗ Cannot read schema file: {escape(str(e))}[/red]")
+        raise typer.Exit(code=1) from e
+    except json.JSONDecodeError as e:
+        err_console.print(f"[red]✗ Schema file is not valid JSON: {escape(str(e))}[/red]")
+        err_console.print("[yellow]i Run 'veriq schema' without --check to regenerate it[/yellow]")
+        raise typer.Exit(code=1) from e
+
+    if not isinstance(committed_schema, dict):
+        err_console.print(f"[red]✗ Schema file is not a JSON object (got {type(committed_schema).__name__})[/red]")
+        err_console.print("[yellow]i Run 'veriq schema' without --check to regenerate it[/yellow]")
+        raise typer.Exit(code=1)
+
+    return committed_schema
+
+
+def _run_schema_check(generated_schema: dict[str, Any], output: Path) -> NoReturn:
+    """Compare the generated schema against the committed file and exit.
+
+    The comparison is semantic (parsed JSON), so cosmetic differences such as
+    indentation or key order do not fail the check.
+
+    Exit codes:
+    - 0: schema file is up to date
+    - 1: schema file is missing, not valid JSON, or out of date
+    """
+    err_console.print(f"[cyan]Checking committed schema:[/cyan] {output}")
+
+    committed_schema = _load_committed_schema(output)
+
+    # Strict semantic comparison: serialized form preserves int/float/bool
+    # distinctions that plain dict equality would miss (100 == 100.0)
+    if json.dumps(committed_schema, sort_keys=True) == json.dumps(generated_schema, sort_keys=True):
+        err_console.print()
+        err_console.print("[green]✓ Schema file is up to date[/green]")
+        err_console.print()
+        raise typer.Exit(code=0)
+
+    entries = diff_dicts(committed_schema, generated_schema)
+    if not entries:
+        # Values compared equal (e.g. 100 vs 100.0) but their JSON types differ
+        err_console.print()
+        err_console.print("[red]✗ Schema file is out of date (numeric/boolean type difference)[/red]")
+        err_console.print("[yellow]i Run 'veriq schema' without --check to regenerate it[/yellow]")
+        err_console.print()
+        raise typer.Exit(code=1)
+
+    err_console.print()
+    err_console.print(f"[red]✗ Schema file is out of date ({len(entries)} difference(s)):[/red]")
+
+    # Fold long content instead of truncating: the report must stay complete for CI logs
+    diff_table = Table(show_header=True, header_style="bold")
+    diff_table.add_column("Path", overflow="fold")
+    diff_table.add_column("Status")
+    diff_table.add_column("Committed", overflow="fold")
+    diff_table.add_column("Generated", overflow="fold")
+
+    for entry in entries:
+        entry_path = escape(format_toml_path(entry.path))
+        if entry.kind is DiffKind.REMOVED:
+            diff_table.add_row(entry_path, "[red]obsolete[/red]", escape(repr(entry.left)), "—")
+        elif entry.kind is DiffKind.ADDED:
+            diff_table.add_row(entry_path, "[green]missing[/green]", "—", escape(repr(entry.right)))
+        else:
+            diff_table.add_row(
+                entry_path,
+                "[yellow]changed[/yellow]",
+                escape(repr(entry.left)),
+                escape(repr(entry.right)),
+            )
+
+    err_console.print(diff_table)
+    err_console.print()
+    err_console.print("[yellow]i Run 'veriq schema' without --check to regenerate it[/yellow]")
+    err_console.print()
+    raise typer.Exit(code=1)
+
+
 @app.command()
 def schema(
     path: Annotated[
@@ -417,8 +504,17 @@ def schema(
         int,
         typer.Option("--indent", help="JSON indentation spaces"),
     ] = 2,
+    check: Annotated[
+        bool,
+        typer.Option("--check", help="Check that the schema file is up to date without writing (CI gate)"),
+    ] = False,
 ) -> None:
-    """Generate JSON schema for the project input model."""
+    """Generate JSON schema for the project input model.
+
+    With --check, nothing is written: the command compares the file at
+    --output against the freshly generated schema and exits 0 when it is
+    up to date, or 1 when it is missing, not valid JSON, or out of date.
+    """
     err_console.print()
 
     # Load config
@@ -442,6 +538,10 @@ def schema(
     err_console.print("[cyan]Generating input model JSON schema...[/cyan]")
     input_model = project.input_model()
     json_schema = input_model.model_json_schema()
+
+    if check:
+        # Compare against the committed file and exit; writes nothing
+        _run_schema_check(json_schema, output)
 
     # Write to file
     err_console.print(f"[cyan]Writing schema to:[/cyan] {output}")
