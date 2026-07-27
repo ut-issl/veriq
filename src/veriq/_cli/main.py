@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
     from veriq._diff import DiffEntry
     from veriq._models import Project
-    from veriq._update import UpdateResult
 
 import typer
 from pydantic import ValidationError
@@ -643,17 +642,22 @@ def _build_check_diff_table(entries: list[DiffEntry]) -> Table:
     return diff_table
 
 
-def _run_update_check(
+def _report_update_check(
     input_model: type[BaseModel],
     existing_data: dict[str, Any],
-    update_result: UpdateResult,
-) -> NoReturn:
-    """Report input drift and schema validity, then exit with a CI-friendly code.
+    would_be_data: dict[str, Any],
+) -> int:
+    """Report input drift and schema validity, and return the exit code.
 
-    Exit codes:
+    ``would_be_data`` must be derived from the same merge code path as the
+    write mode (`merge_into_document`), so that a failing check is always
+    fixable by running `update` and the two modes cannot diverge.
+
+    Returns:
     - 0: input is valid and up to date
     - CHECK_EXIT_STALE (1): input is valid but stale (`update` would change it)
     - CHECK_EXIT_INVALID (2): input is invalid against the current schema
+
     """
     # Validate the input against the current schema
     validation_error: ValidationError | None = None
@@ -662,8 +666,8 @@ def _run_update_check(
     except ValidationError as e:
         validation_error = e
 
-    # Semantic diff between the input and what `update` would produce
-    entries = diff_dicts(existing_data, update_result.updated_data)
+    # Semantic diff between the input and what `update` would actually write
+    entries = diff_dicts(existing_data, would_be_data)
 
     if entries:
         err_console.print(f"[yellow]⚠ Input is out of date ({len(entries)} change(s) required):[/yellow]")
@@ -677,16 +681,16 @@ def _run_update_check(
             loc = ".".join(str(part) for part in error["loc"])
             err_console.print(f"  [red]•[/red] {escape(loc)}: {escape(error['msg'])}")
         err_console.print()
-        raise typer.Exit(code=CHECK_EXIT_INVALID)
+        return CHECK_EXIT_INVALID
 
     if entries:
         err_console.print("[yellow]i Run 'veriq update' without --check to apply these changes[/yellow]")
         err_console.print()
-        raise typer.Exit(code=CHECK_EXIT_STALE)
+        return CHECK_EXIT_STALE
 
     err_console.print("[green]✓ Input file is valid and up to date[/green]")
     err_console.print()
-    raise typer.Exit(code=0)
+    return 0
 
 
 @app.command()
@@ -765,11 +769,9 @@ def update(
     new_default_dict = new_default_data.model_dump()
     result = update_input_data(new_default_dict, existing_data)
 
-    if check:
-        # Report drift/validity and exit with a CI-friendly code; writes nothing
-        _run_update_check(project_input_model, existing_data, result)
-
-    # Merge into the TOML document (parsed with tomlkit) to preserve comments
+    # Merge into the TOML document (parsed with tomlkit) to preserve comments.
+    # Check and write modes share this code path so that --check always agrees
+    # with what `update` would write.
     toml_doc = parse_toml_preserving(input.read_text())
     merge_into_document(toml_doc, new_default_dict, existing_data)
 
@@ -780,6 +782,11 @@ def update(
         for warning in result.warnings:
             err_console.print(f"  [yellow]•[/yellow] {warning.message}")
         err_console.print()
+
+    if check:
+        # Report drift/validity and exit with a CI-friendly code; writes nothing
+        would_be_data = tomllib.loads(dumps_toml(toml_doc))
+        raise typer.Exit(code=_report_update_check(project_input_model, existing_data, would_be_data))
 
     # Write the updated data (comments are now preserved)
     err_console.print(f"[cyan]Writing updated input to:[/cyan] {output}")

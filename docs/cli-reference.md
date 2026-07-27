@@ -245,9 +245,11 @@ This command intelligently merges your existing input file with the current proj
 
 **Check mode:**
 
-With `--check`, nothing is written. The command reports the changes `update`
-would apply (missing new fields, obsolete fields, type mismatches) and any
-schema validation errors, then exits with a CI-friendly code:
+With `--check`, nothing is written. The command computes exactly what `update`
+would write (both modes share the same merge logic, so a failing check is
+always fixed by running `update`), reports the required changes, warnings
+(e.g. fields no longer in the schema), and any schema validation errors, then
+exits with a CI-friendly code:
 
 | Exit code | Meaning |
 |-----------|---------|

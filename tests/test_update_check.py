@@ -45,14 +45,19 @@ def project_file(tmp_path: Path) -> Path:
     return path
 
 
-def run_update_check(project_file: Path, input_file: Path, *extra_args: str) -> subprocess.CompletedProcess[str]:
-    """Run `veriq update --check` as a subprocess and return the completed process."""
+def run_update(project_file: Path, input_file: Path, *extra_args: str) -> subprocess.CompletedProcess[str]:
+    """Run `veriq update` as a subprocess and return the completed process."""
     return subprocess.run(  # noqa: S603
-        ["uv", "run", "veriq", "update", str(project_file), "-i", str(input_file), "--check", *extra_args],  # noqa: S607
+        ["uv", "run", "veriq", "update", str(project_file), "-i", str(input_file), *extra_args],  # noqa: S607
         capture_output=True,
         text=True,
         check=False,
     )
+
+
+def run_update_check(project_file: Path, input_file: Path, *extra_args: str) -> subprocess.CompletedProcess[str]:
+    """Run `veriq update --check` as a subprocess and return the completed process."""
+    return run_update(project_file, input_file, "--check", *extra_args)
 
 
 def test_check_up_to_date_input_exits_zero(project_file: Path, tmp_path: Path) -> None:
@@ -93,15 +98,41 @@ def test_check_missing_field_exits_stale_and_reports_field(project_file: Path, t
     assert "capacity" in result.stderr
 
 
-def test_check_obsolete_field_exits_stale_and_reports_field(project_file: Path, tmp_path: Path) -> None:
-    """An input carrying a field removed from the schema is stale: exit 1, field named."""
+def test_check_obsolete_field_warns_but_matches_update_behavior(project_file: Path, tmp_path: Path) -> None:
+    """An obsolete field is warned about but is not stale, because `update` preserves it.
+
+    --check must agree with what `update` would actually write: since `update`
+    currently keeps fields removed from the schema (it only warns), --check must
+    not report them as requiring a change.
+    """
     input_file = tmp_path / "input.toml"
     input_file.write_text(UP_TO_DATE_TOML + "obsolete_field = 1.0\n")
 
     result = run_update_check(project_file, input_file)
 
-    assert result.returncode == EXIT_STALE, f"stderr: {result.stderr}"
+    assert result.returncode == EXIT_OK, f"stderr: {result.stderr}"
     assert "obsolete_field" in result.stderr
+
+
+def test_check_passes_after_running_update(project_file: Path, tmp_path: Path) -> None:
+    """Running `update` on a stale input always makes a subsequent --check pass.
+
+    This is the consistency guarantee: --check and the write mode share the
+    same merge code path, so `update` is always a sufficient fix for a failing
+    check.
+    """
+    input_file = tmp_path / "input.toml"
+    # Stale (missing capacity) and carrying an obsolete field
+    input_file.write_text("[Power.model]\nvoltage = 3.3\nobsolete_field = 1.0\n")
+
+    check_before = run_update_check(project_file, input_file)
+    assert check_before.returncode == EXIT_STALE, f"stderr: {check_before.stderr}"
+
+    update_result = run_update(project_file, input_file)
+    assert update_result.returncode == EXIT_OK, f"stderr: {update_result.stderr}"
+
+    check_after = run_update_check(project_file, input_file)
+    assert check_after.returncode == EXIT_OK, f"stderr: {check_after.stderr}"
 
 
 def test_check_invalid_type_exits_invalid(project_file: Path, tmp_path: Path) -> None:
