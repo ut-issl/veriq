@@ -406,7 +406,8 @@ def test_user_defined_external_data_with_caching() -> None:
             # Simulate fetching data
             self._fetch_count += 1
             data = f"data from {self.bucket}/{self.key}".encode()
-            self._cached_data = data
+            # Pydantic permits private-attribute mutation on frozen models.
+            self._cached_data = data  # ty: ignore[invalid-assignment]
             return f"sha256:{hashlib.sha256(data).hexdigest()}"
 
         def get_data(self) -> bytes:

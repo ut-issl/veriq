@@ -70,7 +70,10 @@ class TestPathParse:
         ],
     )
     def test_parse_root_only(
-        self, path_str: str, expected_root: str, expected_parts: tuple,
+        self,
+        path_str: str,
+        expected_root: str,
+        expected_parts: tuple,
     ):
         path = Path.parse(path_str)
         assert path.root == expected_root
@@ -95,7 +98,10 @@ class TestPathParse:
         ],
     )
     def test_parse_with_attributes(
-        self, path_str: str, expected_root: str, expected_parts: tuple,
+        self,
+        path_str: str,
+        expected_root: str,
+        expected_parts: tuple,
     ):
         path = Path.parse(path_str)
         assert path.root == expected_root
@@ -110,7 +116,10 @@ class TestPathParse:
         ],
     )
     def test_parse_with_single_item(
-        self, path_str: str, expected_root: str, expected_parts: tuple,
+        self,
+        path_str: str,
+        expected_root: str,
+        expected_parts: tuple,
     ):
         path = Path.parse(path_str)
         assert path.root == expected_root
@@ -133,7 +142,10 @@ class TestPathParse:
         ],
     )
     def test_parse_with_tuple_item(
-        self, path_str: str, expected_root: str, expected_parts: tuple,
+        self,
+        path_str: str,
+        expected_root: str,
+        expected_parts: tuple,
     ):
         path = Path.parse(path_str)
         assert path.root == expected_root
@@ -162,7 +174,10 @@ class TestPathParse:
         ],
     )
     def test_parse_mixed_parts(
-        self, path_str: str, expected_root: str, expected_parts: tuple,
+        self,
+        path_str: str,
+        expected_root: str,
+        expected_parts: tuple,
     ):
         path = Path.parse(path_str)
         assert path.root == expected_root
@@ -320,7 +335,7 @@ class TestGetValueByParts:
                 (Color.BLUE, Size.LARGE): 6.0,
             },
         )
-        model = ModelWithTupleTable(matrix=table)  # ty: ignore[invalid-argument-type]  # tuple-key Table inference limitation
+        model = ModelWithTupleTable(matrix=table)  # tuple-key Table inference limitation
         parts = (AttributePart("matrix"), ItemPart(("green", "large")))
         result = get_value_by_parts(model, parts)
         assert result == 4.0
@@ -420,7 +435,8 @@ class TestHydrateValueByLeafValues:
             (ItemPart(("blue", "large")),): 6.0,
         }
         result = hydrate_value_by_leaf_values(
-            vq.Table[tuple[Color, Size], float], leaf_values,
+            vq.Table[tuple[Color, Size], float],
+            leaf_values,
         )
         assert isinstance(result, vq.Table)
         assert result[(Color.RED, Size.SMALL)] == 1.0

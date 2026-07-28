@@ -47,7 +47,7 @@ class Phase(StrEnum):
 
 
 def test_is_valid_verification_return_type_bool() -> None:
-    """bool is a valid verification return type."""
+    """Bool is a valid verification return type."""
     assert vq.is_valid_verification_return_type(bool) is True
 
 
@@ -62,17 +62,17 @@ def test_is_valid_verification_return_type_table_multidim_bool() -> None:
 
 
 def test_is_valid_verification_return_type_int_invalid() -> None:
-    """int is not a valid verification return type."""
+    """Int is not a valid verification return type."""
     assert vq.is_valid_verification_return_type(int) is False
 
 
 def test_is_valid_verification_return_type_float_invalid() -> None:
-    """float is not a valid verification return type."""
+    """Float is not a valid verification return type."""
     assert vq.is_valid_verification_return_type(float) is False
 
 
 def test_is_valid_verification_return_type_str_invalid() -> None:
-    """str is not a valid verification return type."""
+    """Str is not a valid verification return type."""
     assert vq.is_valid_verification_return_type(str) is False
 
 
@@ -130,10 +130,12 @@ def test_verification_decorator_accepts_table_bool_return() -> None:
     # Should not raise - Table[K, bool] is valid
     @scope.verification()
     def verify_table(value: Annotated[float, vq.Ref("$.value")]) -> vq.Table[Mode, bool]:
-        return vq.Table({
-            Mode.NOMINAL: value > 0,
-            Mode.SAFE: value > 10,
-        })
+        return vq.Table(
+            {
+                Mode.NOMINAL: value > 0,
+                Mode.SAFE: value > 10,
+            },
+        )
 
     assert "verify_table" in scope.verifications
     # Verify the output_type is the correct generic Table type
@@ -154,10 +156,12 @@ def test_verification_decorator_rejects_invalid_return_type() -> None:
 
         @scope.verification()
         def verify_invalid(value: Annotated[float, vq.Ref("$.value")]) -> vq.Table[Mode, float]:
-            return vq.Table({
-                Mode.NOMINAL: value,
-                Mode.SAFE: value * 2,
-            })
+            return vq.Table(
+                {
+                    Mode.NOMINAL: value,
+                    Mode.SAFE: value * 2,
+                },
+            )
 
 
 # =============================================================================
@@ -189,10 +193,12 @@ def test_table_verification_evaluation_stores_leaf_paths() -> None:
 
     model_data = {
         "TestScope": TestModel(
-            margin=vq.Table({
-                Mode.NOMINAL: 0.2,  # > 0.1, should pass
-                Mode.SAFE: 0.05,  # < 0.1, should fail
-            }),
+            margin=vq.Table(
+                {
+                    Mode.NOMINAL: 0.2,  # > 0.1, should pass
+                    Mode.SAFE: 0.05,  # < 0.1, should fail
+                },
+            ),
         ),
     }
 
@@ -242,10 +248,12 @@ def test_bool_and_table_verifications_coexist() -> None:
     model_data = {
         "TestScope": TestModel(
             threshold=1.0,
-            margins=vq.Table({
-                Mode.NOMINAL: 0.2,
-                Mode.SAFE: 0.05,
-            }),
+            margins=vq.Table(
+                {
+                    Mode.NOMINAL: 0.2,
+                    Mode.SAFE: 0.05,
+                },
+            ),
         ),
     }
 
@@ -289,20 +297,20 @@ def test_multidim_table_verification_evaluation() -> None:
     def verify_matrix(
         matrix: Annotated[vq.Table[tuple[Phase, Mode], float], vq.Ref("$.matrix")],
     ) -> vq.Table[tuple[Phase, Mode], bool]:
-        return vq.Table({  # ty: ignore[invalid-return-type]  # tuple-key Table inference limitation
-            (phase, mode): matrix[(phase, mode)] > 0
-            for phase in Phase
-            for mode in Mode
-        })
+        return vq.Table(  # ty: ignore[invalid-return-type]  # tuple-key Table inference limitation
+            {(phase, mode): matrix[(phase, mode)] > 0 for phase in Phase for mode in Mode},
+        )
 
     model_data = {
         "TestScope": TestModel(
-            matrix=vq.Table({  # ty: ignore[invalid-argument-type]  # tuple-key Table inference limitation
-                (Phase.INITIAL, Mode.NOMINAL): 1.0,   # > 0, True
-                (Phase.INITIAL, Mode.SAFE): -1.0,    # < 0, False
-                (Phase.CRUISE, Mode.NOMINAL): 2.0,   # > 0, True
-                (Phase.CRUISE, Mode.SAFE): 0.5,      # > 0, True
-            }),
+            matrix=vq.Table(
+                {  # tuple-key Table inference limitation
+                    (Phase.INITIAL, Mode.NOMINAL): 1.0,  # > 0, True
+                    (Phase.INITIAL, Mode.SAFE): -1.0,  # < 0, False
+                    (Phase.CRUISE, Mode.NOMINAL): 2.0,  # > 0, True
+                    (Phase.CRUISE, Mode.SAFE): 0.5,  # > 0, True
+                },
+            ),
         ),
     }
 
@@ -346,10 +354,12 @@ def test_output_model_includes_table_verification_types() -> None:
 
     @scope.verification()
     def verify_table(value: Annotated[float, vq.Ref("$.value")]) -> vq.Table[Mode, bool]:
-        return vq.Table({
-            Mode.NOMINAL: value > 0,
-            Mode.SAFE: value > 10,
-        })
+        return vq.Table(
+            {
+                Mode.NOMINAL: value > 0,
+                Mode.SAFE: value > 10,
+            },
+        )
 
     output_model = project.output_model()
 
@@ -396,10 +406,12 @@ def test_get_type_returns_correct_verification_types() -> None:
 
     @scope.verification()
     def verify_table(value: Annotated[float, vq.Ref("$.value")]) -> vq.Table[Mode, bool]:
-        return vq.Table({
-            Mode.NOMINAL: value > 0,
-            Mode.SAFE: value > 10,
-        })
+        return vq.Table(
+            {
+                Mode.NOMINAL: value > 0,
+                Mode.SAFE: value > 10,
+            },
+        )
 
     # Bool verification: type is bool
     bool_path = ProjectPath(
