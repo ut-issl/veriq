@@ -172,7 +172,7 @@ def test_table_with_tuple_index_as_calc_output() -> None:
     # Create model data
     model_data = {
         scope.name: RootModel(
-            input_table=vq.Table(  # ty: ignore[invalid-argument-type]  # tuple-key Table inference limitation
+            input_table=vq.Table(  # tuple-key Table inference limitation
                 {
                     (Region.NORTH, Product.WIDGET): 10.0,
                     (Region.NORTH, Product.GADGET): 20.0,
@@ -189,30 +189,42 @@ def test_table_with_tuple_index_as_calc_output() -> None:
     # Check that the calculation was evaluated correctly
     # Verify leaf values directly (tree model stores only leaf values)
     # Tuple keys are stored in ItemPart
-    assert result.get_value(
-        ProjectPath(
-            scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "widget")),)),
-        ),
-    ) == 20.0
-    assert result.get_value(
-        ProjectPath(
-            scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "gadget")),)),
-        ),
-    ) == 40.0
-    assert result.get_value(
-        ProjectPath(
-            scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "widget")),)),
-        ),
-    ) == 60.0
-    assert result.get_value(
-        ProjectPath(
-            scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "gadget")),)),
-        ),
-    ) == 80.0
+    assert (
+        result.get_value(
+            ProjectPath(
+                scope="Test Scope",
+                path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "widget")),)),
+            ),
+        )
+        == 20.0
+    )
+    assert (
+        result.get_value(
+            ProjectPath(
+                scope="Test Scope",
+                path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "gadget")),)),
+            ),
+        )
+        == 40.0
+    )
+    assert (
+        result.get_value(
+            ProjectPath(
+                scope="Test Scope",
+                path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "widget")),)),
+            ),
+        )
+        == 60.0
+    )
+    assert (
+        result.get_value(
+            ProjectPath(
+                scope="Test Scope",
+                path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "gadget")),)),
+            ),
+        )
+        == 80.0
+    )
 
 
 def test_table_with_tuple_index_as_calc_output_with_calc_input() -> None:
@@ -256,7 +268,7 @@ def test_table_with_tuple_index_as_calc_output_with_calc_input() -> None:
     # Create model data
     model_data = {
         "Test Scope": RootModel(
-            input_table=vq.Table(  # ty: ignore[invalid-argument-type]  # tuple-key Table inference limitation
+            input_table=vq.Table(  # tuple-key Table inference limitation
                 {
                     (Region.NORTH, Product.WIDGET): 10.0,
                     (Region.NORTH, Product.GADGET): 20.0,
@@ -272,30 +284,42 @@ def test_table_with_tuple_index_as_calc_output_with_calc_input() -> None:
 
     # Check that the calculation was evaluated correctly
     # Verify leaf values directly (tree model stores only leaf values)
-    assert result.get_value(
-        ProjectPath(
-            scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "widget")),)),
-        ),
-    ) == 10.0 * 2 * 3
-    assert result.get_value(
-        ProjectPath(
-            scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "gadget")),)),
-        ),
-    ) == 20.0 * 2 * 3
-    assert result.get_value(
-        ProjectPath(
-            scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "widget")),)),
-        ),
-    ) == 30.0 * 2 * 3
-    assert result.get_value(
-        ProjectPath(
-            scope="Test Scope",
-            path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "gadget")),)),
-        ),
-    ) == 40.0 * 2 * 3
+    assert (
+        result.get_value(
+            ProjectPath(
+                scope="Test Scope",
+                path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "widget")),)),
+            ),
+        )
+        == 10.0 * 2 * 3
+    )
+    assert (
+        result.get_value(
+            ProjectPath(
+                scope="Test Scope",
+                path=CalcPath(root="@output_table", parts=(ItemPart(key=("north", "gadget")),)),
+            ),
+        )
+        == 20.0 * 2 * 3
+    )
+    assert (
+        result.get_value(
+            ProjectPath(
+                scope="Test Scope",
+                path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "widget")),)),
+            ),
+        )
+        == 30.0 * 2 * 3
+    )
+    assert (
+        result.get_value(
+            ProjectPath(
+                scope="Test Scope",
+                path=CalcPath(root="@output_table", parts=(ItemPart(key=("south", "gadget")),)),
+            ),
+        )
+        == 40.0 * 2 * 3
+    )
 
 
 def test_table_with_triple_tuple_index() -> None:
