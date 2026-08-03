@@ -438,6 +438,7 @@ def _get_root_requirements(
 
 
 def _build_entry(  # noqa: PLR0913
+    *,
     requirement: Requirement,
     scope_name: str,
     evaluation_results: EvaluationResult | None,
@@ -518,6 +519,7 @@ def _build_entry(  # noqa: PLR0913
 
 
 def _build_entries_recursive(  # noqa: PLR0913
+    *,
     requirement: Requirement,
     scope_name: str,
     evaluation_results: EvaluationResult | None,
@@ -547,14 +549,14 @@ def _build_entries_recursive(  # noqa: PLR0913
     for child in requirement.decomposed_requirements:
         child_scope_name = requirements[child.id][0] if child.id in requirements else scope_name
         _build_entries_recursive(
-            child,
-            child_scope_name,
-            evaluation_results,
-            computed_statuses,
-            depth + 1,
-            [],  # Don't add to entries yet - we'll do it in order
-            requirements,
-            project,
+            requirement=child,
+            scope_name=child_scope_name,
+            evaluation_results=evaluation_results,
+            computed_statuses=computed_statuses,
+            depth=depth + 1,
+            entries=[],  # Don't add to entries yet - we'll do it in order
+            requirements=requirements,
+            project=project,
         )
 
     # Process depends_on requirements (they should already be processed)
@@ -562,18 +564,25 @@ def _build_entries_recursive(  # noqa: PLR0913
         if dep.id not in computed_statuses:
             dep_scope_name = requirements[dep.id][0] if dep.id in requirements else scope_name
             _build_entries_recursive(
-                dep,
-                dep_scope_name,
-                evaluation_results,
-                computed_statuses,
-                0,  # depth doesn't matter for status computation
-                [],
-                requirements,
-                project,
+                requirement=dep,
+                scope_name=dep_scope_name,
+                evaluation_results=evaluation_results,
+                computed_statuses=computed_statuses,
+                depth=0,  # depth doesn't matter for status computation
+                entries=[],
+                requirements=requirements,
+                project=project,
             )
 
     # Now build this requirement's entry (children are already computed)
-    entry = _build_entry(requirement, scope_name, evaluation_results, computed_statuses, depth, project)
+    entry = _build_entry(
+        requirement=requirement,
+        scope_name=scope_name,
+        evaluation_results=evaluation_results,
+        computed_statuses=computed_statuses,
+        depth=depth,
+        project=project,
+    )
     computed_statuses[requirement.id] = entry.status
 
     # Add this entry
@@ -582,18 +591,33 @@ def _build_entries_recursive(  # noqa: PLR0913
     # Then add children's entries in order (for display)
     for child in requirement.decomposed_requirements:
         child_scope_name = requirements[child.id][0] if child.id in requirements else scope_name
-        child_entry = _build_entry(child, child_scope_name, evaluation_results, computed_statuses, depth + 1, project)
+        child_entry = _build_entry(
+            requirement=child,
+            scope_name=child_scope_name,
+            evaluation_results=evaluation_results,
+            computed_statuses=computed_statuses,
+            depth=depth + 1,
+            project=project,
+        )
         entries.append(child_entry)
 
         # Recursively add grandchildren
         for grandchild in child.decomposed_requirements:
             gc_scope = requirements[grandchild.id][0] if grandchild.id in requirements else scope_name
             _add_entries_in_order(
-                grandchild, gc_scope, evaluation_results, computed_statuses, depth + 2, entries, requirements, project,
+                requirement=grandchild,
+                scope_name=gc_scope,
+                evaluation_results=evaluation_results,
+                computed_statuses=computed_statuses,
+                depth=depth + 2,
+                entries=entries,
+                requirements=requirements,
+                project=project,
             )
 
 
 def _add_entries_in_order(  # noqa: PLR0913
+    *,
     requirement: Requirement,
     scope_name: str,
     evaluation_results: EvaluationResult | None,
@@ -604,13 +628,27 @@ def _add_entries_in_order(  # noqa: PLR0913
     project: Project,
 ) -> None:
     """Add entries in display order (pre-order traversal)."""
-    entry = _build_entry(requirement, scope_name, evaluation_results, computed_statuses, depth, project)
+    entry = _build_entry(
+        requirement=requirement,
+        scope_name=scope_name,
+        evaluation_results=evaluation_results,
+        computed_statuses=computed_statuses,
+        depth=depth,
+        project=project,
+    )
     entries.append(entry)
 
     for child in requirement.decomposed_requirements:
         child_scope_name = requirements[child.id][0] if child.id in requirements else scope_name
         _add_entries_in_order(
-            child, child_scope_name, evaluation_results, computed_statuses, depth + 1, entries, requirements, project,
+            requirement=child,
+            scope_name=child_scope_name,
+            evaluation_results=evaluation_results,
+            computed_statuses=computed_statuses,
+            depth=depth + 1,
+            entries=entries,
+            requirements=requirements,
+            project=project,
         )
 
 
@@ -651,11 +689,27 @@ def build_traceability_report(
 
     # First pass: compute all statuses (bottom-up)
     for scope_name, req in root_reqs:
-        _compute_statuses_recursive(req, scope_name, evaluation_results, computed_statuses, requirements, project)
+        _compute_statuses_recursive(
+            requirement=req,
+            scope_name=scope_name,
+            evaluation_results=evaluation_results,
+            computed_statuses=computed_statuses,
+            requirements=requirements,
+            project=project,
+        )
 
     # Second pass: build entries in display order (top-down)
     for scope_name, req in root_reqs:
-        _add_entries_in_order(req, scope_name, evaluation_results, computed_statuses, 0, entries, requirements, project)
+        _add_entries_in_order(
+            requirement=req,
+            scope_name=scope_name,
+            evaluation_results=evaluation_results,
+            computed_statuses=computed_statuses,
+            depth=0,
+            entries=entries,
+            requirements=requirements,
+            project=project,
+        )
 
     # Count statistics
     verified_count = sum(1 for e in entries if e.status == RequirementStatus.VERIFIED)
@@ -675,6 +729,7 @@ def build_traceability_report(
 
 
 def _compute_statuses_recursive(  # noqa: PLR0913
+    *,
     requirement: Requirement,
     scope_name: str,
     evaluation_results: EvaluationResult | None,
@@ -720,7 +775,13 @@ def _compute_statuses_recursive(  # noqa: PLR0913
         if child.id not in computed_statuses:
             child_scope = requirements[child.id][0] if child.id in requirements else scope_name
             _compute_statuses_recursive(
-                child, child_scope, evaluation_results, computed_statuses, requirements, project, in_progress,
+                requirement=child,
+                scope_name=child_scope,
+                evaluation_results=evaluation_results,
+                computed_statuses=computed_statuses,
+                requirements=requirements,
+                project=project,
+                in_progress=in_progress,
             )
 
     # Compute depends_on statuses
@@ -728,7 +789,13 @@ def _compute_statuses_recursive(  # noqa: PLR0913
         if dep.id not in computed_statuses:
             dep_scope = requirements[dep.id][0] if dep.id in requirements else scope_name
             _compute_statuses_recursive(
-                dep, dep_scope, evaluation_results, computed_statuses, requirements, project, in_progress,
+                requirement=dep,
+                scope_name=dep_scope,
+                evaluation_results=evaluation_results,
+                computed_statuses=computed_statuses,
+                requirements=requirements,
+                project=project,
+                in_progress=in_progress,
             )
 
     # Resolve verified_by Refs to Verification objects
