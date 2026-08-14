@@ -139,7 +139,7 @@ def calculate_temperature(
     return ThermalOutput(solar_panel_temperature=temperature)
 ```
 
-**新しい概念：**
+#### 新しい概念
 
 - `imports=["Power"]`は、この計算がPowerスコープからのデータを必要とすることをveriqに伝えます
 - `scope="Power"`は、参照される値を探す場所を指定します
@@ -418,7 +418,7 @@ veriq calc my_package.my_satellite:project -i input.toml -o output.toml
 veriq --verbose calc my_satellite.py -i input.toml -o output.toml
 ```
 
-**オプション：**
+#### オプション
 
 - `-i, --input`: 入力TOMLファイルへのパス（必須）
 - `-o, --output`: 出力TOMLファイルへのパス（必須）
@@ -426,7 +426,7 @@ veriq --verbose calc my_satellite.py -i input.toml -o output.toml
 - `--project`: プロジェクト変数の名前（スクリプトパスの場合のみ）
 - `--verbose`: 詳細なデバッグ情報を表示
 
-**終了コード：**
+#### 終了コード
 
 - `0`: 成功（計算完了、`--verify`使用時はすべての検証に合格）
 - `1`: 失敗（検証失敗、またはエラーが発生）
