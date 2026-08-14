@@ -65,21 +65,18 @@ jobs:
       - name: Run ty
         run: uv run -- ty check
 
-  markdownlint:
+  rumdl:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-
-      - name: Install markdownlint-cli
-        run: npm install -g markdownlint-cli
-
-      - name: Run markdownlint
-        run: markdownlint '**/*.md'
+      - name: Run rumdl
+        uses: rvben/rumdl@4997ff07b63c7a54d6a495ebcd3ce7f23ee1173f # v0.2.55
+        with:
+          version: "0.2.55"
+          report-type: annotations
 
   pytest:
     runs-on: ubuntu-latest
@@ -117,7 +114,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   collect:
-    needs: [ruff, ty, markdownlint, pytest]
+    needs: [ruff, ty, rumdl, pytest]
     runs-on: ubuntu-latest
     steps:
       - name: Collect results

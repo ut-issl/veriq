@@ -39,10 +39,10 @@ repos:
     hooks:
       - id: uv-lock
 
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: a4d5d37e66ebcd6b3705204a1d6dbb56dea66338  # frozen: v0.49.0
+  - repo: https://github.com/rvben/rumdl-pre-commit
+    rev: 4f7fb84c204d04a8b458ad18ca6cd63417d524a9  # frozen: v0.2.55
     hooks:
-      - id: markdownlint
+      - id: rumdl
 
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: e3eebf65325ccc992422292cb7a4baee967cf815  # frozen: v1.26.1
