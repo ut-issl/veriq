@@ -6,7 +6,7 @@ on:
 permissions: {}
 
 env:
-  UV_VERSION: "0.11.x"
+  UV_VERSION: "0.12.x"
 
 jobs:
   create-tag:
