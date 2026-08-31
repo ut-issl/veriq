@@ -1,13 +1,14 @@
 """Generic dependency graph abstraction."""
 
 from collections import defaultdict
+from collections.abc import Hashable
 from dataclasses import dataclass, field
 
 from ._algorithms import topological_sort
 
 
 @dataclass(frozen=True, slots=True)
-class DependencyGraph[T]:
+class DependencyGraph[T: Hashable]:
     """A directed acyclic graph representing dependencies between nodes.
 
     This is a pure, immutable data structure with query methods.
