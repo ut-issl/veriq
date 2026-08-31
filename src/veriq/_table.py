@@ -87,7 +87,7 @@ class Table[K: StrEnum | tuple[StrEnum, ...], V](dict[K, V]):
                 deserialized[key] = val  # ty: ignore[invalid-assignment]
 
             # Create the Table instance, which will validate completeness
-            return cls(deserialized)
+            return cls(deserialized)  # ty: ignore[invalid-argument-type]  # Dynamic Pydantic key type
 
         # Create serialization function
         def serialize_table(table: Table[K, V]) -> dict[str, V]:
