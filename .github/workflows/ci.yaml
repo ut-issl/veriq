@@ -73,7 +73,7 @@ jobs:
           persist-credentials: false
 
       - name: Run rumdl
-        uses: rvben/rumdl@46a49dea9bd46346cd277953983c546b107f90ce # v0.2.74
+        uses: rvben/rumdl@41e15c580461c971819816143d4e43c636647674 # v0.2.75
         with:
           version: "0.2.55"
           report-type: annotations
