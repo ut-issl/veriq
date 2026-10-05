@@ -33,7 +33,7 @@ def test_external_data_is_abstract() -> None:
     import pytest
 
     with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-        ExternalData()
+        ExternalData()  # ty: ignore[call-non-callable]  # Deliberately test abstract instantiation.
 
 
 def test_external_data_subclass_must_implement_compute_checksum() -> None:
@@ -44,7 +44,7 @@ def test_external_data_subclass_must_implement_compute_checksum() -> None:
         path: str
 
     with pytest.raises(TypeError, match="_compute_checksum"):
-        IncompleteRef(path="test.txt")
+        IncompleteRef(path="test.txt")  # ty: ignore[call-non-callable]  # Deliberately test missing method.
 
 
 def test_external_data_subclass_with_compute_checksum() -> None:
