@@ -28,6 +28,7 @@ from veriq._external_data import validate_external_data
 from veriq._io import export_to_toml, load_model_data_from_toml
 from veriq._ir import build_graph_spec
 from veriq._path import VerificationPath
+from veriq._schema import diff_schemas
 from veriq._toml_edit import dumps_toml, merge_into_document, parse_toml_preserving
 from veriq._traceability import RequirementStatus, build_traceability_report
 from veriq._update import update_input_data
@@ -445,22 +446,12 @@ def _run_schema_check(generated_schema: dict[str, Any], output: Path) -> NoRetur
 
     committed_schema = _load_committed_schema(output)
 
-    # Strict semantic comparison: serialized form preserves int/float/bool
-    # distinctions that plain dict equality would miss (100 == 100.0)
-    if json.dumps(committed_schema, sort_keys=True) == json.dumps(generated_schema, sort_keys=True):
+    entries = diff_schemas(committed_schema, generated_schema)
+    if not entries:
         err_console.print()
         err_console.print("[green]✓ Schema file is up to date[/green]")
         err_console.print()
         raise typer.Exit(code=0)
-
-    entries = diff_dicts(committed_schema, generated_schema)
-    if not entries:
-        # Values compared equal (e.g. 100 vs 100.0) but their JSON types differ
-        err_console.print()
-        err_console.print("[red]✗ Schema file is out of date (numeric/boolean type difference)[/red]")
-        err_console.print("[yellow]i Run 'veriq schema' without --check to regenerate it[/yellow]")
-        err_console.print()
-        raise typer.Exit(code=1)
 
     err_console.print()
     err_console.print(f"[red]✗ Schema file is out of date ({len(entries)} difference(s)):[/red]")
