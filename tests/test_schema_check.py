@@ -1,153 +1,113 @@
-"""Tests for the `veriq schema --check` CLI mode (CI gate for schema-artifact drift)."""
+"""Tests for the pure schema-artifact comparison core."""
 
 from __future__ import annotations
 
+import copy
 import json
-import subprocess
-from typing import TYPE_CHECKING
+from typing import Any
 
 import pytest
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-EXIT_OK = 0
-EXIT_STALE = 1
-
-PROJECT_CODE = """
 from pydantic import BaseModel
 
 import veriq as vq
-
-
-class Design(BaseModel):
-    voltage: float
-    capacity: float = 100.0
-
-
-project = vq.Project(name="TestProject")
-scope = vq.Scope(name="Power")
-project.add_scope(scope)
-scope.root_model()(Design)
-"""
+from veriq._diff import DiffEntry, DiffKind
+from veriq._schema import diff_schemas
 
 
 @pytest.fixture
-def project_file(tmp_path: Path) -> Path:
-    """Write a minimal project script for CLI invocation."""
-    path = tmp_path / "test_project.py"
-    path.write_text(PROJECT_CODE)
-    return path
+def generated_schema() -> dict[str, Any]:
+    class Design(BaseModel):
+        voltage: float
+        capacity: float = 100.0
+
+    project = vq.Project(name="TestProject")
+    scope = vq.Scope(name="Power")
+    project.add_scope(scope)
+    scope.root_model()(Design)
+    return project.input_model().model_json_schema()
 
 
-def run_schema(project_file: Path, schema_file: Path, *extra_args: str) -> subprocess.CompletedProcess[str]:
-    """Run `veriq schema` as a subprocess and return the completed process."""
-    return subprocess.run(  # noqa: S603
-        ["uv", "run", "veriq", "schema", str(project_file), "-o", str(schema_file), *extra_args],  # noqa: S607
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+def test_in_sync_schema_has_no_differences(generated_schema: dict[str, Any]) -> None:
+    committed = json.loads(json.dumps(generated_schema))
+    assert diff_schemas(committed, generated_schema) == []
 
 
-@pytest.fixture
-def generated_schema_file(project_file: Path, tmp_path: Path) -> Path:
-    """Generate a schema file that is in sync with the project."""
-    schema_file = tmp_path / "schema.json"
-    result = run_schema(project_file, schema_file)
-    assert result.returncode == EXIT_OK, f"schema generation failed: {result.stderr}"
-    return schema_file
+def test_comparison_is_semantic_not_textual(generated_schema: dict[str, Any]) -> None:
+    committed = json.loads(json.dumps(generated_schema, indent=4, sort_keys=True))
+    assert diff_schemas(committed, generated_schema) == []
+    assert diff_schemas({"b": 2, "a": 1}, {"a": 1, "b": 2}) == []
 
 
-def test_check_in_sync_schema_exits_zero(project_file: Path, generated_schema_file: Path) -> None:
-    """A freshly generated schema file passes the check."""
-    result = run_schema(project_file, generated_schema_file, "--check")
+def test_missing_property_reports_exact_path(generated_schema: dict[str, Any]) -> None:
+    committed = copy.deepcopy(generated_schema)
+    capacity = committed["$defs"]["Design"]["properties"].pop("capacity")
 
-    assert result.returncode == EXIT_OK, f"stderr: {result.stderr}"
-
-
-def test_check_is_semantic_not_textual(project_file: Path, generated_schema_file: Path) -> None:
-    """Cosmetic differences (indentation, key order) do not fail the check."""
-    schema = json.loads(generated_schema_file.read_text())
-    # Re-dump with different indentation, sorted keys, and no trailing newline
-    generated_schema_file.write_text(json.dumps(schema, indent=4, sort_keys=True))
-
-    result = run_schema(project_file, generated_schema_file, "--check")
-
-    assert result.returncode == EXIT_OK, f"stderr: {result.stderr}"
+    assert diff_schemas(committed, generated_schema) == [
+        DiffEntry(("$defs", "Design", "properties", "capacity"), DiffKind.ADDED, None, capacity),
+    ]
 
 
-def test_check_stale_schema_exits_nonzero(project_file: Path, generated_schema_file: Path) -> None:
-    """A schema file that no longer matches the models fails the check."""
-    schema = json.loads(generated_schema_file.read_text())
-    # Simulate an outdated artifact: drop a property the current model has
-    del schema["$defs"]["Design"]["properties"]["capacity"]
-    generated_schema_file.write_text(json.dumps(schema))
+def test_obsolete_property_reports_exact_path(generated_schema: dict[str, Any]) -> None:
+    committed = copy.deepcopy(generated_schema)
+    committed["$defs"]["Design"]["properties"]["obsolete"] = {"type": "string"}
 
-    result = run_schema(project_file, generated_schema_file, "--check")
-
-    assert result.returncode == EXIT_STALE, f"stderr: {result.stderr}"
-    assert "capacity" in result.stderr
+    assert diff_schemas(committed, generated_schema) == [
+        DiffEntry(("$defs", "Design", "properties", "obsolete"), DiffKind.REMOVED, {"type": "string"}, None),
+    ]
 
 
-def test_check_missing_schema_file_exits_nonzero(project_file: Path, tmp_path: Path) -> None:
-    """A missing schema file fails the check."""
-    missing_file = tmp_path / "missing.json"
+def test_numeric_default_type_drift_reports_exact_path(generated_schema: dict[str, Any]) -> None:
+    committed = copy.deepcopy(generated_schema)
+    committed["$defs"]["Design"]["properties"]["capacity"]["default"] = 100
 
-    result = run_schema(project_file, missing_file, "--check")
-
-    assert result.returncode == EXIT_STALE, f"stderr: {result.stderr}"
-    assert not missing_file.exists()
-
-
-def test_check_malformed_schema_file_exits_nonzero(project_file: Path, tmp_path: Path) -> None:
-    """A schema file that is not valid JSON fails the check."""
-    schema_file = tmp_path / "schema.json"
-    schema_file.write_text("{ not json")
-
-    result = run_schema(project_file, schema_file, "--check")
-
-    assert result.returncode == EXIT_STALE, f"stderr: {result.stderr}"
+    entries = diff_schemas(committed, generated_schema)
+    assert entries == [
+        DiffEntry(("$defs", "Design", "properties", "capacity", "default"), DiffKind.CHANGED, 100, 100.0),
+    ]
+    assert type(entries[0].left) is int
+    assert type(entries[0].right) is float
 
 
-def test_check_non_object_json_exits_nonzero_without_traceback(project_file: Path, tmp_path: Path) -> None:
-    """A schema file containing valid JSON that is not an object fails cleanly."""
-    schema_file = tmp_path / "schema.json"
-    schema_file.write_text("[1, 2, 3]")
-
-    result = run_schema(project_file, schema_file, "--check")
-
-    assert result.returncode == EXIT_STALE, f"stderr: {result.stderr}"
-    assert "Traceback" not in result.stderr
-
-
-def test_check_output_is_directory_exits_nonzero_without_traceback(project_file: Path, tmp_path: Path) -> None:
-    """Pointing --output at a directory fails cleanly instead of crashing."""
-    schema_dir = tmp_path / "schema.json"
-    schema_dir.mkdir()
-
-    result = run_schema(project_file, schema_dir, "--check")
-
-    assert result.returncode == EXIT_STALE, f"stderr: {result.stderr}"
-    assert "Traceback" not in result.stderr
-
-
-def test_check_detects_numeric_type_drift(project_file: Path, generated_schema_file: Path) -> None:
-    """An int-for-float value (100 vs 100.0) is drift, not equality."""
-    content = generated_schema_file.read_text()
-    assert "100.0" in content, "expected the capacity default in the generated schema"
-    generated_schema_file.write_text(content.replace("100.0", "100"))
-
-    result = run_schema(project_file, generated_schema_file, "--check")
-
-    assert result.returncode == EXIT_STALE, f"stderr: {result.stderr}"
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [
+        (100, 100.0),
+        (100.0, 100),
+        (True, 1),
+        (False, 0.0),
+        ([100], [100.0]),
+        ([{"default": True}], [{"default": 1}]),
+        (["a", "b"], ["b", "a"]),
+        ({"type": "number"}, "number"),
+        (None, "null"),
+        (1, 2),
+    ],
+)
+def test_changed_values_preserve_json_distinctions(left: Any, right: Any) -> None:
+    entries = diff_schemas({"value": left}, {"value": right})
+    assert entries == [DiffEntry(("value",), DiffKind.CHANGED, left, right)]
+    assert type(entries[0].left) is type(left)
+    assert type(entries[0].right) is type(right)
 
 
-def test_check_never_writes(project_file: Path, generated_schema_file: Path) -> None:
-    """--check must not modify the schema file even when it is stale."""
-    stale_content = json.dumps({"outdated": True})
-    generated_schema_file.write_text(stale_content)
+def test_object_order_inside_arrays_is_ignored() -> None:
+    assert diff_schemas({"enum": [{"b": 2, "a": 1}]}, {"enum": [{"a": 1, "b": 2}]}) == []
 
-    run_schema(project_file, generated_schema_file, "--check")
 
-    assert generated_schema_file.read_text() == stale_content
+def test_mixed_changes_are_sorted_by_path() -> None:
+    assert diff_schemas({"z": 0, "nested": {"b": 1}}, {"a": None, "nested": {"b": 2}}) == [
+        DiffEntry(("a",), DiffKind.ADDED, None, None),
+        DiffEntry(("nested", "b"), DiffKind.CHANGED, 1, 2),
+        DiffEntry(("z",), DiffKind.REMOVED, 0, None),
+    ]
+
+
+def test_comparison_does_not_mutate_inputs(generated_schema: dict[str, Any]) -> None:
+    committed = {"outdated": True}
+    original_committed = copy.deepcopy(committed)
+    original_generated = copy.deepcopy(generated_schema)
+
+    diff_schemas(committed, generated_schema)
+
+    assert committed == original_committed
+    assert generated_schema == original_generated
