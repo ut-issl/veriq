@@ -15,8 +15,6 @@ if TYPE_CHECKING:
 
     from veriq._models import Project
 
-    from .config import ProjectSource
-
 
 @dataclass
 class ModuleData:
@@ -82,6 +80,7 @@ def load_project_from_script(script_path: Path, project_name: str | None = None)
     logger = logging.getLogger(__name__)
 
     module_data = get_module_data_from_path(script_path)
+    original_sys_path = sys.path.copy()
     sys.path.insert(0, str(module_data.extra_sys_path))
 
     try:
@@ -90,6 +89,8 @@ def load_project_from_script(script_path: Path, project_name: str | None = None)
         logger.exception("Import error")
         logger.warning("Ensure all the package directories have an __init__.py file")
         raise
+    finally:
+        sys.path[:] = original_sys_path
 
     if project_name:
         if not hasattr(module, project_name):
@@ -122,7 +123,7 @@ def load_project_from_module_path(module_path: str) -> Project:
         The loaded Project instance
 
     Raises:
-        ValueError: If module path format is invalid
+        ValueError: If module path format is invalid or the specified project doesn't exist
         TypeError: If the specified variable is not a Project instance
 
     """
@@ -134,6 +135,9 @@ def load_project_from_module_path(module_path: str) -> Project:
 
     module_name, project_name = module_path.split(":", 1)
     module = importlib.import_module(module_name)
+    if not hasattr(module, project_name):
+        msg = f"Could not find project '{project_name}' in {module_name}"
+        raise ValueError(msg)
     project = getattr(module, project_name)
 
     if not isinstance(project, Project):
@@ -141,23 +145,3 @@ def load_project_from_module_path(module_path: str) -> Project:
         raise TypeError(msg)
 
     return project
-
-
-def load_project_from_source(source: ProjectSource) -> Project:
-    """Load a project from a ProjectSource (script or module).
-
-    Args:
-        source: ProjectSource instance (ScriptSource or ModuleSource)
-
-    Returns:
-        The loaded Project instance
-
-    """
-    # Import here to avoid circular imports at module level
-    from .config import ModuleSource, ScriptSource  # noqa: PLC0415
-
-    match source:
-        case ScriptSource(script=script, name=name):
-            return load_project_from_script(script, name)
-        case ModuleSource(module_path=module_path):
-            return load_project_from_module_path(module_path)
