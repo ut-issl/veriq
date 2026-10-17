@@ -21,6 +21,10 @@ def test_builtins[T](type_: type[T], expected: T) -> None:
     assert default_val == expected
 
 
+def test_bool() -> None:
+    assert default(bool) is False
+
+
 def test_enum() -> None:
     class E(Enum):
         A = 100  # This is the default, as it's the first member
@@ -121,3 +125,10 @@ class Phase(StrEnum):
 def test_table[T](type_: type[T], expected: T) -> None:
     default_val = default(type_)
     assert default_val == expected
+
+
+def test_table_bool() -> None:
+    table = default(vq.Table[Mode, bool])
+
+    assert set(table) == set(Mode)
+    assert all(value is False for value in table.values())
