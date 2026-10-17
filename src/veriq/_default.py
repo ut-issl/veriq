@@ -3,6 +3,7 @@
 The default value of a type `T` will be determined as follows:
 1. If `T` has a class method `T.default()`, it will be called.
 2. If `T` is one of the following types, the predefined default values will be used.
+    - bool
     - int
     - float
     - str
@@ -91,6 +92,8 @@ def _default_table(type_: Any) -> Any:
 DEFAULT_IMPL: Final[dict[type, Callable[[Any], object]]] = {
     # `Enum` should come before `str` because `StrEnum` is subclass of `str`, but should be treated as `Enum`.
     Enum: _default_enum,
+    # `bool` must precede `int` because it is an `int` subclass.
+    bool: lambda _: False,
     int: lambda _: 0,
     float: lambda _: 0.0,
     str: lambda _: "",
