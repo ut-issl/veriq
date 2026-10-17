@@ -327,9 +327,8 @@ def calc(  # noqa: C901, PLR0912, PLR0915
                 err_console.print(f"[dim]Summary: {total_passed}/{total_count} passed[/dim]")
             err_console.print()
 
-        has_failures = any(not passed for results in grouped_results.values() for _, passed, _ in results)
-        if has_failures:
-            err_console.print("[red]✗ Some verifications failed[/red]")
+        if exit_as_err:
+            err_console.print("[red]✗ Some verifications failed or passed unexpectedly[/red]")
 
     # Export results
     err_console.print(f"[cyan]Exporting results to:[/cyan] {effective_output}")
