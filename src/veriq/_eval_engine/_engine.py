@@ -393,7 +393,7 @@ def evaluate_graph(  # noqa: C901
         # Call the function
         try:
             result = spec.compute_fn(**input_values)
-        except (TypeError, ValueError, AttributeError, KeyError, RuntimeError) as e:
+        except Exception as e:  # noqa: BLE001 - Collect user-function failures without catching interrupts.
             errors.append((node_path, f"Evaluation error: {e}"))
             continue
 

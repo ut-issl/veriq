@@ -88,6 +88,70 @@ def test_evaluate_graph_simple_calculation() -> None:
     assert result.get_value(calc_path) == 10.0
 
 
+class CalculationDomainError(Exception):
+    pass
+
+
+@pytest.mark.parametrize("verification", [False, True], ids=["calculation", "verification"])
+@pytest.mark.parametrize("error_type", [ZeroDivisionError, AssertionError, CalculationDomainError])
+def test_evaluate_graph_collects_user_exceptions(
+    *,
+    verification: bool,
+    error_type: type[Exception],
+) -> None:
+    project = vq.Project(name="TestProject")
+    scope = vq.Scope(name="TestScope")
+    project.add_scope(scope)
+
+    @scope.root_model()
+    class TestModel(BaseModel):
+        x: float
+
+    def failing_function(x: Annotated[float, vq.Ref("$.x")]) -> bool:
+        raise error_type(str(x))
+
+    decorator = scope.verification() if verification else scope.calculation()
+    decorator(failing_function)
+
+    @scope.calculation()
+    def double_x(x: Annotated[float, vq.Ref("$.x")]) -> float:
+        return x * 2
+
+    initial_values = {
+        ProjectPath(scope="TestScope", path=ModelPath(root="$", parts=(AttributePart("x"),))): 5.0,
+    }
+    result = evaluate_graph(build_graph_spec(project), initial_values)
+
+    path = (
+        VerificationPath(root="?failing_function")
+        if verification
+        else CalcPath(root="@failing_function", parts=())
+    )
+    assert not result.success
+    assert result.errors == [(ProjectPath(scope="TestScope", path=path), "Evaluation error: 5.0")]
+    assert result.get_value(ProjectPath(scope="TestScope", path=CalcPath(root="@double_x", parts=()))) == 10.0
+    with pytest.raises(RuntimeError, match=r"Evaluation error: 5\.0"):
+        vq.evaluate_project(project, {"TestScope": TestModel(x=5.0)})
+
+
+@pytest.mark.parametrize("error_type", [KeyboardInterrupt, SystemExit, GeneratorExit])
+def test_evaluate_graph_propagates_base_exceptions(error_type: type[BaseException]) -> None:
+    project = vq.Project(name="TestProject")
+    scope = vq.Scope(name="TestScope")
+    project.add_scope(scope)
+
+    @scope.root_model()
+    class TestModel(BaseModel):
+        x: float
+
+    @scope.calculation()
+    def interrupted(x: Annotated[float, vq.Ref("$.x")]) -> float:
+        raise error_type(str(x))
+
+    with pytest.raises(error_type):
+        vq.evaluate_project(project, {"TestScope": TestModel(x=5.0)})
+
+
 def test_evaluate_graph_chained_calculations() -> None:
     """Test evaluating chained calculations."""
     project = vq.Project(name="TestProject")
