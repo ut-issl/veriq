@@ -39,13 +39,15 @@ class TestDepends:
         assert req_dep3 in req_parent.depends_on
         assert len(req_parent.depends_on) == 3
 
-    def test_depends_outside_context_raises(self):
+    def test_depends_outside_context_raises(self, caplog: pytest.LogCaptureFixture):
         """Test that depends() raises error when called outside requirement context."""
         scope = vq.Scope("TestScope")
         req = scope.requirement("REQ-1", description="Some requirement")
 
         with pytest.raises(NoContextError):
             depends(req)
+
+        assert caplog.records == []
 
     def test_depends_nested_requirements(self):
         """Test depends() works with nested requirement contexts."""
