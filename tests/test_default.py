@@ -127,6 +127,36 @@ def test_table[T](type_: type[T], expected: T) -> None:
     assert default_val == expected
 
 
+class MutableTableValue(BaseModel):
+    x: int
+
+
+@pytest.mark.parametrize(
+    ("table_type", "first_key", "second_key"),
+    [
+        (vq.Table[Mode, MutableTableValue], Mode.MODE_A, Mode.MODE_B),
+        (
+            vq.Table[tuple[Mode, Phase], MutableTableValue],
+            (Mode.MODE_A, Phase.PHASE_1),
+            (Mode.MODE_A, Phase.PHASE_2),
+        ),
+    ],
+)
+def test_table_mutable_defaults_are_independent[K: StrEnum | tuple[StrEnum, ...]](
+    table_type: type[vq.Table[K, MutableTableValue]],
+    first_key: K,
+    second_key: K,
+) -> None:
+    table = default(table_type)
+
+    assert table[first_key] == table[second_key] == MutableTableValue(x=0)
+    assert table[first_key] is not table[second_key]
+
+    table[first_key].x = 42
+
+    assert table[second_key].x == 0
+
+
 def test_table_bool() -> None:
     table = default(vq.Table[Mode, bool])
 

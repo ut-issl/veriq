@@ -70,9 +70,6 @@ def _default_table(type_: Any) -> Any:
 
     key_type_arg, value_type_arg = args
 
-    # Get default value for the value type
-    default_value = default(value_type_arg)
-
     # Determine the actual enum type(s) for keys
     key_type_args = get_args(key_type_arg)
     if key_type_args:
@@ -85,8 +82,8 @@ def _default_table(type_: Any) -> Any:
         enum_types = (key_type_arg,)
         all_keys = list(key_type_arg)
 
-    # Create the table with all keys mapped to default value
-    return Table(dict.fromkeys(all_keys, default_value))
+    # Create a fresh default for each key so mutable values are not shared.
+    return Table({key: default(value_type_arg) for key in all_keys})
 
 
 DEFAULT_IMPL: Final[dict[type, Callable[[Any], object]]] = {
