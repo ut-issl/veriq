@@ -1,9 +1,12 @@
 """Tests for graph query CLI commands."""
 
+import json
 from typing import Annotated
+from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
+from typer.testing import CliRunner
 
 import veriq as vq
 from veriq._cli.graph_query import (
@@ -16,6 +19,7 @@ from veriq._cli.graph_query import (
     get_scope_summaries,
     list_nodes,
 )
+from veriq._cli.main import app
 from veriq._ir import NodeKind
 from veriq._path import CalcPath, ModelPath, ProjectPath, VerificationPath, parse_project_path
 
@@ -61,6 +65,24 @@ def simple_project() -> vq.Project:
         return result > threshold
 
     return project
+
+
+@pytest.mark.parametrize(
+    "node_path",
+    ["ScopeA::$.value", "ScopeA::@calc_result", "ScopeA::?verify_positive"],
+)
+def test_show_json_serializes_metadata(simple_project: vq.Project, node_path: str) -> None:
+    with patch("veriq._cli.main._load_project", return_value=simple_project):
+        result = CliRunner().invoke(app, ["show", node_path, "--json"])
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.stdout)
+    assert data["path"] == node_path
+    if node_path == "ScopeA::$.value":
+        assert data["metadata"] == {}
+    else:
+        expected_type = float if "@" in node_path else bool
+        assert data["metadata"]["root_output_type"] == str(expected_type)
 
 
 # --- parse_project_path tests ---
