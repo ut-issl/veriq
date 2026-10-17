@@ -253,6 +253,46 @@ class TestGetDependencyTree:
         # With depth 1, just verify it doesn't error
         assert tree.path == path
 
+    @pytest.mark.parametrize("invert", [False, True])
+    @pytest.mark.parametrize("max_depth", [None, 1, 2])
+    def test_shared_nodes_appear_under_every_parent(self, *, invert: bool, max_depth: int | None) -> None:
+        project = vq.Project("Diamond")
+        scope = vq.Scope("Scope")
+        project.add_scope(scope)
+
+        @scope.root_model()
+        class Model(BaseModel):
+            value: float
+
+        @scope.calculation()
+        def calc_a(value: Annotated[float, vq.Ref("$.value")]) -> float:
+            return value + 1
+
+        @scope.calculation()
+        def calc_b(value: Annotated[float, vq.Ref("$.value")]) -> float:
+            return value + 2
+
+        @scope.verification()
+        def check(
+            a: Annotated[float, vq.Ref("@calc_a")],
+            b: Annotated[float, vq.Ref("@calc_b")],
+        ) -> bool:
+            return a + b > 0
+
+        model_path = parse_project_path("Scope::$.value")
+        verification_path = parse_project_path("Scope::?check")
+        root_path, shared_path = (model_path, verification_path) if invert else (verification_path, model_path)
+        tree = get_dependency_tree(project, root_path, invert=invert, max_depth=max_depth)
+
+        assert tree.path == root_path
+        assert [child.path for child in tree.children] == [
+            parse_project_path("Scope::@calc_a"),
+            parse_project_path("Scope::@calc_b"),
+        ]
+        for child in tree.children:
+            assert [grandchild.path for grandchild in child.children] == ([] if max_depth == 1 else [shared_path])
+            assert all(not grandchild.children for grandchild in child.children)
+
     def test_tree_node_not_found(self, simple_project: vq.Project) -> None:
         path = ProjectPath("ScopeA", ModelPath.parse("$.nonexistent"))
         with pytest.raises(KeyError, match="Node not found"):

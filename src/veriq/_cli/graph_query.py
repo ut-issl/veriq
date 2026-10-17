@@ -341,8 +341,8 @@ def get_dependency_tree(
         sorted_neighbors.sort(key=str)
         for neighbor in sorted_neighbors:
             if neighbor not in visited:
-                visited.add(neighbor)
-                child_tree = build_tree(neighbor, depth + 1, visited)
+                # Track ancestors per path so shared nodes appear under every parent.
+                child_tree = build_tree(neighbor, depth + 1, visited | {neighbor})
                 children.append(child_tree)
 
         return TreeNode(path=node_path, children=children)
