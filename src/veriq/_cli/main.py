@@ -1229,7 +1229,7 @@ def show(
             "dependents": [str(d) for d in sorted(detail.direct_dependents, key=str)],
             "metadata": detail.metadata,
         }
-        out_console.print_json(data=data)
+        out_console.print_json(data=data, default=str)
     else:
         render_node_detail(detail, err_console)
 
