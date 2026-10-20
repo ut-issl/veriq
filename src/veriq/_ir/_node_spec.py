@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from typing_extensions import TypeForm
+
     from veriq._path import ProjectPath
 
 
@@ -59,7 +61,7 @@ class NodeSpec:
     id: ProjectPath
     kind: NodeKind
     dependencies: frozenset[ProjectPath]
-    output_type: type
+    output_type: TypeForm[Any]
     compute_fn: Callable[..., Any] | None = None
     param_mapping: dict[str, ProjectPath] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)

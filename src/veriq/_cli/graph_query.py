@@ -5,12 +5,14 @@ These are the functional core - no I/O, no Rich rendering.
 """
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from veriq._graph import DependencyGraph
 from veriq._ir import GraphSpec, NodeKind, build_graph_spec
 
 if TYPE_CHECKING:
+    from typing_extensions import TypeForm
+
     from veriq._models import Project
     from veriq._path import ProjectPath
 
@@ -49,7 +51,7 @@ class NodeDetail:
 
     path: ProjectPath
     kind: NodeKind
-    output_type: type
+    output_type: TypeForm[Any]
     direct_dependencies: frozenset[ProjectPath]
     direct_dependents: frozenset[ProjectPath]
     metadata: dict

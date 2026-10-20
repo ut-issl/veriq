@@ -1,7 +1,7 @@
 """Tests for path parsing and navigation logic in veriq._path."""
 
 from enum import StrEnum, unique
-from typing import Any
+from typing import Any, assert_type
 
 import pytest
 from pydantic import BaseModel
@@ -419,7 +419,7 @@ class TestHydrateValueByLeafValues:
             (ItemPart("green"),): 2.0,
             (ItemPart("blue"),): 3.0,
         }
-        result = hydrate_value_by_leaf_values(vq.Table[Color, float], leaf_values)
+        result = assert_type(hydrate_value_by_leaf_values(vq.Table[Color, float], leaf_values), vq.Table[Color, float])
         assert isinstance(result, vq.Table)
         assert result[Color.RED] == 1.0
         assert result[Color.GREEN] == 2.0

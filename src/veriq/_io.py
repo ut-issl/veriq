@@ -15,7 +15,7 @@ from ._path import AttributePart, CalcPath, ItemPart, ModelPath, PartBase, Verif
 from ._table import Table
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Generator, Mapping
 
     from pydantic import BaseModel
 
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def input_base_dir(base_dir: Path) -> Iterator[None]:
+def input_base_dir(base_dir: Path) -> Generator[None]:
     """Context manager to set the base directory for resolving relative paths.
 
     When loading input files (e.g., TOML), use this context to resolve relative

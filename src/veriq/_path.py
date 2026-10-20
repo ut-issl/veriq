@@ -14,6 +14,8 @@ from ._table import Table
 if TYPE_CHECKING:
     from collections.abc import Generator, Mapping
 
+    from typing_extensions import TypeForm
+
 logger = logging.getLogger(__name__)
 
 
@@ -367,7 +369,7 @@ def format_for_display(value: object, *, escape_markup: bool = False) -> str:
     return result
 
 
-def hydrate_value_by_leaf_values[T](model: type[T], leaf_values: Mapping[tuple[PartBase, ...], Any]) -> T:  # noqa: PLR0912, C901, PLR0915
+def hydrate_value_by_leaf_values[T](model: TypeForm[T], leaf_values: Mapping[tuple[PartBase, ...], Any]) -> T:  # noqa: PLR0912, C901, PLR0915
     # If there's a value at the empty path (), it represents the complete object
     # This happens when we store both the whole Table and individual items
     if () in leaf_values:

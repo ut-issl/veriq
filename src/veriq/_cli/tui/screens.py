@@ -10,12 +10,13 @@ from textual.widgets import Button, Input, Label, Static
 
 if TYPE_CHECKING:
     from textual.app import ComposeResult
+    from textual.binding import BindingType
 
 
 class EditCellScreen(ModalScreen[Any | None]):
     """Modal dialog for editing a single cell value."""
 
-    BINDINGS: ClassVar[list[tuple[str, str, str]]] = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         ("escape", "cancel", "Cancel"),
     ]
 
@@ -187,7 +188,7 @@ class EditCellScreen(ModalScreen[Any | None]):
 class ConfirmQuitScreen(ModalScreen[bool]):
     """Modal dialog to confirm quitting with unsaved changes."""
 
-    BINDINGS: ClassVar[list[tuple[str, str, str]]] = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         ("escape", "cancel", "Cancel"),
     ]
 

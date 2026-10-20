@@ -15,10 +15,12 @@ from ._graph_spec import GraphSpec
 from ._node_spec import NodeKind, NodeSpec
 
 if TYPE_CHECKING:
+    from typing_extensions import TypeForm
+
     from veriq._models import Project
 
 
-def _get_leaf_type(project: Project, ppath: ProjectPath) -> type:
+def _get_leaf_type(project: Project, ppath: ProjectPath) -> TypeForm[Any]:
     """Get the type at a specific leaf path.
 
     Args:
@@ -98,7 +100,7 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
 
     """
     nodes: dict[ProjectPath, NodeSpec] = {}
-    type_registry: dict[ProjectPath, type] = {}
+    type_registry: dict[ProjectPath, TypeForm[Any]] = {}
 
     for scope_name, scope in project.scopes.items():
         # 1. Create MODEL nodes for root model leaf paths
