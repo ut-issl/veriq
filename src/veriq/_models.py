@@ -16,6 +16,8 @@ from ._table import Table
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
+    from typing_extensions import TypeForm
+
 logger = logging.getLogger(__name__)
 
 # Module-level TypeVar/ParamSpec as workaround for ty bug with PEP 695 ParamSpec in closures.
@@ -269,7 +271,7 @@ class Project:
             **scope_models,
         )
 
-    def get_type(self, ppath: ProjectPath) -> type:  # noqa: C901,PLR0915,PLR0912
+    def get_type(self, ppath: ProjectPath) -> TypeForm[Any]:  # noqa: C901,PLR0915,PLR0912
         """Get the type of the given project path."""
         scope = self._scopes.get(ppath.scope)
         if scope is None:
@@ -277,13 +279,13 @@ class Project:
             raise KeyError(msg)
 
         if isinstance(ppath.path, ModelPath):
-            current_type: type = scope.get_root_model()
+            current_type: TypeForm[Any] = scope.get_root_model()
             for part in ppath.path.parts:
                 if isinstance(current_type, ForwardRef):
                     current_type = current_type.evaluate()
                 match part:
                     case AttributePart(name):
-                        if not issubclass(current_type, BaseModel):
+                        if not isinstance(current_type, type) or not issubclass(current_type, BaseModel):
                             msg = f"Type '{current_type}' is not a Pydantic model."
                             raise TypeError(msg)
                         try:

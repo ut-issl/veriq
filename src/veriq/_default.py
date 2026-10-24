@@ -21,6 +21,8 @@ from pydantic import BaseModel
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from typing_extensions import TypeForm
+
 
 def _default_enum[E: Enum](type_: type[E]) -> E:
     try:
@@ -31,7 +33,12 @@ def _default_enum[E: Enum](type_: type[E]) -> E:
 
 
 def _default_pydantic_basemodel[M: BaseModel](type_: type[M]) -> M:
-    default_values = {name: default(field_info.annotation) for name, field_info in type_.model_fields.items()}
+    default_values = {}
+    for name, field_info in type_.model_fields.items():
+        if field_info.annotation is None:
+            msg = f"Field '{name}' in model '{type_.__name__}' has no type annotation."
+            raise ValueError(msg)
+        default_values[name] = default(field_info.annotation)
     return type_(**default_values)
 
 
@@ -98,7 +105,7 @@ DEFAULT_IMPL: Final[dict[type, Callable[[Any], object]]] = {
 }
 
 
-def default[T](type_: type[T]) -> T:
+def default[T](type_: TypeForm[T]) -> T:
     # Handle ForwardRef by evaluating it first
     if isinstance(type_, ForwardRef):
         type_ = type_.evaluate()
@@ -127,13 +134,10 @@ def default[T](type_: type[T]) -> T:
             raise TypeError(msg) from e
 
     # Handle predefined types via issubclass check
-    for super_cls, default_impl in DEFAULT_IMPL.items():
-        try:
+    if isinstance(type_, type):
+        for super_cls, default_impl in DEFAULT_IMPL.items():
             if issubclass(type_, super_cls):
                 return default_impl(type_)  # ty: ignore[invalid-return-type] # We ensure key-value consistency in `DEFAULT_IMPL`
-        except TypeError:
-            # issubclass() raises TypeError for non-class types
-            continue
 
     msg = f"No default value defined for type {type_}"
     raise ValueError(msg)

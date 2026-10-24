@@ -1,5 +1,5 @@
 from enum import Enum, StrEnum
-from typing import Annotated
+from typing import Annotated, assert_type
 
 import pytest
 from pydantic import BaseModel, Field
@@ -87,6 +87,16 @@ def test_tuple[T](type_: type[T], expected: T) -> None:
     assert default_val == expected
 
 
+def test_pydantic_missing_field_annotation() -> None:
+    class Model(BaseModel):
+        value: int
+
+    Model.model_fields["value"].annotation = None
+
+    with pytest.raises(ValueError, match="Field 'value' in model 'Model' has no type annotation"):
+        default(Model)
+
+
 def test_pydantic_with_tuple_field() -> None:
     class M(BaseModel):
         s: tuple[str]
@@ -158,7 +168,7 @@ def test_table_mutable_defaults_are_independent[K: StrEnum | tuple[StrEnum, ...]
 
 
 def test_table_bool() -> None:
-    table = default(vq.Table[Mode, bool])
+    table = assert_type(default(vq.Table[Mode, bool]), vq.Table[Mode, bool])
 
     assert set(table) == set(Mode)
     assert all(value is False for value in table.values())

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from enum import StrEnum
 
     from textual.app import ComposeResult
+    from textual.binding import BindingType
 
     from .data import TableData
 
@@ -93,7 +94,7 @@ class DimensionSelector(Static):
 class InlineCellInput(Input):
     """Input widget for inline cell editing."""
 
-    BINDINGS: ClassVar[list[Binding]] = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("escape", "cancel", "Cancel", show=False),
     ]
 

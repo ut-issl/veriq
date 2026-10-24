@@ -20,6 +20,7 @@ from .widgets import DimensionSelector, InlineCellInput, TableEditor, TableSelec
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from textual.binding import BindingType
     from tomlkit import TOMLDocument
 
     from veriq._models import Project
@@ -81,7 +82,7 @@ class VeriqEditApp(App[None]):
     }
     """
 
-    BINDINGS: ClassVar[list[Binding]] = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("s", "save", "Save", show=True),
         Binding("q", "quit", "Quit", show=True),
         Binding("tab", "next_table", "Next Table", show=True),

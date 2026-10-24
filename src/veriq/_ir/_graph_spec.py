@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from typing_extensions import TypeForm
+
     from veriq._path import ProjectPath
 
     from ._node_spec import NodeKind, NodeSpec
@@ -41,7 +43,7 @@ class GraphSpec:
 
     nodes: dict[ProjectPath, NodeSpec] = field(default_factory=dict)
     scope_names: tuple[str, ...] = field(default_factory=tuple)
-    type_registry: dict[ProjectPath, type] = field(default_factory=dict)
+    type_registry: dict[ProjectPath, TypeForm[Any]] = field(default_factory=dict)
 
     def get_node(self, path: ProjectPath) -> NodeSpec:
         """Get a node by its path.
@@ -82,7 +84,7 @@ class GraphSpec:
         """
         return [node for node in self.nodes.values() if node.id.scope == scope_name]
 
-    def get_type(self, path: ProjectPath) -> type:
+    def get_type(self, path: ProjectPath) -> TypeForm[Any]:
         """Get the type at a specific path.
 
         Args:
