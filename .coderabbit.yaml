@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit configuration. Reference: https://docs.coderabbit.ai/reference/configuration
+# CodeRabbit also reads CLAUDE.md / AGENTS.md as coding guidelines.
+language: "en-US"
+
+reviews:
+  # Lockfiles and generated output are not worth reviewing and count against
+  # the per-review file limit.
+  path_filters:
+    - "!**/uv.lock"
+    - "!site/**"
+    - "!coverage.xml"
+
+  path_instructions:
+    - path: "src/veriq/**/*.py"
+      instructions: >-
+        Keep IO (filesystem, TOML loading/export, CLI) at the boundary
+        (_io.py, _cli/) and the evaluation/graph logic pure. Prefer
+        @dataclass(slots=True), frozen for immutable types. Flag
+        string-based encodings of structured paths/references that bypass
+        the typed path system in _path.py. Do not repeat issues that ruff or
+        ty already report. Flag new behavior in src/ that lacks
+        corresponding tests.
+    - path: "tests/**/*.py"
+      instructions: >-
+        Tests should be function-style (no test classes) and use
+        pytest.mark.parametrize for input variations. Flag new behavior in
+        src/ that lacks corresponding tests.
+
+  auto_review:
+    auto_incremental_review: false
+    # Dependency-update PRs would quickly exhaust the review rate limit.
+    ignore_usernames:
+      - "renovate[bot]"
+
+  # Already enforced in CI (ruff, rumdl).
+  tools:
+    ruff:
+      enabled: false
+    markdownlint:
+      enabled: false
