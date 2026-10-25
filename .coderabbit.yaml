@@ -19,7 +19,8 @@ reviews:
         @dataclass(slots=True), frozen for immutable types. Flag
         string-based encodings of structured paths/references that bypass
         the typed path system in _path.py. Do not repeat issues that ruff or
-        ty already report.
+        ty already report. Flag new behavior in src/ that lacks
+        corresponding tests.
     - path: "tests/**/*.py"
       instructions: >-
         Tests should be function-style (no test classes) and use
