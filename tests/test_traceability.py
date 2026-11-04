@@ -693,7 +693,8 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: True}),
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees({ppath: True}),
             errors=[],
             validity={ppath: True},
         )
@@ -730,7 +731,8 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: False}),
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees({ppath: False}),
             errors=[],
             validity={ppath: True},
         )
@@ -766,7 +768,8 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: False}),
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees({ppath: False}),
             errors=[],
             validity={ppath: True},
         )
@@ -836,7 +839,8 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: False}),
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees({ppath: False}),
             errors=[],
             validity={ppath: True},
         )
@@ -879,7 +883,8 @@ class TestBuildTraceabilityReport:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: True}),
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees({ppath: True}),
             errors=[],
             validity={ppath: True},
         )
@@ -925,7 +930,8 @@ class TestVerifiedByRef:
             scope="Power",
             path=VerificationPath(root="?verify_capacity", parts=()),
         )
-        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: True}),
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees({ppath: True}),
             errors=[],
             validity={ppath: True},
         )
@@ -973,7 +979,8 @@ class TestVerifiedByRef:
             scope="Thermal",
             path=VerificationPath(root="?verify_temp", parts=()),
         )
-        evaluation_results = EvaluationResult(scopes=build_scope_trees({ppath: True}),
+        evaluation_results = EvaluationResult(
+            scopes=build_scope_trees({ppath: True}),
             errors=[],
             validity={ppath: True},
         )

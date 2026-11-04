@@ -244,10 +244,7 @@ def collect_all_requirements(
         for req_id, requirement in scope.requirements.items():
             if req_id in result:
                 existing_scope, _ = result[req_id]
-                msg = (
-                    f"Duplicate requirement ID '{req_id}' found in scopes "
-                    f"'{existing_scope}' and '{scope_name}'."
-                )
+                msg = f"Duplicate requirement ID '{req_id}' found in scopes '{existing_scope}' and '{scope_name}'."
                 raise ValueError(msg)
             result[req_id] = (scope_name, requirement)
 

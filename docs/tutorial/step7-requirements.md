@@ -51,6 +51,7 @@ def verify_battery_capacity(
 ) -> bool:
     return capacity >= 100.0
 
+
 # Link the verification to the requirement using vq.Ref
 power.requirement(
     "REQ-PWR-001",

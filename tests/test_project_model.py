@@ -154,7 +154,8 @@ class TestProjectGetType:
     def test_get_type_model_path_nested(self):
         """Test getting type for a nested model field path."""
         ppath = ProjectPath(
-            scope="Power", path=ModelPath.parse("$.mode_configs[nominal].consumption"),
+            scope="Power",
+            path=ModelPath.parse("$.mode_configs[nominal].consumption"),
         )
         result = project.get_type(ppath)
         assert result is float
@@ -169,7 +170,8 @@ class TestProjectGetType:
     def test_get_type_model_path_table_item(self):
         """Test getting type for a Table item."""
         ppath = ProjectPath(
-            scope="Power", path=ModelPath.parse("$.mode_configs[nominal]"),
+            scope="Power",
+            path=ModelPath.parse("$.mode_configs[nominal]"),
         )
         result = project.get_type(ppath)
         assert result is PowerConfig
@@ -177,7 +179,8 @@ class TestProjectGetType:
     def test_get_type_calc_path(self):
         """Test getting type for a calculation output."""
         ppath = ProjectPath(
-            scope="Power", path=CalcPath.parse("@calculate_battery_performance"),
+            scope="Power",
+            path=CalcPath.parse("@calculate_battery_performance"),
         )
         result = project.get_type(ppath)
         assert result is PowerResult
@@ -194,7 +197,8 @@ class TestProjectGetType:
     def test_get_type_verification_path(self):
         """Test getting type for a verification result."""
         ppath = ProjectPath(
-            scope="Power", path=VerificationPath.parse("?verify_battery_performance"),
+            scope="Power",
+            path=VerificationPath.parse("?verify_battery_performance"),
         )
         result = project.get_type(ppath)
         assert result is bool
@@ -202,7 +206,8 @@ class TestProjectGetType:
     def test_get_type_missing_scope_raises(self):
         """Test that missing scope raises KeyError."""
         ppath = ProjectPath(
-            scope="NonexistentScope", path=ModelPath.parse("$.field"),
+            scope="NonexistentScope",
+            path=ModelPath.parse("$.field"),
         )
         with pytest.raises(KeyError, match="Scope 'NonexistentScope' not found"):
             project.get_type(ppath)
@@ -210,7 +215,8 @@ class TestProjectGetType:
     def test_get_type_missing_calculation_raises(self):
         """Test that missing calculation raises KeyError."""
         ppath = ProjectPath(
-            scope="Power", path=CalcPath.parse("@nonexistent_calc"),
+            scope="Power",
+            path=CalcPath.parse("@nonexistent_calc"),
         )
         with pytest.raises(KeyError, match="Calculation 'nonexistent_calc' not found"):
             project.get_type(ppath)
@@ -218,7 +224,8 @@ class TestProjectGetType:
     def test_get_type_missing_verification_raises(self):
         """Test that missing verification raises KeyError."""
         ppath = ProjectPath(
-            scope="Power", path=VerificationPath.parse("?nonexistent_verif"),
+            scope="Power",
+            path=VerificationPath.parse("?nonexistent_verif"),
         )
         with pytest.raises(KeyError, match="Verification 'nonexistent_verif' not found"):
             project.get_type(ppath)
@@ -334,7 +341,8 @@ class TestRequirement:
             req1_2 = test_scope.requirement("REQ-1.2", description="Sub requirement 2")
             with req1_2:
                 req1_2_1 = test_scope.requirement(
-                    "REQ-1.2.1", description="Sub-sub requirement",
+                    "REQ-1.2.1",
+                    description="Sub-sub requirement",
                 )
 
         all_reqs = list(req1.iter_requirements())

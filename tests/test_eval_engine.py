@@ -122,11 +122,7 @@ def test_evaluate_graph_collects_user_exceptions(
     }
     result = evaluate_graph(build_graph_spec(project), initial_values)
 
-    path = (
-        VerificationPath(root="?failing_function")
-        if verification
-        else CalcPath(root="@failing_function", parts=())
-    )
+    path = VerificationPath(root="?failing_function") if verification else CalcPath(root="@failing_function", parts=())
     assert not result.success
     assert result.errors == [(ProjectPath(scope="TestScope", path=path), "Evaluation error: 5.0")]
     assert result.get_value(ProjectPath(scope="TestScope", path=CalcPath(root="@double_x", parts=()))) == 10.0

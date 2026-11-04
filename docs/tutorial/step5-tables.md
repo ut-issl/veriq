@@ -27,6 +27,7 @@ First, define your row categories using a `StrEnum`:
 ```python
 from enum import StrEnum
 
+
 class OperationMode(StrEnum):
     NOMINAL = "nominal"
     SAFE = "safe"
@@ -131,6 +132,7 @@ For data indexed by two categories (like a pivot table), use a tuple key:
 class Row(StrEnum):
     A = "a"
     B = "b"
+
 
 class Column(StrEnum):
     X = "x"

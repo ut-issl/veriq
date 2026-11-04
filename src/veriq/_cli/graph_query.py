@@ -285,9 +285,7 @@ def _find_matching_leaf_paths(spec: GraphSpec, prefix_path: ProjectPath) -> list
 
     # Find all paths that are children of the prefix
     matching: list[ProjectPath] = [
-        node_path
-        for node_path in spec.nodes
-        if _is_path_prefix_of(prefix_str, str(node_path))
+        node_path for node_path in spec.nodes if _is_path_prefix_of(prefix_str, str(node_path))
     ]
 
     # Filter out non-leaf paths using the shared helper
