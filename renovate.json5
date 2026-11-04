@@ -1,22 +1,7 @@
 {
-    $schema: "https://docs.renovatebot.com/renovate-schema.json",
-    extends: [
-        "config:best-practices",
-    ],
-    minimumReleaseAge: "7 days",
-    lockFileMaintenance: {
-        "enabled": true,
-    },
-    labels: [
-        "dependencies",
-    ],
-    packageRules: [
-    {
-      // .github/workflows/actions.lock pins action commits; gh actions-lock strips inline digests.
-      description: "Use the actions lockfile instead of inline digest pins",
-      matchManagers: ["github-actions"],
-      pinDigests: false,
-    },
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["github>shunichironomura/renovate-config"],
+  packageRules: [
     {
       // release.yaml is not onboarded to actions.lock (see its header comment), so keep digest pins there.
       description: "Keep inline digest pins in the release workflow",
@@ -24,41 +9,10 @@
       matchFileNames: [".github/workflows/release.yaml"],
       pinDigests: true,
     },
-        {
-            matchUpdateTypes: [
-                "lockFileMaintenance",
-            ],
-            minimumReleaseAge: null,
-        },
-        {
-            matchCategories: [
-                "ci",
-            ],
-            addLabels: [
-                "ci",
-            ]
-        },
-        {
-            matchManagers: [
-                "pep621",
-            ],
-            matchDepTypes: [
-                "dependency-groups",
-            ],
-            addLabels: [
-                "dev dependencies",
-            ],
-            automerge: true,
-        },
-    ],
-  customManagers: [
     {
-      customType: "regex",
-      description: "Track the gh-actions-lock version used to verify the actions lockfile",
-      managerFilePatterns: ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
-      matchStrings: ["gh extension install github/gh-actions-lock --pin (?<currentValue>v[^\\s]+)"],
-      depNameTemplate: "github/gh-actions-lock",
-      datasourceTemplate: "github-releases",
+      matchManagers: ["pep621"],
+      matchDepTypes: ["dependency-groups"],
+      addLabels: ["dev dependencies"],
     },
   ],
 }
