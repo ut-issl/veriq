@@ -81,6 +81,7 @@ class PowerModel(BaseModel):
     solar_panel_area: float  # 平方メートル単位
     solar_panel_efficiency: float  # 0.0から1.0
 
+
 # Thermalサブシステムが必要とするデータを定義
 @thermal.root_model()
 class ThermalModel(BaseModel):
@@ -96,6 +97,7 @@ class ThermalModel(BaseModel):
 class SolarPanelOutput(BaseModel):
     power_generated: float  # ワット単位
     heat_generated: float  # ワット単位
+
 
 # Powerスコープに計算を作成
 @power.calculation()
@@ -126,12 +128,10 @@ def calculate_solar_panel(
 class ThermalOutput(BaseModel):
     solar_panel_temperature: float  # 摂氏
 
+
 @thermal.calculation(imports=["Power"])
 def calculate_temperature(
-    heat_generated: Annotated[
-        float,
-        vq.Ref("@calculate_solar_panel.heat_generated", scope="Power")
-    ],
+    heat_generated: Annotated[float, vq.Ref("@calculate_solar_panel.heat_generated", scope="Power")],
 ) -> ThermalOutput:
     """発生した熱に基づいて温度を計算する。"""
     # 簡略化された熱モデル
@@ -152,10 +152,7 @@ def calculate_temperature(
 ```python
 @thermal.verification(imports=["Power"])
 def solar_panel_temperature_limit(
-    temperature: Annotated[
-        float,
-        vq.Ref("@calculate_temperature.solar_panel_temperature")
-    ],
+    temperature: Annotated[float, vq.Ref("@calculate_temperature.solar_panel_temperature")],
 ) -> bool:
     """ソーラーパネルの温度が制限内であることを検証する。"""
     MAX_TEMP = 85.0  # 摂氏
@@ -294,6 +291,7 @@ class PowerModel(BaseModel):
 class BatteryOutput(BaseModel):
     max_discharge_power: float
 
+
 @power.calculation()
 def calculate_battery_performance(
     capacity: Annotated[float, vq.Ref("$.battery_capacity")],
@@ -341,9 +339,11 @@ vq.Ref("@calculate_temp.max_temp", scope="Thermal")  # 別のスコープの計�
 ```python
 from enum import StrEnum
 
+
 class OperationMode(StrEnum):
     NOMINAL = "nominal"
     SAFE = "safe"
+
 
 class PowerModel(BaseModel):
     # 動作モードでインデックス付けされたテーブル
@@ -364,6 +364,7 @@ safe = 10.0
 class OperationPhase(StrEnum):
     LAUNCH = "launch"
     ORBIT = "orbit"
+
 
 class PowerModel(BaseModel):
     # (フェーズ、モード)でインデックス付けされたテーブル

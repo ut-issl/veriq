@@ -73,6 +73,7 @@ class TestAssumeDecorator:
         import pytest
 
         with pytest.raises(ValueError, match="requires a verification reference"):
+
             @assume(vq.Ref("$.some_field"))
             def some_function() -> float:
                 return 42.0

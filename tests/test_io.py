@@ -218,7 +218,8 @@ class TestResultsToDict:
     def test_model_path(self):
         values = {
             ProjectPath(
-                scope="Power", path=ModelPath(root="$", parts=(AttributePart("value"),)),
+                scope="Power",
+                path=ModelPath(root="$", parts=(AttributePart("value"),)),
             ): 42.0,
         }
         result = results_to_dict(_make_eval_result(values))
@@ -263,10 +264,12 @@ class TestResultsToDict:
     def test_multiple_scopes(self):
         values = {
             ProjectPath(
-                scope="Power", path=ModelPath(root="$", parts=(AttributePart("a"),)),
+                scope="Power",
+                path=ModelPath(root="$", parts=(AttributePart("a"),)),
             ): 1.0,
             ProjectPath(
-                scope="Thermal", path=ModelPath(root="$", parts=(AttributePart("b"),)),
+                scope="Thermal",
+                path=ModelPath(root="$", parts=(AttributePart("b"),)),
             ): 2.0,
         }
         result = results_to_dict(_make_eval_result(values))
@@ -278,7 +281,8 @@ class TestResultsToDict:
     def test_combined_paths(self):
         values = {
             ProjectPath(
-                scope="Power", path=ModelPath(root="$", parts=(AttributePart("input"),)),
+                scope="Power",
+                path=ModelPath(root="$", parts=(AttributePart("input"),)),
             ): 10.0,
             ProjectPath(
                 scope="Power",

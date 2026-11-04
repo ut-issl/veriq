@@ -62,9 +62,7 @@ def with_range(
 
         # Collect existing members defined in the class
         existing_members = {
-            name: value
-            for name, value in vars(cls).items()
-            if not name.startswith("_") and isinstance(value, int)
+            name: value for name, value in vars(cls).items() if not name.startswith("_") and isinstance(value, int)
         }
         members.update(existing_members)
 

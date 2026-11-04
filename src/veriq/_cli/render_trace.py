@@ -180,11 +180,7 @@ def render_traceability_table(
         first_prefix, cont_prefix = _build_tree_prefixes(entries, i)
 
         # Get verification content (may be multi-line)
-        verif_content = (
-            _format_verification_results(entry)
-            if has_evaluation
-            else _format_linked_verifications(entry)
-        )
+        verif_content = _format_verification_results(entry) if has_evaluation else _format_linked_verifications(entry)
 
         # Count lines in verification content to build matching requirement column
         verif_lines = verif_content.count("\n") + 1
@@ -236,12 +232,14 @@ def render_traceability_summary(
     summary_lines = [f"Total requirements: {report.total_requirements}"]
 
     if has_evaluation:
-        summary_lines.extend([
-            f"[green]✓ Verified:[/green] {report.verified_count}",
-            f"[cyan]○ Satisfied:[/cyan] {report.satisfied_count}",
-            f"[red]✗ Failed:[/red] {report.failed_count}",
-            f"[yellow]? Not verified:[/yellow] {report.not_verified_count}",
-        ])
+        summary_lines.extend(
+            [
+                f"[green]✓ Verified:[/green] {report.verified_count}",
+                f"[cyan]○ Satisfied:[/cyan] {report.satisfied_count}",
+                f"[red]✗ Failed:[/red] {report.failed_count}",
+                f"[yellow]? Not verified:[/yellow] {report.not_verified_count}",
+            ],
+        )
 
     console.print(Panel("\n".join(summary_lines), title="Summary", border_style="cyan"))
 

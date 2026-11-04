@@ -215,9 +215,7 @@ def _check_validity(  # noqa: C901, PLR0912
             # Check ALL leaf paths of the verification (for Table[K, bool])
             # The assumed_path is the root verification path, we need to find all leaves
             verif_results = [
-                values.get(p)
-                for p in values
-                if p.scope == assumed_path.scope and p.path.root == assumed_path.path.root
+                values.get(p) for p in values if p.scope == assumed_path.scope and p.path.root == assumed_path.path.root
             ]
             # Assumption holds only if ALL verification results are True
             if not all(v is True for v in verif_results if v is not None):

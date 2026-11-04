@@ -36,9 +36,11 @@ project = vq.Project("MySatellite")
 power = vq.Scope("Power")
 project.add_scope(power)
 
+
 @power.root_model()
 class PowerModel(BaseModel):
     battery_capacity: float  # in Watt-hours
+
 
 @power.verification()
 def verify_capacity(

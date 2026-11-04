@@ -85,7 +85,7 @@ def load_project_from_script(script_path: Path, project_name: str | None = None)
 
     try:
         module = importlib.import_module(module_data.module_import_str)
-    except (ImportError, ValueError):
+    except ImportError, ValueError:
         logger.exception("Import error")
         logger.warning("Ensure all the package directories have an __init__.py file")
         raise

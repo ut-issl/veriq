@@ -84,10 +84,7 @@ def _parse_project_source(value: object, project_root: Path) -> ProjectSource:
     if isinstance(value, str):
         # Module path format: "module.path:variable"
         if ":" not in value:
-            msg = (
-                f"Invalid module path '{value}'. "
-                "Expected format: 'module.path:variable_name'"
-            )
+            msg = f"Invalid module path '{value}'. Expected format: 'module.path:variable_name'"
             raise ConfigError(msg)
         return ModuleSource(module_path=value)
 
@@ -95,10 +92,7 @@ def _parse_project_source(value: object, project_root: Path) -> ProjectSource:
         # Script path format: { script = "path.py", name = "project" }
         value_dict = cast("dict[str, object]", value)
         if "script" not in value_dict:
-            msg = (
-                "Invalid [tool.veriq].project configuration. "
-                "Expected string or table with 'script' key."
-            )
+            msg = "Invalid [tool.veriq].project configuration. Expected string or table with 'script' key."
             raise ConfigError(msg)
 
         script_value = value_dict["script"]
@@ -117,10 +111,7 @@ def _parse_project_source(value: object, project_root: Path) -> ProjectSource:
 
         return ScriptSource(script=script_path, name=name)
 
-    msg = (
-        "Invalid [tool.veriq].project configuration. "
-        "Expected string or table with 'script' key."
-    )
+    msg = "Invalid [tool.veriq].project configuration. Expected string or table with 'script' key."
     raise ConfigError(msg)
 
 

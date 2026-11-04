@@ -311,7 +311,7 @@ class TableEditor(DataTable):
         # Parse the value
         try:
             parsed_value = self._parse_value(text, self.table_data.value_type)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             # Invalid value - cancel the edit
             self.cancel_inline_edit()
             return
@@ -415,7 +415,7 @@ class TableEditor(DataTable):
                 Coordinate(row_idx, col_idx),
                 self._format_value(new_value),
             )
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             pass
 
         # Post message about the update

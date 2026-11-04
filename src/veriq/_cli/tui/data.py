@@ -45,9 +45,7 @@ class TableData:
         if self.dimensions == 1:
             return (self.key_types[0](key_str),)
         parts = key_str.split(",")
-        return tuple(
-            enum_type(part) for enum_type, part in zip(self.key_types, parts, strict=True)
-        )
+        return tuple(enum_type(part) for enum_type, part in zip(self.key_types, parts, strict=True))
 
     def _serialize_key(self, key: tuple[StrEnum, ...]) -> str:
         """Serialize a tuple of enum values to a comma-separated string."""

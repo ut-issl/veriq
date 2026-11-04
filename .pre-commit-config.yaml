@@ -1,11 +1,7 @@
-ci:
-  autoupdate_schedule: monthly
-  autofix_prs: false
-
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: c59bba8fb259db0fec2bbb77ad8ba51ea7341b56  # frozen: v0.15.20
+    rev: 25bcf95026b96e2dd3c0aec3090c3d6ef6ca2e6c  # frozen: v0.17.3
     hooks:
       # Run the linter.
       - id: ruff

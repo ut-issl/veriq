@@ -232,6 +232,7 @@ vq.Ref("$.peak_power[launch,nominal]")
 ```python
 from enum import StrEnum
 
+
 class Mode(StrEnum):
     NOMINAL = "nominal"
     SAFE = "safe"
@@ -289,6 +290,7 @@ def verify_margin(
 
 ```python
 from veriq import FileRef
+
 
 class DataModel(BaseModel):
     config_file: FileRef
@@ -356,8 +358,7 @@ When a calculation or verification references another scope, declare it with `im
 @thermal.calculation(imports=["Power"])
 def calculate_temperature(
     heat: Annotated[float, vq.Ref("@calculate_solar.heat", scope="Power")],
-) -> ThermalOutput:
-    ...
+) -> ThermalOutput: ...
 ```
 
 The `imports` parameter:

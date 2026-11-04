@@ -193,6 +193,7 @@ def process_data(
 
     # Use with libraries that accept paths
     import json
+
     with data_file.path.open() as f:
         data = json.load(f)
 
