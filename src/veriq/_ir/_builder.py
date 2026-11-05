@@ -120,6 +120,7 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
                 compute_fn=None,
                 param_mapping={},
                 metadata={},
+                user_metadata=scope.root_model_metadata,
             )
             type_registry[leaf_ppath] = leaf_type
 
@@ -168,6 +169,7 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
                     compute_fn=calc.func,
                     param_mapping=dict(calc.dep_ppaths),
                     metadata=metadata,
+                    user_metadata=calc.metadata,
                 )
                 type_registry[leaf_ppath] = leaf_type
 
@@ -216,6 +218,7 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
                     compute_fn=verif.func,
                     param_mapping=dict(verif.dep_ppaths),
                     metadata=metadata,
+                    user_metadata=verif.metadata,
                 )
                 type_registry[leaf_ppath] = leaf_type
 
