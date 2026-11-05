@@ -14,7 +14,7 @@ from ._path import AttributePart, CalcPath, ItemPart, ModelPath, ProjectPath, Ve
 from ._table import Table
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Mapping
 
     from typing_extensions import TypeForm
 
@@ -406,6 +406,7 @@ class Calculation[T, **P]:
     func: Callable[P, T] = field(repr=False)
     default_scope_name: str = field()
     imported_scope_names: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict, kw_only=True)
 
     # Fields initialized in __post_init__
     dep_ppaths: dict[str, ProjectPath] = field(init=False)
@@ -446,6 +447,7 @@ class Verification[T, **P]:
     default_scope_name: str = field()
     imported_scope_names: list[str] = field(default_factory=list)
     xfail: bool = field(default=False, kw_only=True)
+    metadata: dict[str, Any] = field(default_factory=dict, kw_only=True)
 
     # Fields initialized in __post_init__
     dep_ppaths: dict[str, ProjectPath] = field(init=False)
@@ -513,6 +515,7 @@ class Requirement(ScopedContext):
 class Scope:
     name: str
     _root_model: type[BaseModel] | None = field(default=None)
+    _root_model_metadata: dict[str, Any] = field(default_factory=dict)
     _requirements: dict[str, Requirement] = field(default_factory=dict)
     _verifications: dict[str, Verification[Any, ...]] = field(default_factory=dict)
     _calculations: dict[str, Calculation[Any, ...]] = field(default_factory=dict)
@@ -523,6 +526,11 @@ class Scope:
             msg = f"Scope '{self.name}' does not have a root model defined."
             raise RuntimeError(msg)
         return self._root_model
+
+    @property
+    def root_model_metadata(self) -> dict[str, Any]:
+        """Get the user-defined metadata attached to the root model via `root_model(metadata=...)`."""
+        return self._root_model_metadata
 
     @property
     def requirements(self) -> dict[str, Requirement]:
@@ -539,14 +547,27 @@ class Scope:
         """Get all calculations in the scope."""
         return self._calculations
 
-    def root_model[M: type[BaseModel]](self) -> Callable[[M], M]:
-        """Decorator to mark a model as the root model of the scope."""
+    def root_model[M: type[BaseModel]](
+        self,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> Callable[[M], M]:
+        """Decorator to mark a model as the root model of the scope.
+
+        Args:
+            metadata: Optional user-defined metadata for the root model.
+                It is stored on the scope (the model class is not modified)
+                and shared by all leaf MODEL nodes of the root model.
+                veriq does not interpret its contents.
+
+        """
 
         def decorator(model: M) -> M:
             if self._root_model is not None:
                 msg = f"Scope '{self.name}' already has a root model assigned: {self._root_model.__name__}"
                 raise RuntimeError(msg)
             self._root_model = model
+            self._root_model_metadata = dict(metadata) if metadata is not None else {}
             return model
 
         return decorator
@@ -557,10 +578,19 @@ class Scope:
         imports: Iterable[str] = (),
         *,
         xfail: bool = False,
+        metadata: Mapping[str, Any] | None = None,
     ) -> Callable[[Callable[P, T]], Verification[T, P]]:
         """Decorator to mark a function as a verification in the scope.
 
         The decorated function must return either `bool` or `Table[K, bool]`.
+
+        Args:
+            name: Name of the verification. Defaults to the function name.
+            imports: Names of other scopes referenced by the verification.
+            xfail: Whether the verification is expected to fail.
+            metadata: Optional user-defined metadata. A shallow copy is stored;
+                veriq does not interpret its contents.
+
         """
 
         def decorator(func: Callable[P, T]) -> Verification[T, P]:
@@ -578,6 +608,7 @@ class Scope:
                 imported_scope_names=list(imports),
                 default_scope_name=self.name,
                 xfail=xfail,
+                metadata=dict(metadata) if metadata is not None else {},
             )
             if verification_name in self._verifications:
                 msg = f"Verification with name '{verification_name}' already exists in scope '{self.name}'."
@@ -591,8 +622,18 @@ class Scope:
         self,
         name: str | None = None,
         imports: Iterable[str] = (),
+        *,
+        metadata: Mapping[str, Any] | None = None,
     ) -> Callable[[Callable[P, T]], Calculation[T, P]]:
-        """Decorator to mark a function as a calculation in the scope."""
+        """Decorator to mark a function as a calculation in the scope.
+
+        Args:
+            name: Name of the calculation. Defaults to the function name.
+            imports: Names of other scopes referenced by the calculation.
+            metadata: Optional user-defined metadata. A shallow copy is stored;
+                veriq does not interpret its contents.
+
+        """
 
         def decorator(func: Callable[P, T]) -> Calculation[T, P]:
             if name is None:
@@ -608,6 +649,7 @@ class Scope:
                 func=func,
                 imported_scope_names=list(imports),
                 default_scope_name=self.name,
+                metadata=dict(metadata) if metadata is not None else {},
             )
             if calculation_name in self._calculations:
                 msg = f"Calculation with name '{calculation_name}' already exists in scope '{self.name}'."
