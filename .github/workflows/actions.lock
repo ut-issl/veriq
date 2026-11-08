@@ -6,10 +6,10 @@ workflows:
     '.github/workflows/ci.yaml':
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-python@v7.1.0'
-        - 'astral-sh/setup-uv@v10.3.2'
+        - 'astral-sh/setup-uv@v10.3.3'
         - 'codecov/codecov-action@v7.1.1'
         - 'j178/prek-action@v3.1.0'
-        - 'rvben/rumdl@v0.3.0'
+        - 'rvben/rumdl@v0.3.2'
     '.github/workflows/docs.yaml':
         - 'actions/checkout@v7.0.1'
         - 'actions/configure-pages@v6.0.0'
@@ -57,9 +57,9 @@ dependencies:
         repo_id: 496012378
         uses:
             - 'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
-    'astral-sh/setup-uv@v10.3.2':
-        ref: 'v10.3.2'
-        commit: 'sha1-07a047e608db84b3d8c06cd9a7c7dcc9c355c18e'
+    'astral-sh/setup-uv@v10.3.3':
+        ref: 'v10.3.3'
+        commit: 'sha1-68559e99cc807c1eb7e9238fd43a15bba460eec2'
         owner_id: 115962839
         repo_id: 846733598
     'codecov/codecov-action@v7.1.1':
@@ -79,9 +79,9 @@ dependencies:
         commit: 'sha1-44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d'
         owner_id: 10510431
         repo_id: 1052387486
-    'rvben/rumdl@v0.3.0':
-        ref: 'v0.3.0'
-        commit: 'sha1-19006897519812a2fdc508314b34738e5c281233'
+    'rvben/rumdl@v0.3.2':
+        ref: 'v0.3.2'
+        commit: 'sha1-1e0f1d13c87418c31e0d59dacddd98f27a02efcc'
         owner_id: 5196381
         repo_id: 940812004
     'zizmorcore/zizmor-action@v0.8.1':
