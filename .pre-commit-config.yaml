@@ -31,12 +31,12 @@ repos:
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
-    rev: b1b0a3ca3d67a225af2a0a786f939e8a6381aa3a  # frozen: 0.11.27
+    rev: 46787482b9fb2003c56e0f7592e312ef381829d9  # frozen: 0.13.6
     hooks:
       - id: uv-lock
 
   - repo: https://github.com/rvben/rumdl-pre-commit
-    rev: 4f7fb84c204d04a8b458ad18ca6cd63417d524a9  # frozen: v0.2.55
+    rev: b0cff962ee693b9e612c097d22e71e0cba127447  # frozen: v0.3.2
     hooks:
       - id: rumdl
 
