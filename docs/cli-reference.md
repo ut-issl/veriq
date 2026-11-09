@@ -36,6 +36,7 @@ veriq [OPTIONS] COMMAND
 | `list` | List nodes in the dependency graph |
 | `show` | View detailed information about a node |
 | `tree` | Show dependency tree for a node |
+| `upstream` | Show the definition-level upstream of a node, with metadata aggregation and input provenance |
 
 ---
 
@@ -582,6 +583,8 @@ Metadata:
   assumed_verification_paths: [Power::?solar_panel_max_temperature]
 ```
 
+When the definition carries user metadata (`metadata=` on the decorator) a `User Metadata:` section follows, and model leaves with `vq.Meta` on their field show a `Field Metadata:` section. Both are included in `--json` as `user_metadata` / `field_metadata`.
+
 ---
 
 ## `veriq tree`
@@ -644,6 +647,79 @@ Power::$.design.solar_panel.area
 │   └── Thermal::@calculate_temperature.solar_panel_temperature_max
 └── System::?power_thermal_compatibility
 ```
+
+---
+
+## `veriq upstream`
+
+Show everything a node transitively depends on, **at definition granularity**: each root model, calculation and verification appears once, no matter how many output leaves it has or how many paths lead to it. Optionally aggregates a numeric user-metadata key and shows the provenance of the root-model inputs the node ultimately reads.
+
+```bash
+veriq upstream NODE_PATH [OPTIONS]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `NODE_PATH` | Definition path in format `Scope::path` (required). Any leaf of a definition selects the whole definition. |
+
+**Options:**
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--path PATH` | `-p` | Path to Python script or module path |
+| `--project NAME` | | Name of the project variable |
+| `--input FILE` | `-i` | Input TOML; its `provenance` tables are shown for the inputs (defaults to the configured input, if any) |
+| `--key KEY` | | Numeric user-metadata key to aggregate (e.g. `compute_time_s`) |
+| `--combine max\|sum` | | How predecessor values are merged when propagating (default `max`, the critical path) |
+| `--default N` | | Value for definitions whose metadata lacks `--key` (default `0.0`) |
+| `--follow-assumes` / `--no-follow-assumes` | | Traverse and propagate through `@vq.assume` edges (default on) |
+| `--bindings` | | List which parameter of each definition reads which path |
+| `--json` | | Output as JSON |
+
+With `--key`, two numbers are reported and they mean different things:
+
+- **Sequential total**: the key summed over the *set* of definitions. Each definition counts once.
+- **Propagated to target**: `value(node) = own(node) + combine(predecessor values)` evaluated in topological order. With `max` this is the critical path (parallel makespan). With `sum`, a dependency shared by several paths is counted once per path, so it is *not* a total.
+
+**Examples:**
+
+```bash
+# What does a verification depend on, and how long is the critical path?
+veriq upstream "Power::?verify_margin" -p examples/dummysat.py --key compute_time_s
+
+# Parameter wiring and input provenance from the input file
+veriq upstream "Power::?verify_margin" -p examples/dummysat.py --bindings -i examples/dummysat.in.toml
+
+# Machine-readable: nodes, data edges with bindings, assume edges, inputs, aggregation
+veriq upstream "Power::?verify_margin" -p examples/dummysat.py --json --key compute_time_s
+```
+
+**Example output:**
+
+```
+Upstream of Power::?verify_margin (5 definitions, 4 data edges, 1 assume edges)
+
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
+┃ Kind         ┃ Definition            ┃ Inputs ┃ compute_time_s ┃ propagated (max) ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
+│ MODEL        │ Power::$              │      0 │              0 │                0 │
+│ CALCULATION  │ Power::@heavy_calc    │      1 │            120 │              120 │
+│ VERIFICATION │ Power::?verify_margin │      1 │              2 │              122 │
+└──────────────┴───────────────────────┴────────┴────────────────┴──────────────────┘
+
+Sequential total of compute_time_s (each definition once): 122
+Propagated to target (combine=max): 122 (critical path)
+
+Inputs (3 root-model leaves):
+  Power::$.design.battery_a.capacity
+    field unit: 'Wh'
+    provenance source: 'vendor datasheet rev.C'
+  ...
+```
+
+The JSON output contains `target`, `nodes` (topological order, with `user_metadata` and, with `--key`, `value` / `propagated`), `data_edges` (each with `bindings`: `param`, `ref`, `leaves`), `assume_edges`, `inputs` (each with `field_metadata` and `provenance`), and `aggregation`.
 
 ---
 
