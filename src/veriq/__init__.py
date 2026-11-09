@@ -1,13 +1,18 @@
 """Requirements verification tool."""
 
 __all__ = [
+    "AssumeEdge",
     "ChecksumValidationEntry",
     "ChecksumValidationResult",
+    "DataEdge",
+    "DefinitionId",
+    "DefinitionNode",
     "DependencyGraph",
     "EvaluationResult",
     "ExternalData",
     "FileRef",
     "GraphSpec",
+    "InputBinding",
     "Meta",
     "NodeKind",
     "NodeSpec",
@@ -24,6 +29,7 @@ __all__ = [
     "Table",
     "TableFieldHandler",
     "TraceabilityReport",
+    "UpstreamSubgraph",
     "VerificationResult",
     "assume",
     "build_graph_spec",
@@ -37,6 +43,7 @@ __all__ = [
     "load_model_data_from_toml",
     "load_provenance_from_toml",
     "toml_to_provenance",
+    "upstream_subgraph",
     "validate_external_data",
     "with_range",
 ]
@@ -61,6 +68,15 @@ from ._provenance import Meta, ProvenanceError, toml_to_provenance
 from ._range_enum import with_range
 from ._relations import depends
 from ._str_enum_with_doc import StrEnumWithDoc
+from ._subgraph import (
+    AssumeEdge,
+    DataEdge,
+    DefinitionId,
+    DefinitionNode,
+    InputBinding,
+    UpstreamSubgraph,
+    upstream_subgraph,
+)
 from ._table import Table
 from ._traceability import (
     RequirementStatus,
