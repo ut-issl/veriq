@@ -255,7 +255,7 @@ def test_user_metadata_and_set_style_aggregation(project: vq.Project) -> None:
     assert total == 0.0 + 10.0 + 20.0 + 5.0 + 2.0 + 1.0
 
 
-def test_topological_order_respects_data_and_assume_edges(project: vq.Project) -> None:
+def test_topological_order_respects_data_edges(project: vq.Project) -> None:
     sub = vq.upstream_subgraph(project, "Power::?margin_ok")
     order = sub.topological_order()
     pos = {node_id: i for i, node_id in enumerate(order)}
@@ -263,8 +263,28 @@ def test_topological_order_respects_data_and_assume_edges(project: vq.Project) -
     assert set(order) == set(sub.nodes)
     for edge in sub.data_edges:
         assert pos[edge.source] < pos[edge.target]
-    for edge in sub.assume_edges:
-        assert pos[edge.source] < pos[edge.target]
+
+
+def test_assume_cycle_with_data_edges_is_allowed() -> None:
+    """Assume edges are premises, not ordering: a verification may assume-depend circularly on a calc."""
+    project = vq.Project(name="P")
+    scope = vq.Scope(name="S")
+    project.add_scope(scope)
+    scope.root_model()(ThermalDesign)
+
+    def heat(max_temp: Annotated[float, vq.Ref("$.max_temp")]) -> float:
+        return max_temp
+
+    scope.calculation()(vq.assume(vq.Ref("?temp_ok"))(heat))
+
+    @scope.verification()
+    def temp_ok(h: Annotated[float, vq.Ref("@heat")]) -> bool:
+        return h < 100
+
+    sub = vq.upstream_subgraph(project, "S::?temp_ok")
+    assert set(sub.nodes) == {_did("S::$"), _did("S::@heat"), _did("S::?temp_ok")}
+    assert sub.assume_edges == (vq.AssumeEdge(source=_did("S::?temp_ok"), target=_did("S::@heat")),)
+    assert sub.topological_order() == [_did("S::$"), _did("S::@heat"), _did("S::?temp_ok")]
 
 
 def test_result_is_deterministic(project: vq.Project) -> None:

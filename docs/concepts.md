@@ -457,13 +457,13 @@ sub.data_edges                 # producer -> consumer, with the parameter bindin
 sub.assume_edges               # @vq.assume references, kept separate from data flow
 sub.inputs_of(node_id)         # which parameter reads which path, and the leaf paths it expands to
 sub.input_leaves()             # root-model leaves at the start of every chain (join key for provenance)
-sub.topological_order()        # producers before consumers
+sub.topological_order()        # producers before consumers (data edges only)
 
 # Set-style aggregation over definitions, no double counting:
 total = sum(n.user_metadata.get("compute_time_s", 0.0) for n in sub.nodes.values())
 ```
 
-`follow_assumes=True` (default) also walks through assumed verifications, so the result contains the full assumption closure. With `follow_assumes=False` the assume edges and the assumed verifications are present but their own upstream is not.
+`follow_assumes=True` (default) also walks through assumed verifications, so the result contains the full assumption closure. With `follow_assumes=False` the assume edges and the assumed verifications are present but their own upstream is not. Assume edges are premises, not data flow: an assumed verification may itself read the assuming calculation's output, so they never take part in ordering.
 
 ## Execution Flow
 
