@@ -141,6 +141,8 @@ def test_nodes_are_deduplicated_to_definitions(project: vq.Project) -> None:
     model = sub.nodes[_did("Power::$")]
     assert model.kind == NodeKind.MODEL
     assert _pp("Power::$.unused") in model.outputs  # outputs are what the definition produces, not what is read
+    assert _pp("Power::$.load") not in model.outputs  # whole-table node carries no value
+    assert _pp("Power::$.load[safe]") in model.outputs
 
 
 def test_data_edges_and_bindings(project: vq.Project) -> None:
@@ -172,11 +174,11 @@ def test_data_edges_and_bindings(project: vq.Project) -> None:
     assert heat_from_thermal.bindings[0].param == "max_temp"
     assert heat_from_thermal.bindings[0].leaves == frozenset({_pp("Thermal::$.max_temp")})
 
-    # Whole-table reference expands to the table node and every key; Table[key] to one leaf
+    # Whole-table reference expands to every key (the valueless whole-table node is left out);
+    # Table[key] to one leaf. The declared ref still says the whole table was referenced.
     gen_bindings = {b.param: b for b in edges[("Power::$", "Power::@gen")].bindings}
-    assert gen_bindings["load"].leaves == frozenset(
-        {_pp("Power::$.load"), _pp("Power::$.load[nominal]"), _pp("Power::$.load[safe]")},
-    )
+    assert gen_bindings["load"].ref == _pp("Power::$.load")
+    assert gen_bindings["load"].leaves == frozenset({_pp("Power::$.load[nominal]"), _pp("Power::$.load[safe]")})
     budget_from_model = edges[("Power::$", "Power::@budget")].bindings
     assert budget_from_model == (
         vq.InputBinding(
@@ -208,7 +210,6 @@ def test_input_leaves_are_root_model_leaves_only(project: vq.Project) -> None:
 
     assert sub.input_leaves() == {
         _pp("Power::$.area"),
-        _pp("Power::$.load"),
         _pp("Power::$.load[nominal]"),
         _pp("Power::$.load[safe]"),
         _pp("Power::$.battery.capacity"),
@@ -299,3 +300,24 @@ def test_definition_id_str_and_from_path() -> None:
     did = vq.DefinitionId.from_path(_pp("Power::@budget.margin"))
     assert did == _did("Power::@budget")
     assert str(did) == "Power::@budget"
+
+
+def test_table_outputs_exclude_whole_table_node() -> None:
+    project = vq.Project(name="P")
+    scope = vq.Scope(name="S")
+    project.add_scope(scope)
+    scope.root_model()(PowerDesign)
+
+    @scope.calculation()
+    def doubled(load: Annotated[vq.Table[Mode, float], vq.Ref("$.load")]) -> vq.Table[Mode, float]:
+        return vq.Table({k: v * 2 for k, v in load.items()})
+
+    @scope.verification()
+    def ok(d: Annotated[vq.Table[Mode, float], vq.Ref("@doubled")]) -> bool:
+        return all(v > 0 for v in d.values())
+
+    sub = vq.upstream_subgraph(project, "S::?ok")
+    assert sub.nodes[_did("S::@doubled")].outputs == (_pp("S::@doubled[nominal]"), _pp("S::@doubled[safe]"))
+    (edge,) = [e for e in sub.data_edges if e.source == _did("S::@doubled")]
+    assert edge.bindings[0].ref == _pp("S::@doubled")
+    assert edge.bindings[0].leaves == frozenset({_pp("S::@doubled[nominal]"), _pp("S::@doubled[safe]")})

@@ -52,7 +52,11 @@ class DefinitionId:
 
 @dataclass(frozen=True, slots=True)
 class DefinitionNode:
-    """A definition (root model, calculation or verification) and the leaves it produces."""
+    """A definition (root model, calculation or verification) and the leaves it produces.
+
+    `outputs` lists the value-bearing leaf paths only. A `Table` is stored in the IR both
+    as a whole and as one node per key; the whole-table node carries no value and is left out.
+    """
 
     id: DefinitionId
     kind: NodeKind
@@ -65,7 +69,11 @@ class DefinitionNode:
 
 @dataclass(frozen=True, slots=True)
 class InputBinding:
-    """One function parameter of a consumer and where its value comes from."""
+    """One function parameter of a consumer and where its value comes from.
+
+    `ref` is the declared reference (may be a whole model or `Table`); `leaves` are the
+    value-bearing leaf paths it expands to (whole-table nodes excluded).
+    """
 
     param: str
     ref: ProjectPath
@@ -124,7 +132,7 @@ class UpstreamSubgraph:
         return tuple(b for edge in self.data_edges if edge.target == node_id for b in edge.bindings)
 
     def input_leaves(self) -> frozenset[ProjectPath]:
-        """Root-model leaf paths at the start of every chain (join key for input provenance)."""
+        """Value-bearing root-model leaf paths at the start of every chain (join key for input provenance)."""
         return frozenset(
             leaf
             for edge in self.data_edges
@@ -174,7 +182,29 @@ def _is_under(leaf: ProjectPath, ref: ProjectPath) -> bool:
     )
 
 
-def _bindings_of(leaves: list[NodeSpec]) -> tuple[InputBinding, ...]:
+def _value_leaves(spec: GraphSpec) -> frozenset[ProjectPath]:
+    """Node IDs that carry a value: those that are not a proper prefix of another node in the same definition.
+
+    `Table` fields appear in the IR as the whole table plus one node per key; only the
+    per-key nodes (and non-table leaves) hold values.
+    """
+    by_definition: dict[DefinitionId, list[ProjectPath]] = {}
+    for path in spec.nodes:
+        by_definition.setdefault(DefinitionId.from_path(path), []).append(path)
+    value_leaves: set[ProjectPath] = set()
+    for paths in by_definition.values():
+        for path in paths:
+            n = len(path.path.parts)
+            is_prefix = any(
+                other is not path and len(other.path.parts) > n and other.path.parts[:n] == path.path.parts
+                for other in paths
+            )
+            if not is_prefix:
+                value_leaves.add(path)
+    return frozenset(value_leaves)
+
+
+def _bindings_of(leaves: list[NodeSpec], value_leaves: frozenset[ProjectPath]) -> tuple[InputBinding, ...]:
     """Parameter bindings of a definition (all its leaves share `param_mapping`)."""
     representative = leaves[0]
     dependencies = frozenset().union(*(leaf.dependencies for leaf in leaves))
@@ -182,7 +212,7 @@ def _bindings_of(leaves: list[NodeSpec]) -> tuple[InputBinding, ...]:
         InputBinding(
             param=param,
             ref=ref,
-            leaves=frozenset(dep for dep in dependencies if _is_under(dep, ref)),
+            leaves=frozenset(dep for dep in dependencies if dep in value_leaves and _is_under(dep, ref)),
         )
         for param, ref in representative.param_mapping.items()
     )
@@ -209,6 +239,7 @@ class _Reducer:
 
     def __init__(self, spec: GraphSpec, *, follow_assumes: bool) -> None:
         self.groups = _group_by_definition(spec)
+        self.value_leaves = _value_leaves(spec)
         self.follow_assumes = follow_assumes
         self.nodes: dict[DefinitionId, DefinitionNode] = {}
         self.data_edges: list[DataEdge] = []
@@ -221,7 +252,7 @@ class _Reducer:
         self.nodes[node_id] = DefinitionNode(
             id=node_id,
             kind=leaves[0].kind,
-            outputs=tuple(sorted((leaf.id for leaf in leaves), key=str)),
+            outputs=tuple(sorted((leaf.id for leaf in leaves if leaf.id in self.value_leaves), key=str)),
             user_metadata=leaves[0].user_metadata,
         )
 
@@ -229,7 +260,7 @@ class _Reducer:
         """Record edges into `node_id` and yield the definitions to visit next."""
         leaves = self.groups[node_id]
         by_source: dict[DefinitionId, list[InputBinding]] = {}
-        for binding in _bindings_of(leaves):
+        for binding in _bindings_of(leaves, self.value_leaves):
             by_source.setdefault(DefinitionId.from_path(binding.ref), []).append(binding)
         for source_id, bindings in by_source.items():
             if source_id != node_id:
