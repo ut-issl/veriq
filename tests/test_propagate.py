@@ -121,17 +121,16 @@ def test_non_numeric_value_raises() -> None:
         sub.propagate("compute_time_s", combine=max)
 
 
-def test_include_assumes_toggle() -> None:
+def test_assume_edges_do_not_take_part_in_propagation() -> None:
     sub = vq.upstream_subgraph(_diamond(assume_time=30.0), "S::?ok")
     assert sub.assume_edges == (vq.AssumeEdge(source=_did("S::?pre"), target=_did("S::@c")),)
 
-    # ?pre (30) must finish before c: critical path becomes $ -> ?pre -> c -> ok = 30 + 5 + 2
-    assert sub.propagate("compute_time_s", combine=max) == 37.0
-    assert sub.propagate("compute_time_s", combine=max, include_assumes=False) == 17.0
-
-    # The assumed verification is still a node either way (set-style totals include it)
-    assert _did("S::?pre") in sub
-    assert sub.propagate_all("compute_time_s", combine=max, include_assumes=False)[_did("S::?pre")] == 30.0
+    # ?pre (30) is a premise of c, not an input: the critical path stays $ -> a -> c -> ok
+    assert sub.propagate("compute_time_s", combine=max) == 17.0
+    # ...but the assumed verification is a node, so set-style totals include it
+    assert sum(n.user_metadata.get("compute_time_s", 0.0) for n in sub.nodes.values()) == 50.0
+    # and it gets its own propagated value from its data dependencies ($ -> ?pre)
+    assert sub.propagate_all("compute_time_s", combine=max)[_did("S::?pre")] == 30.0
 
 
 def test_propagate_on_model_target_is_own_value() -> None:
