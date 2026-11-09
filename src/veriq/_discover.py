@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from veriq._config import ConfigError, ModuleSource, ScriptSource, VeriqConfig, get_config
+
 if TYPE_CHECKING:
     from veriq._models import Project
 
@@ -146,29 +148,51 @@ def load_project_from_module_path(module_path: str) -> Project:
     return project
 
 
-def load_project(source: str | Path, *, project_var: str | None = None) -> Project:
+def load_project(
+    source: str | Path | None = None,
+    *,
+    project_var: str | None = None,
+    config: VeriqConfig | None = None,
+) -> Project:
     """Load a `Project` the same way the CLI does.
 
     Args:
         source: Either a path to a Python script that defines the project, or a module
             path of the form ``"package.module:variable"``. A string containing ``":"`` is
-            treated as a module path, anything else as a script path.
+            treated as a module path, anything else as a script path. If None, the project
+            configured in ``[tool.veriq].project`` of the nearest pyproject.toml is used
+            (see `get_config`).
         project_var: Name of the project variable in the script. If None, the script must
             define exactly one `Project` (or a variable named ``project``). Ignored for
-            module paths, which name the variable explicitly.
+            module paths, which name the variable explicitly. Overrides the configured name
+            when falling back to the configuration.
+        config: Configuration to use when `source` is None. Defaults to `get_config()`.
 
     Returns:
         The loaded `Project`.
 
     Raises:
-        ValueError: If no project (or no unambiguous project) is found.
+        ConfigError: If `source` is None and no project is configured (or the config is invalid).
+        ValueError: If no project (or no unambiguous project) is found in the script/module.
         ImportError / FileNotFoundError: If the module or script cannot be imported.
 
     Example:
         >>> project = vq.load_project("examples/compute_time.py")
         >>> project = vq.load_project("examples.compute_time:project")
+        >>> project = vq.load_project()  # [tool.veriq].project from pyproject.toml
 
     """
+    if source is None:
+        if config is None:
+            config = get_config()
+        match config.project:
+            case ScriptSource(script=script, name=name):
+                return load_project_from_script(script, project_var or name)
+            case ModuleSource(module_path=module_path):
+                return load_project_from_module_path(module_path)
+            case _:
+                msg = "No project specified. Pass a source or configure [tool.veriq].project in pyproject.toml."
+                raise ConfigError(msg)
     if isinstance(source, str) and ":" in source:
         return load_project_from_module_path(source)
     return load_project_from_script(Path(source), project_var)

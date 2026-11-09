@@ -4,6 +4,7 @@ __all__ = [
     "AssumeEdge",
     "ChecksumValidationEntry",
     "ChecksumValidationResult",
+    "ConfigError",
     "DataEdge",
     "DefinitionId",
     "DefinitionNode",
@@ -15,6 +16,7 @@ __all__ = [
     "GraphSpec",
     "InputBinding",
     "Meta",
+    "ModuleSource",
     "NodeKind",
     "NodeSpec",
     "PathNode",
@@ -26,12 +28,14 @@ __all__ = [
     "RequirementTraceEntry",
     "Scope",
     "ScopeTree",
+    "ScriptSource",
     "StrEnumWithDoc",
     "Table",
     "TableFieldHandler",
     "TraceabilityReport",
     "UpstreamSubgraph",
     "VerificationResult",
+    "VeriqConfig",
     "assume",
     "build_graph_spec",
     "build_traceability_report",
@@ -39,6 +43,7 @@ __all__ = [
     "evaluate_graph",
     "evaluate_project",
     "export_to_toml",
+    "get_config",
     "input_base_dir",
     "is_valid_verification_return_type",
     "load_model_data_from_toml",
@@ -52,6 +57,7 @@ __all__ = [
 
 # bounded-models integration
 from ._bounded_models import TableFieldHandler
+from ._config import ConfigError, ModuleSource, ScriptSource, VeriqConfig, get_config
 from ._decorators import assume
 from ._discover import load_project
 from ._eval import evaluate_project
