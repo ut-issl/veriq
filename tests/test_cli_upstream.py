@@ -168,8 +168,8 @@ def test_upstream_json_structure(project: vq.Project) -> None:
 def test_upstream_json_combine_sum_and_no_assumes(project: vq.Project) -> None:
     result = _run(project, "upstream", "Power::?ok", "--json", "--key", "compute_time_s", "--combine", "sum")
     data = json.loads(result.stdout)
-    # sum recurrence: budget = 5 + (10 + 20 + 1) = 36, ok = 38
-    assert data["aggregation"]["propagated"] == 38.0
+    # sum recurrence over data edges: budget = 5 + (10 + 20) = 35, ok = 37 (assumed ?temp_ok is not an input)
+    assert data["aggregation"]["propagated"] == 37.0
 
     result = _run(project, "upstream", "Power::?ok", "--json", "--key", "compute_time_s", "--no-follow-assumes")
     data = json.loads(result.stdout)

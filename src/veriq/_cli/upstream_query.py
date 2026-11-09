@@ -99,7 +99,7 @@ def build_upstream_report(  # noqa: PLR0913
     """
     spec = build_graph_spec(project)
     sub = upstream_subgraph(spec, target, follow_assumes=follow_assumes)
-    order = sub.topological_order(include_assumes=follow_assumes)
+    order = sub.topological_order()
 
     aggregation: MetadataAggregation | None = None
     if key is not None:
@@ -108,7 +108,6 @@ def build_upstream_report(  # noqa: PLR0913
             key,
             combine=_COMBINE_FUNCS[combine],
             default=default,
-            include_assumes=follow_assumes,
         )
         own = {node_id: float(node.user_metadata.get(key, default)) for node_id, node in sub.nodes.items()}
         aggregation = MetadataAggregation(

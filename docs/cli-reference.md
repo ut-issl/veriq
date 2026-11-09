@@ -674,7 +674,7 @@ veriq upstream NODE_PATH [OPTIONS]
 | `--key KEY` | | Numeric user-metadata key to aggregate (e.g. `compute_time_s`) |
 | `--combine max\|sum` | | How predecessor values are merged when propagating (default `max`, the critical path) |
 | `--default N` | | Value for definitions whose metadata lacks `--key` (default `0.0`) |
-| `--follow-assumes` / `--no-follow-assumes` | | Traverse and propagate through `@vq.assume` edges (default on) |
+| `--follow-assumes` / `--no-follow-assumes` | | Include assumed verifications and their upstream in the subgraph (default on). Assume edges are premises, not inputs: they are listed under `--bindings` and in JSON but never take part in propagation |
 | `--bindings` | | List which parameter of each definition reads which path |
 | `--json` | | Output as JSON |
 

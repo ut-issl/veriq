@@ -1376,7 +1376,10 @@ def upstream(  # noqa: PLR0913, C901
     ] = 0.0,
     follow_assumes: Annotated[
         bool,
-        typer.Option("--follow-assumes/--no-follow-assumes", help="Traverse and propagate through @assume edges"),
+        typer.Option(
+            "--follow-assumes/--no-follow-assumes",
+            help="Include assumed verifications and their upstream in the subgraph (they never affect propagation)",
+        ),
     ] = True,
     bindings: Annotated[
         bool,
