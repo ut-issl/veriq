@@ -554,6 +554,7 @@ def schema(
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w") as f:
         json.dump(json_schema, f, indent=indent)
+        f.write("\n")
 
     err_console.print()
     err_console.print("[green]✓ Schema generation complete[/green]")
