@@ -83,7 +83,12 @@ class DataEdge:
 
 @dataclass(frozen=True, slots=True)
 class AssumeEdge:
-    """`target` carries `@vq.assume(...)` pointing at the verification `source`."""
+    """`target` carries `@vq.assume(...)` pointing at the verification `source`.
+
+    This is a premise relation, not a data dependency: `source` may itself depend on
+    `target`'s output (compute assuming X, then verify X from the result). It is kept
+    apart from `DataEdge` and never used for ordering.
+    """
 
     source: DefinitionId
     target: DefinitionId
@@ -129,12 +134,16 @@ class UpstreamSubgraph:
         )
 
     def topological_order(self) -> list[DefinitionId]:
-        """Definitions ordered so that every producer (and assumed verification) precedes its consumers."""
+        """Definitions ordered so that every producer precedes its consumers (data edges only).
+
+        Assume edges are not ordering constraints: an assumed verification is a premise
+        checked after the fact and may itself depend on the assuming definition's output,
+        so including them could introduce cycles. Assumed definitions are still part of
+        `nodes` and appear in the order wherever their data dependencies place them.
+        """
         successors: dict[DefinitionId, set[DefinitionId]] = {node_id: set() for node_id in self.nodes}
         for edge in self.data_edges:
             successors[edge.source].add(edge.target)
-        for assume in self.assume_edges:
-            successors[assume.source].add(assume.target)
         return topological_sort(successors)
 
     def __len__(self) -> int:
