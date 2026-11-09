@@ -290,3 +290,82 @@ def test_assume_table_verification_all_entries_must_pass() -> None:
         path=CalcPath(root="@sum_values", parts=()),
     )
     assert not result.is_valid(calc_path)
+
+
+def test_assume_can_be_applied_outside_the_registering_decorator() -> None:
+    """@vq.assume works on either side of @scope.calculation() / @scope.verification()."""
+    project = vq.Project("TestProject")
+    scope = vq.Scope("TestScope")
+    project.add_scope(scope)
+
+    @scope.root_model()
+    class TestModel(BaseModel):
+        value: float
+
+    @scope.verification()
+    def value_positive(val: Annotated[float, vq.Ref("$.value")]) -> bool:
+        return val > 0
+
+    @scope.calculation()
+    @vq.assume(vq.Ref("?value_positive"))
+    def inner(val: Annotated[float, vq.Ref("$.value")]) -> float:
+        return val * 2
+
+    @vq.assume(vq.Ref("?value_positive"))
+    @scope.calculation()
+    def outer(val: Annotated[float, vq.Ref("$.value")]) -> float:
+        return val * 3
+
+    @vq.assume(vq.Ref("?value_positive"))
+    @scope.verification()
+    def outer_verif(val: Annotated[float, vq.Ref("$.value")]) -> bool:
+        return val < 100
+
+    assert isinstance(outer, vq.Calculation if hasattr(vq, "Calculation") else type(inner))
+    assert scope.calculations["inner"].assumed_refs == scope.calculations["outer"].assumed_refs
+    assert scope.verifications["outer_verif"].assumed_refs == [vq.Ref("?value_positive")]
+
+    result = evaluate_project(project, {"TestScope": TestModel(value=-1.0)})
+    for name in ("inner", "outer"):
+        assert not result.is_valid(ProjectPath(scope="TestScope", path=CalcPath(root=f"@{name}", parts=())))
+    assert not result.is_valid(ProjectPath(scope="TestScope", path=VerificationPath(root="?outer_verif", parts=())))
+
+    sub = vq.upstream_subgraph(project, "TestScope::@outer")
+    assert len(sub.assume_edges) == 1
+
+
+def test_overridden_verification_keeps_raw_value() -> None:
+    """An invalid verification reads False, but the value its function returned is still available."""
+    project = vq.Project("TestProject")
+    scope = vq.Scope("TestScope")
+    project.add_scope(scope)
+
+    @scope.root_model()
+    class TestModel(BaseModel):
+        value: float
+
+    @scope.verification()
+    def value_positive(val: Annotated[float, vq.Ref("$.value")]) -> bool:
+        return val > 0
+
+    @scope.calculation()
+    @vq.assume(vq.Ref("?value_positive"))
+    def doubled(val: Annotated[float, vq.Ref("$.value")]) -> float:
+        return val * 2
+
+    @scope.verification()
+    def doubled_is_negative(d: Annotated[float, vq.Ref("@doubled")]) -> bool:
+        return d < 0  # genuinely True for value=-1, but rests on a failed assumption
+
+    result = evaluate_project(project, {"TestScope": TestModel(value=-1.0)})
+    path = ProjectPath(scope="TestScope", path=VerificationPath(root="?doubled_is_negative", parts=()))
+
+    assert result.is_valid(path) is False
+    assert result.get_value(path) is False  # overridden, as before
+    assert result.get_value(path, raw=True) is True  # what the function returned
+    assert result.raw_values == {path: True}
+
+    # Valid verifications are untouched and raw=True is a no-op for them
+    ok_path = ProjectPath(scope="TestScope", path=VerificationPath(root="?value_positive", parts=()))
+    assert result.get_value(ok_path, raw=True) is result.get_value(ok_path) is False
+    assert ok_path not in result.raw_values

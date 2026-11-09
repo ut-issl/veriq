@@ -92,6 +92,8 @@ Do not use `propagate(..., combine=sum)` for a total. A dependency shared by sev
 
 `@vq.assume` edges are part of the upstream subgraph (`sub.assume_edges`, `follow_assumes=True` by default also pulls in the assumed verification's own upstream), which is why the sequential total above includes the thermal nodes. They are *premises*, not inputs: an assumed verification may itself read the assuming calculation's output, as `?panel_within_limit` does here. Hence they never act as ordering constraints and never take part in `propagate()`. The critical path is the same with or without them.
 
+`@vq.assume` may be written on either side of `@scope.calculation()` / `@scope.verification()`. At evaluation time a verification that rests on a failed assumption reads `False`; the value its function actually returned stays available through `result.get_value(path, raw=True)` (and `result.raw_values`), and `result.is_valid(path)` tells the two cases apart.
+
 ## From the command line
 
 ```bash

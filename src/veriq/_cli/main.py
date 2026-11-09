@@ -23,6 +23,7 @@ from rich.table import Table
 
 from veriq._default import default
 from veriq._diff import DiffKind, diff_dicts, format_toml_path
+from veriq._discover import load_project_from_module_path, load_project_from_script
 from veriq._eval import evaluate_project
 from veriq._external_data import validate_external_data
 from veriq._io import export_to_toml, load_model_data_from_toml, load_provenance_from_toml
@@ -35,7 +36,6 @@ from veriq._traceability import RequirementStatus, build_traceability_report
 from veriq._update import update_input_data
 
 from .config import ConfigError, VeriqConfig, get_config
-from .discover import load_project_from_module_path, load_project_from_script
 from .render_trace import render_traceability_summary, render_traceability_table
 from .upstream_query import Combine
 
