@@ -481,6 +481,8 @@ per_node = sub.propagate_all("compute_time_s", combine=max)  # {DefinitionId: va
 
 `propagate` is a recurrence along paths, not a reduction over nodes: with `combine=sum` a dependency shared by several paths is counted once per path. For a sequential total, sum over `sub.nodes` as shown above.
 
+See [Metadata & Provenance](metadata.md) for a complete worked example.
+
 ## Execution Flow
 
 When you run `veriq calc`:

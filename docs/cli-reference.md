@@ -687,37 +687,46 @@ With `--key`, two numbers are reported and they mean different things:
 
 ```bash
 # What does a verification depend on, and how long is the critical path?
-veriq upstream "Power::?verify_margin" -p examples/dummysat.py --key compute_time_s
+veriq upstream "Power::?margin_positive" -p examples/compute_time.py --key compute_time_s
 
 # Parameter wiring and input provenance from the input file
-veriq upstream "Power::?verify_margin" -p examples/dummysat.py --bindings -i examples/dummysat.in.toml
+veriq upstream "Power::?margin_positive" -p examples/compute_time.py --bindings -i examples/compute_time.in.toml
 
 # Machine-readable: nodes, data edges with bindings, assume edges, inputs, aggregation
-veriq upstream "Power::?verify_margin" -p examples/dummysat.py --json --key compute_time_s
+veriq upstream "Power::?margin_positive" -p examples/compute_time.py --json --key compute_time_s
 ```
 
 **Example output:**
 
 ```
-Upstream of Power::?verify_margin (5 definitions, 4 data edges, 1 assume edges)
+Upstream of Power::?margin_positive (8 definitions, 10 data edges, 1 assume edges)
 
-┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
-┃ Kind         ┃ Definition            ┃ Inputs ┃ compute_time_s ┃ propagated (max) ┃
-┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
-│ MODEL        │ Power::$              │      0 │              0 │                0 │
-│ CALCULATION  │ Power::@heavy_calc    │      1 │            120 │              120 │
-│ VERIFICATION │ Power::?verify_margin │      1 │              2 │              122 │
-└──────────────┴───────────────────────┴────────┴────────────────┴──────────────────┘
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
+┃ Kind         ┃ Definition                       ┃ Inputs ┃ compute_time_s ┃ propagated (max) ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
+│ MODEL        │ Power::$                         │      0 │              0 │                0 │
+│ MODEL        │ Thermal::$                       │      0 │              0 │                0 │
+│ CALCULATION  │ Power::@solar_generation         │      1 │             30 │               30 │
+│ CALCULATION  │ Power::@battery_sizing           │      1 │            120 │              120 │
+│ CALCULATION  │ Thermal::@panel_temperature      │      2 │             45 │               75 │
+│ CALCULATION  │ Power::@power_margin             │      3 │              5 │              125 │
+│ VERIFICATION │ Thermal::?panel_within_limit     │      2 │              1 │               76 │
+│ VERIFICATION │ Power::?margin_positive (target) │      1 │              2 │              127 │
+└──────────────┴──────────────────────────────────┴────────┴────────────────┴──────────────────┘
 
-Sequential total of compute_time_s (each definition once): 122
-Propagated to target (combine=max): 122 (critical path)
+Sequential total of compute_time_s (each definition once): 203
+Propagated to target (combine=max): 127 (critical path)
 
-Inputs (3 root-model leaves):
-  Power::$.design.battery_a.capacity
-    field unit: 'Wh'
-    provenance source: 'vendor datasheet rev.C'
+Inputs (9 root-model leaves):
+  Power::$.battery.capacity_ah
+    field unit: 'Ah'
+    provenance baseline: 'PDR-2026-03'
+    provenance source: 'cell datasheet'
+    provenance rationale: 'two 10 Ah strings in parallel'
   ...
 ```
+
+See [Metadata & Provenance](metadata.md) for the full walk-through of this example.
 
 The JSON output contains `target`, `nodes` (topological order, with `user_metadata` and, with `--key`, `value` / `propagated`), `data_edges` (each with `bindings`: `param`, `ref`, `leaves`), `assume_edges`, `inputs` (each with `field_metadata` and `provenance`), and `aggregation`.
 
