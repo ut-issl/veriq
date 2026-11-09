@@ -174,7 +174,7 @@ def _render_upstream_table(report: UpstreamReport, console: Console) -> None:
     for node_id in report.order:
         node = sub.nodes[node_id]
         kind_style = _get_kind_style(node.kind)
-        n_inputs = len(sub.predecessors(node_id)) + len(sub.assumptions_of(node_id))
+        n_inputs = len(sub.predecessors(node_id))
         label = escape(str(node_id)) + (" [dim](target)[/dim]" if node_id == sub.target else "")
         row = [f"[{kind_style}]{node.kind.upper()}[/{kind_style}]", label, str(n_inputs)]
         if agg is not None:
