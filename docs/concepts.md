@@ -29,6 +29,13 @@ project = vq.Project("MySatellite")
 
 A project contains one or more scopes and manages the overall dependency graph.
 
+To load a project defined in another file the way the CLI does, use `vq.load_project()` with either a script path or a `module.path:variable` string:
+
+```python
+project = vq.load_project("examples/compute_time.py")
+project = vq.load_project("examples.compute_time:project")
+```
+
 ## Scope
 
 A **Scope** groups related models, calculations, and verifications:
