@@ -22,6 +22,7 @@ nav = [
     { "Step 7: Requirements Traceability" = "tutorial/step7-requirements.md" },
   ] },
   { "Concepts" = "concepts.md" },
+  { "Metadata & Provenance" = "metadata.md" },
   { "CLI Reference" = "cli-reference.md" },
 ]
 
