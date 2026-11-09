@@ -40,7 +40,7 @@ project = vq.load_project()  # [tool.veriq].project from the nearest pyproject.t
 The CLI's defaults from `[tool.veriq]` (project, input and output paths, resolved against the project root) are available through `vq.get_config()`, so tools built on veriq can honour the same configuration:
 
 ```python
-config = vq.get_config()            # or vq.get_config(start_dir)
+config = vq.get_config()  # or vq.get_config(start_dir)
 project = vq.load_project(config=config)
 provenance = vq.load_provenance_from_toml(project, config.input) if config.input else {}
 ```
