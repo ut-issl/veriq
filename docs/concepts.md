@@ -452,12 +452,12 @@ Internally the graph has one node per *output leaf*, so a calculation returning 
 ```python
 sub = vq.upstream_subgraph(project, "Power::?verify_margin")
 
-sub.nodes                      # {DefinitionId: DefinitionNode}, target included, each definition once
-sub.data_edges                 # producer -> consumer, with the parameter bindings of the consumer
-sub.assume_edges               # @vq.assume references, kept separate from data flow
-sub.inputs_of(node_id)         # which parameter reads which path, and the leaf paths it expands to
-sub.input_leaves()             # root-model leaves at the start of every chain (join key for provenance)
-sub.topological_order()        # producers before consumers (data edges only)
+sub.nodes  # {DefinitionId: DefinitionNode}, target included, each definition once
+sub.data_edges  # producer -> consumer, with the parameter bindings of the consumer
+sub.assume_edges  # @vq.assume references, kept separate from data flow
+sub.inputs_of(node_id)  # which parameter reads which path, and the leaf paths it expands to
+sub.input_leaves()  # root-model leaves at the start of every chain (join key for provenance)
+sub.topological_order()  # producers before consumers (data edges only)
 
 # Set-style aggregation over definitions, no double counting:
 total = sum(n.user_metadata.get("compute_time_s", 0.0) for n in sub.nodes.values())
