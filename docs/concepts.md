@@ -467,6 +467,20 @@ total = sum(n.user_metadata.get("compute_time_s", 0.0) for n in sub.nodes.values
 
 A definition without any leaf, such as an empty root model that another scope reads as a whole, is still a node; its `outputs` are empty. An unknown target raises `vq.DefinitionNotFoundError` (a `KeyError`).
 
+### Propagating Values Along the Graph
+
+Some aggregations depend on the *shape* of the DAG, not only on the node set. The parallel makespan of computation time, for example, is the longest path: a node can start only when all its inputs are ready. `propagate()` evaluates such recurrences in topological order:
+
+```python
+# value(node) = own(node) + combine(value(p) for p in predecessors(node))
+parallel = sub.propagate("compute_time_s", combine=max, default=0.0)   # critical path, at the target
+per_node = sub.propagate_all("compute_time_s", combine=max)            # {DefinitionId: value}
+```
+
+`own(node)` is `user_metadata[key]`, or `default` when the key is absent. Assume edges count as predecessors by default (`include_assumes=False` to restrict to data edges), because an assumed verification must complete before the computation that assumes it.
+
+`propagate` is a recurrence along paths, not a reduction over nodes: with `combine=sum` a dependency shared by several paths is counted once per path. For a sequential total, sum over `sub.nodes` as shown above.
+
 ## Execution Flow
 
 When you run `veriq calc`:
