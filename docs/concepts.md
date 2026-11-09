@@ -477,7 +477,7 @@ parallel = sub.propagate("compute_time_s", combine=max, default=0.0)   # critica
 per_node = sub.propagate_all("compute_time_s", combine=max)            # {DefinitionId: value}
 ```
 
-`own(node)` is `user_metadata[key]`, or `default` when the key is absent. Assume edges count as predecessors by default (`include_assumes=False` to restrict to data edges), because an assumed verification must complete before the computation that assumes it.
+`own(node)` is `user_metadata[key]`, or `default` when the key is absent. Only data edges propagate: an assumed verification is a premise rather than an input, so it is a node of the subgraph (and counts in set-style totals) but does not feed the recurrence.
 
 `propagate` is a recurrence along paths, not a reduction over nodes: with `combine=sum` a dependency shared by several paths is counted once per path. For a sequential total, sum over `sub.nodes` as shown above.
 
