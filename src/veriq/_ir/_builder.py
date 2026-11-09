@@ -10,6 +10,7 @@ from veriq._path import (
     iter_leaf_path_parts,
     parse_path,
 )
+from veriq._provenance import collect_field_metadata
 
 from ._graph_spec import GraphSpec
 from ._node_spec import NodeKind, NodeSpec
@@ -105,6 +106,7 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
     for scope_name, scope in project.scopes.items():
         # 1. Create MODEL nodes for root model leaf paths
         root_model = scope.get_root_model()
+        field_metadata_by_leaf = collect_field_metadata(root_model)
         for leaf_parts in iter_leaf_path_parts(root_model):
             leaf_ppath = ProjectPath(
                 scope=scope_name,
@@ -121,6 +123,7 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
                 param_mapping={},
                 metadata={},
                 user_metadata=scope.root_model_metadata,
+                field_metadata=field_metadata_by_leaf.get(leaf_parts, {}),
             )
             type_registry[leaf_ppath] = leaf_type
 

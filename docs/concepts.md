@@ -284,6 +284,59 @@ def verify_margin(
     return vq.Table({mode: margin[mode] > 0 for mode in Mode})
 ```
 
+## Input Provenance
+
+Input values rarely come from nowhere: a capacity comes from a datasheet, a margin from a review decision. veriq lets you record this **per input field**, in two complementary places. veriq does not interpret the contents; it only stores them and makes them retrievable per leaf path.
+
+### Field definition metadata (`vq.Meta`)
+
+Properties of the field itself (unit, governing document, owner) belong next to the field definition:
+
+```python
+from typing import Annotated
+
+
+class Battery(BaseModel):
+    capacity: Annotated[float, vq.Meta({"unit": "Wh", "source_doc": "EPS-ICD-001"})]
+    min_capacity: float
+
+
+class PowerModel(BaseModel):
+    battery: Annotated[Battery, vq.Meta(owner="power-team")]  # inherited by battery.*
+```
+
+The resolved metadata appears as `NodeSpec.field_metadata` on the corresponding MODEL leaf nodes of the dependency graph. It is kept separate from `@scope.root_model(metadata=...)`, which is shared by all leaves of the root model.
+
+### Value provenance (`provenance` table)
+
+The rationale for a *concrete value* belongs next to the value, in the reserved `provenance` table of the input TOML file. It mirrors the structure of the `model` table:
+
+```toml
+[Power.model.battery]
+capacity = 100.0
+min_capacity = 50.0
+
+[Power.provenance.battery]
+source = "vendor datasheet rev.C"      # applies to capacity and min_capacity
+
+[Power.provenance.battery.capacity]
+rationale = "20% EOL degradation applied"   # adds to the entry above
+```
+
+Rules:
+
+- A key that names a model field or `Table` key is a sub-table for that path; every other key is metadata for the current path.
+- Metadata is inherited along the path from the root model to each leaf. The nearest path wins per key.
+- A sub-table whose key does not exist in the model is an error, so typos are never silently dropped.
+- `veriq update` never generates or removes `provenance` tables; `veriq schema` describes them in the JSON schema.
+
+Load provenance separately from model data:
+
+```python
+provenance = vq.load_provenance_from_toml(project, "input.toml")
+# {ProjectPath(Power::$.battery.capacity): {"source": "vendor datasheet rev.C", "rationale": "..."}, ...}
+```
+
 ## External Data (FileRef)
 
 **FileRef** allows you to reference external files in your models with automatic checksum tracking for reproducibility:

@@ -9,6 +9,17 @@
       "properties": {
         "model": {
           "$ref": "#/$defs/AOCSModel"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AOCSProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -31,6 +42,39 @@
         "requirement"
       ],
       "title": "AOCSModel",
+      "type": "object"
+    },
+    "AOCSProvenance": {
+      "additionalProperties": true,
+      "properties": {
+        "design": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Design"
+        },
+        "requirement": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requirement"
+        }
+      },
+      "title": "AOCSProvenance",
       "type": "object"
     },
     "AOCSRequirement": {
@@ -57,7 +101,7 @@
       "type": "object"
     },
     "FileRef": {
-      "description": "Reference to a local file.\n\nStreams file for checksum - doesn't load entire file into memory.\nUser accesses data via `path` attribute.\n\nExample:\n    # In model definition\n    class MyModel(BaseModel):\n        config_file: FileRef\n\n    # In calculation\n    @scope.calculation()\n    def process(config_file: Annotated[FileRef, vq.Ref(\"$.config_file\")]) -> Result:\n        data = config_file.path.read_bytes()\n        return process_data(data)\n\n    # In TOML\n    [Scope.model.config_file]\n    path = \"data/config.json\"\n    checksum = \"sha256:abc123...\"  # Added by veriq after first run",
+      "description": "Reference to a local file.\n\nStreams file for checksum - doesn't load entire file into memory.\nUser accesses data via `path` attribute.\n\nRelative paths are resolved against the base directory set via\n`input_base_dir()` context manager (typically the TOML file's directory).\n\nExample:\n    # In model definition\n    class MyModel(BaseModel):\n        config_file: FileRef\n\n    # In calculation\n    @scope.calculation()\n    def process(config_file: Annotated[FileRef, vq.Ref(\"$.config_file\")]) -> Result:\n        data = config_file.path.read_bytes()\n        return process_data(data)\n\n    # In TOML\n    [Scope.model.config_file]\n    path = \"data/config.json\"\n    checksum = \"sha256:abc123...\"  # Added by veriq after first run",
       "properties": {
         "checksum": {
           "anyOf": [
@@ -87,12 +131,346 @@
       "properties": {
         "model": {
           "$ref": "#/$defs/PowerSubsystemModel"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PowerProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
         "model"
       ],
       "title": "PowerInput",
+      "type": "object"
+    },
+    "PowerProvenance": {
+      "additionalProperties": true,
+      "properties": {
+        "design": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PowerProvenance_design"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "requirement": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requirement"
+        }
+      },
+      "title": "PowerProvenance",
+      "type": "object"
+    },
+    "PowerProvenance_design": {
+      "additionalProperties": true,
+      "properties": {
+        "battery_a": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PowerProvenance_design_battery_a"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "battery_b": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PowerProvenance_design_battery_b"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "solar_panel": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PowerProvenance_design_solar_panel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "power_generation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PowerProvenance_design_power_generation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "power_consumption": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PowerProvenance_design_power_consumption"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "config_file": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config File"
+        }
+      },
+      "title": "PowerProvenance_design",
+      "type": "object"
+    },
+    "PowerProvenance_design_battery_a": {
+      "additionalProperties": true,
+      "properties": {
+        "capacity": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capacity"
+        },
+        "min_capacity": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Capacity"
+        }
+      },
+      "title": "PowerProvenance_design_battery_a",
+      "type": "object"
+    },
+    "PowerProvenance_design_battery_b": {
+      "additionalProperties": true,
+      "properties": {
+        "capacity": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capacity"
+        },
+        "min_capacity": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Capacity"
+        }
+      },
+      "title": "PowerProvenance_design_battery_b",
+      "type": "object"
+    },
+    "PowerProvenance_design_power_consumption": {
+      "additionalProperties": true,
+      "properties": {
+        "nominal": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nominal"
+        },
+        "safe": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Safe"
+        },
+        "mission": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mission"
+        }
+      },
+      "title": "PowerProvenance_design_power_consumption",
+      "type": "object"
+    },
+    "PowerProvenance_design_power_generation": {
+      "additionalProperties": true,
+      "properties": {
+        "nominal": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nominal"
+        },
+        "safe": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Safe"
+        },
+        "mission": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mission"
+        }
+      },
+      "title": "PowerProvenance_design_power_generation",
+      "type": "object"
+    },
+    "PowerProvenance_design_solar_panel": {
+      "additionalProperties": true,
+      "properties": {
+        "area": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Area"
+        },
+        "efficiency": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Efficiency"
+        },
+        "max_temperature": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Temperature"
+        },
+        "thermal_coefficient": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Thermal Coefficient"
+        }
+      },
+      "title": "PowerProvenance_design_solar_panel",
       "type": "object"
     },
     "PowerSubsystemDesign": {
@@ -194,12 +572,424 @@
       "properties": {
         "model": {
           "$ref": "#/$defs/ReactionWheelAssemblyModel"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RWAProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
         "model"
       ],
       "title": "RWAInput",
+      "type": "object"
+    },
+    "RWAProvenance": {
+      "additionalProperties": true,
+      "properties": {
+        "wheel_x": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RWAProvenance_wheel_x"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wheel_y": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RWAProvenance_wheel_y"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wheel_z": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RWAProvenance_wheel_z"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "power_consumption": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RWAProvenance_power_consumption"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "power_limit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RWAProvenance_power_limit"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "peak_power_consumption": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RWAProvenance_peak_power_consumption"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "mass": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mass"
+        }
+      },
+      "title": "RWAProvenance",
+      "type": "object"
+    },
+    "RWAProvenance_peak_power_consumption": {
+      "additionalProperties": true,
+      "properties": {
+        "initial,nominal": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Initial,Nominal"
+        },
+        "initial,safe": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Initial,Safe"
+        },
+        "initial,mission": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Initial,Mission"
+        },
+        "cruise,nominal": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cruise,Nominal"
+        },
+        "cruise,safe": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cruise,Safe"
+        },
+        "cruise,mission": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cruise,Mission"
+        }
+      },
+      "title": "RWAProvenance_peak_power_consumption",
+      "type": "object"
+    },
+    "RWAProvenance_power_consumption": {
+      "additionalProperties": true,
+      "properties": {
+        "nominal": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nominal"
+        },
+        "safe": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Safe"
+        },
+        "mission": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mission"
+        }
+      },
+      "title": "RWAProvenance_power_consumption",
+      "type": "object"
+    },
+    "RWAProvenance_power_limit": {
+      "additionalProperties": true,
+      "properties": {
+        "nominal": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nominal"
+        },
+        "safe": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Safe"
+        },
+        "mission": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mission"
+        }
+      },
+      "title": "RWAProvenance_power_limit",
+      "type": "object"
+    },
+    "RWAProvenance_wheel_x": {
+      "additionalProperties": true,
+      "properties": {
+        "max_torque": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Torque"
+        },
+        "power_consumption": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Power Consumption"
+        },
+        "mass": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mass"
+        }
+      },
+      "title": "RWAProvenance_wheel_x",
+      "type": "object"
+    },
+    "RWAProvenance_wheel_y": {
+      "additionalProperties": true,
+      "properties": {
+        "max_torque": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Torque"
+        },
+        "power_consumption": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Power Consumption"
+        },
+        "mass": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mass"
+        }
+      },
+      "title": "RWAProvenance_wheel_y",
+      "type": "object"
+    },
+    "RWAProvenance_wheel_z": {
+      "additionalProperties": true,
+      "properties": {
+        "max_torque": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Torque"
+        },
+        "power_consumption": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Power Consumption"
+        },
+        "mass": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mass"
+        }
+      },
+      "title": "RWAProvenance_wheel_z",
       "type": "object"
     },
     "ReactionWheelAssemblyModel": {
@@ -377,6 +1167,19 @@
       "properties": {
         "model": {
           "$ref": "#/$defs/SatelliteModel"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance"
         }
       },
       "required": [
@@ -389,6 +1192,19 @@
       "properties": {
         "model": {
           "$ref": "#/$defs/ThermalModel"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance"
         }
       },
       "required": [
