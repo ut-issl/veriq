@@ -78,8 +78,8 @@ Power::$ ──► @solar_generation (30 s) ──┐
 ```python
 sub = vq.upstream_subgraph(project, "Power::?margin_positive")
 
-sequential = sum(n.user_metadata.get("compute_time_s", 0.0) for n in sub.nodes.values())   # 203.0
-parallel = sub.propagate("compute_time_s", combine=max)                                    # 127.0
+sequential = sum(n.user_metadata.get("compute_time_s", 0.0) for n in sub.nodes.values())  # 203.0
+parallel = sub.propagate("compute_time_s", combine=max)  # 127.0
 ```
 
 **Set-style aggregation** answers questions about the *set* of upstream definitions: total compute time if everything runs one after another, the set of tools involved, the owning teams. It needs no helper. Iterate `sub.nodes` with plain Python. Every definition appears exactly once, no matter how many output leaves it has or how many paths lead to it.
