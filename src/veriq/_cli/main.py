@@ -21,6 +21,7 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 
+from veriq._config import ConfigError, VeriqConfig, get_config
 from veriq._default import default
 from veriq._diff import DiffKind, diff_dicts, format_toml_path
 from veriq._discover import load_project_from_module_path, load_project_from_script
@@ -35,7 +36,6 @@ from veriq._toml_edit import dumps_toml, merge_into_document, parse_toml_preserv
 from veriq._traceability import RequirementStatus, build_traceability_report
 from veriq._update import update_input_data
 
-from .config import ConfigError, VeriqConfig, get_config
 from .render_trace import render_traceability_summary, render_traceability_table
 from .upstream_query import Combine
 
@@ -133,7 +133,7 @@ def _load_project(
         raise typer.BadParameter(msg)
 
     # Load from config
-    from .config import ModuleSource, ScriptSource  # noqa: PLC0415
+    from veriq._config import ModuleSource, ScriptSource  # noqa: PLC0415
 
     match config.project:
         case ScriptSource(script=script, name=name):
