@@ -191,7 +191,7 @@ class Project:
         {
             "ScopeName": {
                 "model": <root model instance>,
-                "provenance": <optional, mirrors the root model; only if include_provenance>
+                "provenance": <optional, model path -> metadata table; only if include_provenance>
             },
             ...
         }

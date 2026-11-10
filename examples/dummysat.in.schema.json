@@ -45,33 +45,12 @@
       "type": "object"
     },
     "AOCSProvenance": {
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
-        "design": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Design"
-        },
-        "requirement": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Requirement"
+        "$": {
+          "additionalProperties": true,
+          "title": "$",
+          "type": "object"
         }
       },
       "title": "AOCSProvenance",
@@ -151,326 +130,120 @@
       "type": "object"
     },
     "PowerProvenance": {
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
-        "design": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PowerProvenance_design"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "$": {
+          "additionalProperties": true,
+          "title": "$",
+          "type": "object"
         },
-        "requirement": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Requirement"
+        "$.design": {
+          "additionalProperties": true,
+          "title": "$.design",
+          "type": "object"
+        },
+        "$.design.battery_a": {
+          "additionalProperties": true,
+          "title": "$.design.battery_a",
+          "type": "object"
+        },
+        "$.design.battery_a.capacity": {
+          "additionalProperties": true,
+          "title": "$.design.battery_a.capacity",
+          "type": "object"
+        },
+        "$.design.battery_a.min_capacity": {
+          "additionalProperties": true,
+          "title": "$.design.battery_a.min_capacity",
+          "type": "object"
+        },
+        "$.design.battery_b": {
+          "additionalProperties": true,
+          "title": "$.design.battery_b",
+          "type": "object"
+        },
+        "$.design.battery_b.capacity": {
+          "additionalProperties": true,
+          "title": "$.design.battery_b.capacity",
+          "type": "object"
+        },
+        "$.design.battery_b.min_capacity": {
+          "additionalProperties": true,
+          "title": "$.design.battery_b.min_capacity",
+          "type": "object"
+        },
+        "$.design.solar_panel": {
+          "additionalProperties": true,
+          "title": "$.design.solar_panel",
+          "type": "object"
+        },
+        "$.design.solar_panel.area": {
+          "additionalProperties": true,
+          "title": "$.design.solar_panel.area",
+          "type": "object"
+        },
+        "$.design.solar_panel.efficiency": {
+          "additionalProperties": true,
+          "title": "$.design.solar_panel.efficiency",
+          "type": "object"
+        },
+        "$.design.solar_panel.max_temperature": {
+          "additionalProperties": true,
+          "title": "$.design.solar_panel.max_temperature",
+          "type": "object"
+        },
+        "$.design.solar_panel.thermal_coefficient": {
+          "additionalProperties": true,
+          "title": "$.design.solar_panel.thermal_coefficient",
+          "type": "object"
+        },
+        "$.design.power_generation": {
+          "additionalProperties": true,
+          "title": "$.design.power_generation",
+          "type": "object"
+        },
+        "$.design.power_generation[nominal]": {
+          "additionalProperties": true,
+          "title": "$.design.power_generation[nominal]",
+          "type": "object"
+        },
+        "$.design.power_generation[safe]": {
+          "additionalProperties": true,
+          "title": "$.design.power_generation[safe]",
+          "type": "object"
+        },
+        "$.design.power_generation[mission]": {
+          "additionalProperties": true,
+          "title": "$.design.power_generation[mission]",
+          "type": "object"
+        },
+        "$.design.power_consumption": {
+          "additionalProperties": true,
+          "title": "$.design.power_consumption",
+          "type": "object"
+        },
+        "$.design.power_consumption[nominal]": {
+          "additionalProperties": true,
+          "title": "$.design.power_consumption[nominal]",
+          "type": "object"
+        },
+        "$.design.power_consumption[safe]": {
+          "additionalProperties": true,
+          "title": "$.design.power_consumption[safe]",
+          "type": "object"
+        },
+        "$.design.power_consumption[mission]": {
+          "additionalProperties": true,
+          "title": "$.design.power_consumption[mission]",
+          "type": "object"
+        },
+        "$.design.config_file": {
+          "additionalProperties": true,
+          "title": "$.design.config_file",
+          "type": "object"
         }
       },
       "title": "PowerProvenance",
-      "type": "object"
-    },
-    "PowerProvenance_design": {
-      "additionalProperties": true,
-      "properties": {
-        "battery_a": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PowerProvenance_design_battery_a"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "battery_b": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PowerProvenance_design_battery_b"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "solar_panel": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PowerProvenance_design_solar_panel"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "power_generation": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PowerProvenance_design_power_generation"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "power_consumption": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PowerProvenance_design_power_consumption"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "config_file": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Config File"
-        }
-      },
-      "title": "PowerProvenance_design",
-      "type": "object"
-    },
-    "PowerProvenance_design_battery_a": {
-      "additionalProperties": true,
-      "properties": {
-        "capacity": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Capacity"
-        },
-        "min_capacity": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Min Capacity"
-        }
-      },
-      "title": "PowerProvenance_design_battery_a",
-      "type": "object"
-    },
-    "PowerProvenance_design_battery_b": {
-      "additionalProperties": true,
-      "properties": {
-        "capacity": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Capacity"
-        },
-        "min_capacity": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Min Capacity"
-        }
-      },
-      "title": "PowerProvenance_design_battery_b",
-      "type": "object"
-    },
-    "PowerProvenance_design_power_consumption": {
-      "additionalProperties": true,
-      "properties": {
-        "nominal": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Nominal"
-        },
-        "safe": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Safe"
-        },
-        "mission": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Mission"
-        }
-      },
-      "title": "PowerProvenance_design_power_consumption",
-      "type": "object"
-    },
-    "PowerProvenance_design_power_generation": {
-      "additionalProperties": true,
-      "properties": {
-        "nominal": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Nominal"
-        },
-        "safe": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Safe"
-        },
-        "mission": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Mission"
-        }
-      },
-      "title": "PowerProvenance_design_power_generation",
-      "type": "object"
-    },
-    "PowerProvenance_design_solar_panel": {
-      "additionalProperties": true,
-      "properties": {
-        "area": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Area"
-        },
-        "efficiency": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Efficiency"
-        },
-        "max_temperature": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Max Temperature"
-        },
-        "thermal_coefficient": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Thermal Coefficient"
-        }
-      },
-      "title": "PowerProvenance_design_solar_panel",
       "type": "object"
     },
     "PowerSubsystemDesign": {
@@ -592,404 +365,155 @@
       "type": "object"
     },
     "RWAProvenance": {
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
-        "wheel_x": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RWAProvenance_wheel_x"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "$": {
+          "additionalProperties": true,
+          "title": "$",
+          "type": "object"
         },
-        "wheel_y": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RWAProvenance_wheel_y"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "$.wheel_x": {
+          "additionalProperties": true,
+          "title": "$.wheel_x",
+          "type": "object"
         },
-        "wheel_z": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RWAProvenance_wheel_z"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "$.wheel_x.max_torque": {
+          "additionalProperties": true,
+          "title": "$.wheel_x.max_torque",
+          "type": "object"
         },
-        "power_consumption": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RWAProvenance_power_consumption"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "$.wheel_x.power_consumption": {
+          "additionalProperties": true,
+          "title": "$.wheel_x.power_consumption",
+          "type": "object"
         },
-        "power_limit": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RWAProvenance_power_limit"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "$.wheel_x.mass": {
+          "additionalProperties": true,
+          "title": "$.wheel_x.mass",
+          "type": "object"
         },
-        "peak_power_consumption": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RWAProvenance_peak_power_consumption"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "$.wheel_y": {
+          "additionalProperties": true,
+          "title": "$.wheel_y",
+          "type": "object"
         },
-        "mass": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Mass"
+        "$.wheel_y.max_torque": {
+          "additionalProperties": true,
+          "title": "$.wheel_y.max_torque",
+          "type": "object"
+        },
+        "$.wheel_y.power_consumption": {
+          "additionalProperties": true,
+          "title": "$.wheel_y.power_consumption",
+          "type": "object"
+        },
+        "$.wheel_y.mass": {
+          "additionalProperties": true,
+          "title": "$.wheel_y.mass",
+          "type": "object"
+        },
+        "$.wheel_z": {
+          "additionalProperties": true,
+          "title": "$.wheel_z",
+          "type": "object"
+        },
+        "$.wheel_z.max_torque": {
+          "additionalProperties": true,
+          "title": "$.wheel_z.max_torque",
+          "type": "object"
+        },
+        "$.wheel_z.power_consumption": {
+          "additionalProperties": true,
+          "title": "$.wheel_z.power_consumption",
+          "type": "object"
+        },
+        "$.wheel_z.mass": {
+          "additionalProperties": true,
+          "title": "$.wheel_z.mass",
+          "type": "object"
+        },
+        "$.power_consumption": {
+          "additionalProperties": true,
+          "title": "$.power_consumption",
+          "type": "object"
+        },
+        "$.power_consumption[nominal]": {
+          "additionalProperties": true,
+          "title": "$.power_consumption[nominal]",
+          "type": "object"
+        },
+        "$.power_consumption[safe]": {
+          "additionalProperties": true,
+          "title": "$.power_consumption[safe]",
+          "type": "object"
+        },
+        "$.power_consumption[mission]": {
+          "additionalProperties": true,
+          "title": "$.power_consumption[mission]",
+          "type": "object"
+        },
+        "$.power_limit": {
+          "additionalProperties": true,
+          "title": "$.power_limit",
+          "type": "object"
+        },
+        "$.power_limit[nominal]": {
+          "additionalProperties": true,
+          "title": "$.power_limit[nominal]",
+          "type": "object"
+        },
+        "$.power_limit[safe]": {
+          "additionalProperties": true,
+          "title": "$.power_limit[safe]",
+          "type": "object"
+        },
+        "$.power_limit[mission]": {
+          "additionalProperties": true,
+          "title": "$.power_limit[mission]",
+          "type": "object"
+        },
+        "$.peak_power_consumption": {
+          "additionalProperties": true,
+          "title": "$.peak_power_consumption",
+          "type": "object"
+        },
+        "$.peak_power_consumption[initial,nominal]": {
+          "additionalProperties": true,
+          "title": "$.peak_power_consumption[initial,nominal]",
+          "type": "object"
+        },
+        "$.peak_power_consumption[initial,safe]": {
+          "additionalProperties": true,
+          "title": "$.peak_power_consumption[initial,safe]",
+          "type": "object"
+        },
+        "$.peak_power_consumption[initial,mission]": {
+          "additionalProperties": true,
+          "title": "$.peak_power_consumption[initial,mission]",
+          "type": "object"
+        },
+        "$.peak_power_consumption[cruise,nominal]": {
+          "additionalProperties": true,
+          "title": "$.peak_power_consumption[cruise,nominal]",
+          "type": "object"
+        },
+        "$.peak_power_consumption[cruise,safe]": {
+          "additionalProperties": true,
+          "title": "$.peak_power_consumption[cruise,safe]",
+          "type": "object"
+        },
+        "$.peak_power_consumption[cruise,mission]": {
+          "additionalProperties": true,
+          "title": "$.peak_power_consumption[cruise,mission]",
+          "type": "object"
+        },
+        "$.mass": {
+          "additionalProperties": true,
+          "title": "$.mass",
+          "type": "object"
         }
       },
       "title": "RWAProvenance",
-      "type": "object"
-    },
-    "RWAProvenance_peak_power_consumption": {
-      "additionalProperties": true,
-      "properties": {
-        "initial,nominal": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Initial,Nominal"
-        },
-        "initial,safe": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Initial,Safe"
-        },
-        "initial,mission": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Initial,Mission"
-        },
-        "cruise,nominal": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Cruise,Nominal"
-        },
-        "cruise,safe": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Cruise,Safe"
-        },
-        "cruise,mission": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Cruise,Mission"
-        }
-      },
-      "title": "RWAProvenance_peak_power_consumption",
-      "type": "object"
-    },
-    "RWAProvenance_power_consumption": {
-      "additionalProperties": true,
-      "properties": {
-        "nominal": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Nominal"
-        },
-        "safe": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Safe"
-        },
-        "mission": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Mission"
-        }
-      },
-      "title": "RWAProvenance_power_consumption",
-      "type": "object"
-    },
-    "RWAProvenance_power_limit": {
-      "additionalProperties": true,
-      "properties": {
-        "nominal": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Nominal"
-        },
-        "safe": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Safe"
-        },
-        "mission": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Mission"
-        }
-      },
-      "title": "RWAProvenance_power_limit",
-      "type": "object"
-    },
-    "RWAProvenance_wheel_x": {
-      "additionalProperties": true,
-      "properties": {
-        "max_torque": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Max Torque"
-        },
-        "power_consumption": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Power Consumption"
-        },
-        "mass": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Mass"
-        }
-      },
-      "title": "RWAProvenance_wheel_x",
-      "type": "object"
-    },
-    "RWAProvenance_wheel_y": {
-      "additionalProperties": true,
-      "properties": {
-        "max_torque": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Max Torque"
-        },
-        "power_consumption": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Power Consumption"
-        },
-        "mass": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Mass"
-        }
-      },
-      "title": "RWAProvenance_wheel_y",
-      "type": "object"
-    },
-    "RWAProvenance_wheel_z": {
-      "additionalProperties": true,
-      "properties": {
-        "max_torque": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Max Torque"
-        },
-        "power_consumption": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Power Consumption"
-        },
-        "mass": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Mass"
-        }
-      },
-      "title": "RWAProvenance_wheel_z",
       "type": "object"
     },
     "ReactionWheelAssemblyModel": {
@@ -1171,21 +695,31 @@
         "provenance": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/$defs/SystemProvenance"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Provenance"
+          "default": null
         }
       },
       "required": [
         "model"
       ],
       "title": "SystemInput",
+      "type": "object"
+    },
+    "SystemProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "$": {
+          "additionalProperties": true,
+          "title": "$",
+          "type": "object"
+        }
+      },
+      "title": "SystemProvenance",
       "type": "object"
     },
     "ThermalInput": {
@@ -1196,15 +730,13 @@
         "provenance": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/$defs/ThermalProvenance"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Provenance"
+          "default": null
         }
       },
       "required": [
@@ -1216,6 +748,18 @@
     "ThermalModel": {
       "properties": {},
       "title": "ThermalModel",
+      "type": "object"
+    },
+    "ThermalProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "$": {
+          "additionalProperties": true,
+          "title": "$",
+          "type": "object"
+        }
+      },
+      "title": "ThermalProvenance",
       "type": "object"
     }
   },
