@@ -56,14 +56,14 @@ class PowerDesign(BaseModel):
 capacity_ah = 20.0
 
 [Power.provenance]
-baseline = "PDR-2026-03"                      # applies to every Power input
+"$" = { baseline = "PDR-2026-03" }            # applies to every Power input
 
-[Power.provenance.battery.capacity_ah]
+[Power.provenance."$.battery.capacity_ah"]
 source = "cell datasheet"
 rationale = "two 10 Ah strings in parallel"
 ```
 
-The `provenance` table mirrors the `model` table. A key naming a model field or `Table` key is a sub-table for that path; any other key is metadata for the current path. The same inheritance rule applies. A sub-table whose key does not exist in the model is an error, so a typo never silently drops provenance. `veriq calc` validates the table; `veriq schema` describes it; `veriq update` leaves it untouched.
+Each entry of the `provenance` table is keyed by the path of the input it describes, in the syntax of `vq.Ref`: `"$"` for the whole root model, `"$.battery"` for a nested model, `"$.power[safe]"` for a `Table` entry. The entry itself is free-form metadata (scalars, arrays or tables), so a metadata key never collides with a field name. The same inheritance rule applies. A key that is not a path of the model is an error, so a typo never silently drops provenance. `veriq calc` validates the table; `veriq schema` describes it; `veriq update` leaves it untouched.
 
 ## Two kinds of aggregation
 
@@ -139,4 +139,4 @@ Inputs (9 root-model leaves):
 
 - **Requirements carry no metadata.** Requirements form a decomposition tree, not part of the dependency DAG this foundation targets.
 - **Nothing is measured.** `compute_time_s` is a declared value; veriq does not time calculations.
-- **Metadata is untyped.** A plain `dict` is validated for nothing but shape in the `provenance` table (sub-tables must name model paths). Typed metadata schemas are a possible later addition.
+- **Metadata is untyped.** A plain `dict` is validated for nothing but shape in the `provenance` table (its keys must be model paths). Typed metadata schemas are a possible later addition.
