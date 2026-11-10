@@ -35,13 +35,13 @@ path = "power_config.json"  # Relative to the directory in which this file exist
 checksum = "sha256:5218467b66140a4995551b6ea58a2b5cc452606784b6296704ffdc0cd6ea0c0c"
 
 # Provenance: why the input values above are what they are (see docs/concepts.md).
-[Power.provenance.design.battery_a]
+[Power.provenance."$.design.battery_a"]
 source = "vendor datasheet rev.C"
 
-[Power.provenance.design.battery_a.min_capacity]
+[Power.provenance."$.design.battery_a.min_capacity"]
 rationale = "50% depth-of-discharge limit from the battery lifetime analysis"
 
-[Power.provenance.design.power_consumption]
+[Power.provenance."$.design.power_consumption"]
 source = "power budget v3"
 
 [Power.model.requirement]
