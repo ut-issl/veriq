@@ -27,12 +27,13 @@ from typing import TYPE_CHECKING, Any
 from ._graph import topological_sort
 from ._ir import GraphSpec, NodeKind, build_graph_spec
 from ._models import Project
-from ._path import ProjectPath, parse_project_path
+from ._path import ProjectPath, parse_path, parse_project_path
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
     from ._ir import NodeSpec
+    from ._models import Calculation, Ref, Verification
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +57,8 @@ class DefinitionNode:
 
     `outputs` lists the value-bearing leaf paths only. A `Table` is stored in the IR both
     as a whole and as one node per key; the whole-table node carries no value and is left out.
+    A definition whose type has no leaves at all (e.g. an empty root model) has no outputs
+    but is still a node, so a dependency on it stays visible.
     """
 
     id: DefinitionId
@@ -166,6 +169,27 @@ class UpstreamSubgraph:
 # =============================================================================
 
 
+class DefinitionNotFoundError(KeyError):
+    """The requested target (or an assumed verification) does not name a definition in the graph."""
+
+    def __str__(self) -> str:
+        return str(self.args[0]) if self.args else ""
+
+
+_KIND_BY_SYMBOL = {"$": NodeKind.MODEL, "@": NodeKind.CALCULATION, "?": NodeKind.VERIFICATION}
+
+
+@dataclass(frozen=True, slots=True)
+class _Definition:
+    """What the reduction needs to know about one definition."""
+
+    kind: NodeKind
+    user_metadata: Mapping[str, Any]
+    outputs: tuple[ProjectPath, ...]
+    bindings: tuple[InputBinding, ...]
+    assumed: frozenset[DefinitionId]
+
+
 def _group_by_definition(spec: GraphSpec) -> dict[DefinitionId, list[NodeSpec]]:
     groups: dict[DefinitionId, list[NodeSpec]] = {}
     for node in spec.nodes.values():
@@ -234,42 +258,127 @@ def _resolve_target(target: ProjectPath | str | DefinitionId) -> DefinitionId:
     return DefinitionId.from_path(target)
 
 
+def _definitions_from_spec(spec: GraphSpec, value_leaves: frozenset[ProjectPath]) -> dict[DefinitionId, _Definition]:
+    """One `_Definition` per definition that has at least one node in the IR."""
+    return {
+        node_id: _Definition(
+            kind=leaves[0].kind,
+            user_metadata=leaves[0].user_metadata,
+            outputs=tuple(sorted((leaf.id for leaf in leaves if leaf.id in value_leaves), key=str)),
+            bindings=_bindings_of(leaves, value_leaves),
+            assumed=_assumed_ids(leaves),
+        )
+        for node_id, leaves in _group_by_definition(spec).items()
+    }
+
+
+def _leafless_definitions(
+    project: Project,
+    known: Mapping[DefinitionId, _Definition],
+    value_leaves: frozenset[ProjectPath],
+) -> dict[DefinitionId, _Definition]:
+    """Definitions of `project` that the IR has no node for, because their type has no leaves.
+
+    The typical case is an empty root model (`class ThermalModel(BaseModel): ...`) that
+    another scope references as a whole.
+    """
+
+    def bindings(dep_ppaths: Mapping[str, ProjectPath]) -> tuple[InputBinding, ...]:
+        return tuple(
+            InputBinding(param=param, ref=ref, leaves=frozenset(leaf for leaf in value_leaves if _is_under(leaf, ref)))
+            for param, ref in dep_ppaths.items()
+        )
+
+    def assumed(scope_name: str, refs: Iterable[Ref]) -> frozenset[DefinitionId]:
+        return frozenset(
+            DefinitionId(scope=ref.scope if ref.scope is not None else scope_name, root=parse_path(ref.path).root)
+            for ref in refs
+        )
+
+    leafless: dict[DefinitionId, _Definition] = {}
+    for scope_name, scope in project.scopes.items():
+        model_id = DefinitionId(scope=scope_name, root="$")
+        if model_id not in known:
+            leafless[model_id] = _Definition(
+                kind=NodeKind.MODEL,
+                user_metadata=scope.root_model_metadata,
+                outputs=(),
+                bindings=(),
+                assumed=frozenset(),
+            )
+        functions: list[tuple[str, NodeKind, Mapping[str, Calculation[Any, ...] | Verification[Any, ...]]]] = [
+            ("@", NodeKind.CALCULATION, scope.calculations),
+            ("?", NodeKind.VERIFICATION, scope.verifications),
+        ]
+        for symbol, kind, definitions in functions:
+            for name, definition in definitions.items():
+                node_id = DefinitionId(scope=scope_name, root=f"{symbol}{name}")
+                if node_id not in known:
+                    leafless[node_id] = _Definition(
+                        kind=kind,
+                        user_metadata=definition.metadata,
+                        outputs=(),
+                        bindings=bindings(definition.dep_ppaths),
+                        assumed=assumed(scope_name, definition.assumed_refs),
+                    )
+    return leafless
+
+
 class _Reducer:
     """Collects definition-level nodes and edges while walking upstream of a target."""
 
-    def __init__(self, spec: GraphSpec, *, follow_assumes: bool) -> None:
-        self.groups = _group_by_definition(spec)
-        self.value_leaves = _value_leaves(spec)
+    def __init__(self, spec: GraphSpec, project: Project | None, *, follow_assumes: bool) -> None:
+        value_leaves = _value_leaves(spec)
+        self.definitions = _definitions_from_spec(spec, value_leaves)
+        if project is not None:
+            self.definitions.update(_leafless_definitions(project, self.definitions, value_leaves))
+        self.scope_names = frozenset(spec.scope_names)
         self.follow_assumes = follow_assumes
         self.nodes: dict[DefinitionId, DefinitionNode] = {}
         self.data_edges: list[DataEdge] = []
         self.assume_edges: list[AssumeEdge] = []
 
+    def definition(self, node_id: DefinitionId) -> _Definition:
+        """Look up a definition that is known to exist because another definition reads it.
+
+        Without a `Project` (a bare `GraphSpec` was given) a definition without leaves has
+        no node to describe it, so only its kind, taken from the path symbol, is known.
+        """
+        if node_id not in self.definitions:
+            self.definitions[node_id] = _Definition(
+                kind=_KIND_BY_SYMBOL[node_id.root[0]],
+                user_metadata={},
+                outputs=(),
+                bindings=(),
+                assumed=frozenset(),
+            )
+        return self.definitions[node_id]
+
     def add_node(self, node_id: DefinitionId) -> None:
         if node_id in self.nodes:
             return
-        leaves = self.groups[node_id]
+        definition = self.definition(node_id)
         self.nodes[node_id] = DefinitionNode(
             id=node_id,
-            kind=leaves[0].kind,
-            outputs=tuple(sorted((leaf.id for leaf in leaves if leaf.id in self.value_leaves), key=str)),
-            user_metadata=leaves[0].user_metadata,
+            kind=definition.kind,
+            outputs=definition.outputs,
+            user_metadata=definition.user_metadata,
         )
 
     def expand(self, node_id: DefinitionId) -> Iterable[DefinitionId]:
         """Record edges into `node_id` and yield the definitions to visit next."""
-        leaves = self.groups[node_id]
+        definition = self.definition(node_id)
         by_source: dict[DefinitionId, list[InputBinding]] = {}
-        for binding in _bindings_of(leaves, self.value_leaves):
+        for binding in definition.bindings:
             by_source.setdefault(DefinitionId.from_path(binding.ref), []).append(binding)
         for source_id, bindings in by_source.items():
             if source_id != node_id:
                 self.data_edges.append(DataEdge(source=source_id, target=node_id, bindings=tuple(bindings)))
                 yield source_id
-        for assumed_id in _assumed_ids(leaves):
-            if assumed_id not in self.groups:
+        for assumed_id in definition.assumed:
+            if assumed_id not in self.definitions:
                 msg = f"Assumed verification not found: {assumed_id} (assumed by {node_id})"
-                raise KeyError(msg)
+                raise DefinitionNotFoundError(msg)
             self.assume_edges.append(AssumeEdge(source=assumed_id, target=node_id))
             if self.follow_assumes:
                 yield assumed_id
@@ -277,9 +386,11 @@ class _Reducer:
                 self.add_node(assumed_id)
 
     def run(self, target_id: DefinitionId) -> UpstreamSubgraph:
-        if target_id not in self.groups:
+        # A root model without leaves has no node in a bare GraphSpec, but every scope has one.
+        is_root_model = target_id.root == "$" and target_id.scope in self.scope_names
+        if target_id not in self.definitions and not is_root_model:
             msg = f"Definition not found: {target_id}"
-            raise KeyError(msg)
+            raise DefinitionNotFoundError(msg)
         self.add_node(target_id)
         queue: deque[DefinitionId] = deque([target_id])
         expanded: set[DefinitionId] = set()
@@ -316,9 +427,15 @@ def upstream_subgraph(
             by `@vq.assume`, so the result contains the full assumption closure. If False, the
             assume edges and the assumed verifications are included but their own upstream is not.
 
+    A definition whose type has no leaves (e.g. an empty root model that another scope reads
+    as a whole) is included as a node with empty `outputs`. Its user metadata and its own
+    inputs are only known when a `Project` is given: the IR has no node to carry them.
+
     Raises:
-        KeyError: If `target` does not name a definition in the graph.
+        DefinitionNotFoundError: If `target` does not name a definition in the graph
+            (a subclass of `KeyError`).
 
     """
-    spec = build_graph_spec(source) if isinstance(source, Project) else source
-    return _Reducer(spec, follow_assumes=follow_assumes).run(_resolve_target(target))
+    if isinstance(source, Project):
+        return _Reducer(build_graph_spec(source), source, follow_assumes=follow_assumes).run(_resolve_target(target))
+    return _Reducer(source, None, follow_assumes=follow_assumes).run(_resolve_target(target))
