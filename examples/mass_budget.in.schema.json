@@ -194,365 +194,140 @@
       "type": "object"
     },
     "SystemProvenance": {
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
-        "design": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SystemProvenance_design"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "$": {
+          "additionalProperties": true,
+          "title": "$",
+          "type": "object"
         },
-        "requirement": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SystemProvenance_requirement"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "$.design": {
+          "additionalProperties": true,
+          "title": "$.design",
+          "type": "object"
+        },
+        "$.design.mass": {
+          "additionalProperties": true,
+          "title": "$.design.mass",
+          "type": "object"
+        },
+        "$.design.mass[structure]": {
+          "additionalProperties": true,
+          "title": "$.design.mass[structure]",
+          "type": "object"
+        },
+        "$.design.mass[battery]": {
+          "additionalProperties": true,
+          "title": "$.design.mass[battery]",
+          "type": "object"
+        },
+        "$.design.mass[solar_panel]": {
+          "additionalProperties": true,
+          "title": "$.design.mass[solar_panel]",
+          "type": "object"
+        },
+        "$.design.position": {
+          "additionalProperties": true,
+          "title": "$.design.position",
+          "type": "object"
+        },
+        "$.design.position[structure,x]": {
+          "additionalProperties": true,
+          "title": "$.design.position[structure,x]",
+          "type": "object"
+        },
+        "$.design.position[structure,y]": {
+          "additionalProperties": true,
+          "title": "$.design.position[structure,y]",
+          "type": "object"
+        },
+        "$.design.position[structure,z]": {
+          "additionalProperties": true,
+          "title": "$.design.position[structure,z]",
+          "type": "object"
+        },
+        "$.design.position[battery,x]": {
+          "additionalProperties": true,
+          "title": "$.design.position[battery,x]",
+          "type": "object"
+        },
+        "$.design.position[battery,y]": {
+          "additionalProperties": true,
+          "title": "$.design.position[battery,y]",
+          "type": "object"
+        },
+        "$.design.position[battery,z]": {
+          "additionalProperties": true,
+          "title": "$.design.position[battery,z]",
+          "type": "object"
+        },
+        "$.design.position[solar_panel,x]": {
+          "additionalProperties": true,
+          "title": "$.design.position[solar_panel,x]",
+          "type": "object"
+        },
+        "$.design.position[solar_panel,y]": {
+          "additionalProperties": true,
+          "title": "$.design.position[solar_panel,y]",
+          "type": "object"
+        },
+        "$.design.position[solar_panel,z]": {
+          "additionalProperties": true,
+          "title": "$.design.position[solar_panel,z]",
+          "type": "object"
+        },
+        "$.design.margin_percent": {
+          "additionalProperties": true,
+          "title": "$.design.margin_percent",
+          "type": "object"
+        },
+        "$.design.margin_percent[structure]": {
+          "additionalProperties": true,
+          "title": "$.design.margin_percent[structure]",
+          "type": "object"
+        },
+        "$.design.margin_percent[battery]": {
+          "additionalProperties": true,
+          "title": "$.design.margin_percent[battery]",
+          "type": "object"
+        },
+        "$.design.margin_percent[solar_panel]": {
+          "additionalProperties": true,
+          "title": "$.design.margin_percent[solar_panel]",
+          "type": "object"
+        },
+        "$.requirement": {
+          "additionalProperties": true,
+          "title": "$.requirement",
+          "type": "object"
+        },
+        "$.requirement.mass_limit": {
+          "additionalProperties": true,
+          "title": "$.requirement.mass_limit",
+          "type": "object"
+        },
+        "$.requirement.cog_limit": {
+          "additionalProperties": true,
+          "title": "$.requirement.cog_limit",
+          "type": "object"
+        },
+        "$.requirement.cog_limit[x]": {
+          "additionalProperties": true,
+          "title": "$.requirement.cog_limit[x]",
+          "type": "object"
+        },
+        "$.requirement.cog_limit[y]": {
+          "additionalProperties": true,
+          "title": "$.requirement.cog_limit[y]",
+          "type": "object"
+        },
+        "$.requirement.cog_limit[z]": {
+          "additionalProperties": true,
+          "title": "$.requirement.cog_limit[z]",
+          "type": "object"
         }
       },
       "title": "SystemProvenance",
-      "type": "object"
-    },
-    "SystemProvenance_design": {
-      "additionalProperties": true,
-      "properties": {
-        "mass": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SystemProvenance_design_mass"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "position": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SystemProvenance_design_position"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "margin_percent": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SystemProvenance_design_margin_percent"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "title": "SystemProvenance_design",
-      "type": "object"
-    },
-    "SystemProvenance_design_margin_percent": {
-      "additionalProperties": true,
-      "properties": {
-        "structure": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Structure"
-        },
-        "battery": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Battery"
-        },
-        "solar_panel": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Solar Panel"
-        }
-      },
-      "title": "SystemProvenance_design_margin_percent",
-      "type": "object"
-    },
-    "SystemProvenance_design_mass": {
-      "additionalProperties": true,
-      "properties": {
-        "structure": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Structure"
-        },
-        "battery": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Battery"
-        },
-        "solar_panel": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Solar Panel"
-        }
-      },
-      "title": "SystemProvenance_design_mass",
-      "type": "object"
-    },
-    "SystemProvenance_design_position": {
-      "additionalProperties": true,
-      "properties": {
-        "structure,x": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Structure,X"
-        },
-        "structure,y": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Structure,Y"
-        },
-        "structure,z": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Structure,Z"
-        },
-        "battery,x": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Battery,X"
-        },
-        "battery,y": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Battery,Y"
-        },
-        "battery,z": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Battery,Z"
-        },
-        "solar_panel,x": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Solar Panel,X"
-        },
-        "solar_panel,y": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Solar Panel,Y"
-        },
-        "solar_panel,z": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Solar Panel,Z"
-        }
-      },
-      "title": "SystemProvenance_design_position",
-      "type": "object"
-    },
-    "SystemProvenance_requirement": {
-      "additionalProperties": true,
-      "properties": {
-        "mass_limit": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Mass Limit"
-        },
-        "cog_limit": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SystemProvenance_requirement_cog_limit"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "title": "SystemProvenance_requirement",
-      "type": "object"
-    },
-    "SystemProvenance_requirement_cog_limit": {
-      "additionalProperties": true,
-      "properties": {
-        "x": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "X"
-        },
-        "y": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Y"
-        },
-        "z": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Z"
-        }
-      },
-      "title": "SystemProvenance_requirement_cog_limit",
       "type": "object"
     }
   },

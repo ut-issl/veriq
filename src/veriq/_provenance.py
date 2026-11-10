@@ -8,7 +8,9 @@ Two complementary sources describe *why an input value is what it is*:
    ``NodeSpec.field_metadata``.
 2. **Input-TOML side** (``provenance`` table): rationale for the concrete value
    written next to the value. Input data, so it is loaded separately from the
-   model data as a mapping keyed by leaf ``ProjectPath``.
+   model data as a mapping keyed by leaf ``ProjectPath``. The table is keyed by
+   model path (``"$.battery.capacity"``), so path names and metadata keys never
+   share a namespace.
 
 Both sources may be attached to non-leaf paths (nested model, whole ``Table``).
 Leaves see a shallow merge along the path from the root model to the leaf, the
@@ -184,77 +186,74 @@ def collect_field_metadata(root_model: type[BaseModel]) -> dict[tuple[PartBase, 
 # =============================================================================
 
 
-def _format_path(scope_name: str, parts: tuple[PartBase, ...]) -> str:
-    return f"{scope_name}::{ModelPath(root='$', parts=parts)}"
+def _model_paths(root_model: type[BaseModel]) -> dict[str, tuple[PartBase, ...]]:
+    """Every path of a root model that provenance can be attached to, keyed by its string form.
+
+    These are the root model itself (``$``), every leaf and every prefix of a leaf (nested
+    models and whole tables), in declaration order.
+    """
+    paths: dict[str, tuple[PartBase, ...]] = {ModelPath.ROOT_SYMBOL: ()}
+    for leaf_parts in iter_leaf_path_parts(root_model):
+        for n in range(1, len(leaf_parts) + 1):
+            prefix = leaf_parts[:n]
+            paths.setdefault(str(ModelPath(root=ModelPath.ROOT_SYMBOL, parts=prefix)), prefix)
+    return paths
 
 
-def _child_names(type_: Any) -> list[str]:
-    """Names of the child entries a provenance table may have at this type (model fields or table keys)."""
-    type_ = _resolve_type(type_)
-    table_keys = _table_key_strings(type_)
-    if table_keys is not None:
-        return table_keys
-    if isclass(type_) and issubclass(type_, BaseModel) and not issubclass(type_, ExternalData):
-        return list(type_.model_fields)
-    return []
+def _unknown_key_message(scope_name: str, key: str, paths: Mapping[str, tuple[PartBase, ...]]) -> str:
+    if not key.startswith(ModelPath.ROOT_SYMBOL):
+        return (
+            f"Provenance key '{key}' of scope '{scope_name}' is not a model path. "
+            f"Keys of the '{PROVENANCE_KEY}' table are paths such as \"$\" (the whole root model) "
+            'or "$.battery.capacity"; the metadata goes in the table under that key.'
+        )
+    try:
+        canonical = str(ModelPath.parse(key))
+    except ValueError:
+        canonical = None
+    if canonical in paths:
+        return f"Provenance path '{scope_name}::{key}' must be written as \"{canonical}\"."
+    return f"Provenance path '{scope_name}::{key}' does not exist in the root model."
 
 
-def _child_type(type_: Any, name: str) -> Any:
-    type_ = _resolve_type(type_)
-    if _table_key_strings(type_) is not None:
-        return _table_value_type(type_)
-    return type_.model_fields[name].annotation
-
-
-def _child_part(type_: Any, name: str) -> PartBase:
-    if _table_key_strings(_resolve_type(type_)) is not None:
-        return _item_part_for_key(name)
-    return AttributePart(name=name)
-
-
-def _walk_provenance_table(
+def _scope_provenance(
     scope_name: str,
-    type_: Any,
+    root_model: type[BaseModel],
     table: Mapping[str, Any],
-    parts: tuple[PartBase, ...],
-    declared: dict[tuple[PartBase, ...], dict[str, Any]],
-) -> None:
-    children = _child_names(type_)
-    for key, value in table.items():
-        if key in children:
-            if not isinstance(value, Mapping):
-                msg = (
-                    f"Provenance entry '{key}' at '{_format_path(scope_name, parts)}' names a model path, "
-                    f"so it must be a table, got {type(value).__name__}."
-                )
-                raise ProvenanceError(msg)
-            _walk_provenance_table(
-                scope_name,
-                _child_type(type_, key),
-                value,
-                (*parts, _child_part(type_, key)),
-                declared,
-            )
-        elif isinstance(value, Mapping):
-            msg = (
-                f"Provenance path '{_format_path(scope_name, (*parts, AttributePart(name=key)))}' "
-                "does not exist in the root model."
-            )
+) -> dict[tuple[PartBase, ...], Mapping[str, Any]]:
+    """Validate one scope's ``provenance`` table and return the metadata declared per path."""
+    paths = _model_paths(root_model)
+    declared: dict[tuple[PartBase, ...], Mapping[str, Any]] = {}
+    for key, metadata in table.items():
+        if key not in paths:
+            raise ProvenanceError(_unknown_key_message(scope_name, key, paths))
+        if not isinstance(metadata, Mapping):
+            msg = f"Provenance entry '{scope_name}::{key}' must be a table of metadata, got {type(metadata).__name__}."
             raise ProvenanceError(msg)
-        else:
-            declared.setdefault(parts, {})[key] = value
+        declared[paths[key]] = metadata
+    return declared
 
 
 def toml_to_provenance(project: Project, toml_contents: Mapping[str, Any]) -> dict[ProjectPath, dict[str, Any]]:
     """Extract input provenance from parsed TOML contents.
 
-    For each scope, the reserved ``provenance`` table (sibling of ``model``) mirrors the
-    root model's structure. Keys that name a model field or ``Table`` key are sub-tables
-    for that path; all other keys are metadata for the current path. A sub-table whose
-    key is not a model path raises ``ProvenanceError``.
+    For each scope, the reserved ``provenance`` table (sibling of ``model``) maps model
+    paths to metadata tables::
 
-    Returns a mapping from leaf ``ProjectPath`` to the metadata merged along the path
-    (nearest path wins). Leaves without provenance are omitted.
+        [Power.provenance]
+        "$" = { baseline = "PDR-2026-03" }  # the whole root model
+
+        [Power.provenance."$.battery.capacity"]
+        source = "cell datasheet"
+
+    Keys use the path syntax of ``vq.Ref`` (``$``, ``$.field``, ``$.table[key]``) and may
+    name a leaf, a nested model or a whole ``Table``. A key that is not a path of the
+    root model raises ``ProvenanceError``, as does an entry that is not a table. The
+    metadata itself is free-form: its values may be scalars, arrays or tables.
+
+    Returns a mapping from leaf ``ProjectPath`` to the metadata merged along the path.
+    The merge is shallow and the nearest path wins per key, so a table-valued entry
+    replaces an inherited one as a whole. Leaves without provenance are omitted.
     """
     result: dict[ProjectPath, dict[str, Any]] = {}
     for scope_name, scope in project.scopes.items():
@@ -267,8 +266,7 @@ def toml_to_provenance(project: Project, toml_contents: Mapping[str, Any]) -> di
             raise ProvenanceError(msg)
 
         root_model = scope.get_root_model()
-        declared: dict[tuple[PartBase, ...], dict[str, Any]] = {}
-        _walk_provenance_table(scope_name, root_model, provenance_table, (), declared)
+        declared = _scope_provenance(scope_name, root_model, provenance_table)
         if not declared:
             continue
         for leaf_parts in iter_leaf_path_parts(root_model):
@@ -298,20 +296,13 @@ def strip_provenance(toml_contents: Mapping[str, Any]) -> dict[str, Any]:
 def build_provenance_model(root_model: type[BaseModel], name: str) -> type[BaseModel]:
     """Build a Pydantic model describing the ``provenance`` table of a root model.
 
-    The model mirrors the root model's structure: every field / ``Table`` key becomes an
-    optional sub-model, and every level accepts arbitrary extra keys (the metadata).
-    Used only for JSON schema generation.
+    The model has one optional field per model path (``$``, ``$.battery``,
+    ``$.battery.capacity``, ...), each a free-form metadata table, and rejects any other
+    key. Used only for JSON schema generation.
     """
-    from pydantic import ConfigDict, create_model  # noqa: PLC0415
+    from pydantic import ConfigDict, Field, create_model  # noqa: PLC0415
 
-    def build(type_: Any, model_name: str) -> Any:
-        children = _child_names(type_)
-        if not children:
-            return dict[str, Any]
-        fields: dict[str, Any] = {}
-        for child in children:
-            child_model = build(_child_type(type_, child), f"{model_name}_{child.replace(',', '_')}")
-            fields[child] = (child_model | None, None)
-        return create_model(model_name, __config__=ConfigDict(extra="allow"), **fields)
-
-    return build(root_model, name)
+    fields: dict[str, Any] = {
+        path: (dict[str, Any], Field(default_factory=dict, title=path)) for path in _model_paths(root_model)
+    }
+    return create_model(name, __config__=ConfigDict(extra="forbid"), **fields)
