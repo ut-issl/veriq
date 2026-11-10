@@ -24,7 +24,7 @@ from rich.table import Table
 from veriq._config import ConfigError, VeriqConfig, get_config
 from veriq._default import default
 from veriq._diff import DiffKind, diff_dicts, format_toml_path
-from veriq._discover import load_project_from_module_path, load_project_from_script
+from veriq._discover import is_module_path, load_project_from_module_path, load_project_from_script
 from veriq._eval import evaluate_project
 from veriq._external_data import validate_external_data
 from veriq._io import export_to_toml, load_model_data_from_toml, load_provenance_from_toml
@@ -118,7 +118,7 @@ def _load_project(
     """
     if path is not None:
         # CLI path provided - use it
-        if ":" in path:
+        if is_module_path(path):
             # Module path format
             err_console.print(f"[cyan]Loading project from module:[/cyan] {path}")
             return load_project_from_module_path(path)

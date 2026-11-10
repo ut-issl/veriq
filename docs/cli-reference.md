@@ -787,7 +787,7 @@ veriq check path/to/my_project.py
 veriq will:
 
 1. Load the Python script
-2. Find a `Project` instance (or use `--project` to specify)
+2. Find a `Project` instance (or use `--project` to specify). If the script defines several, the one named `project` is used; without such a variable `--project` is required
 
 ### Module Path
 
