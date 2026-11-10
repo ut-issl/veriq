@@ -1360,7 +1360,14 @@ def upstream(  # noqa: PLR0913, C901
     ] = None,
     input: Annotated[  # noqa: A002
         Path | None,
-        typer.Option("-i", "--input", help="Input TOML; its 'provenance' tables are shown for the inputs"),
+        typer.Option(
+            "-i",
+            "--input",
+            help=(
+                "Input TOML; its 'provenance' tables are shown for the inputs. "
+                "Defaults to [tool.veriq].input only when the project also comes from the config (no --path)."
+            ),
+        ),
     ] = None,
     key: Annotated[
         str | None,
@@ -1398,6 +1405,7 @@ def upstream(  # noqa: PLR0913, C901
     the critical path) are reported.
     """
     from veriq._provenance import ProvenanceError  # noqa: PLC0415
+    from veriq._subgraph import DefinitionNotFoundError  # noqa: PLC0415
 
     from .graph_query import get_available_scopes  # noqa: PLC0415
     from .graph_render import render_upstream_report  # noqa: PLC0415
@@ -1427,8 +1435,10 @@ def upstream(  # noqa: PLR0913, C901
         err_console.print(f"[dim]Available scopes: {', '.join(available_scopes)}[/dim]")
         raise typer.Exit(code=1)
 
-    # Provenance input: explicit -i must exist; a config default that is missing is skipped
-    effective_input = _get_effective_input(input, config)
+    # Provenance input: explicit -i must exist; a config default that is missing is skipped.
+    # The configured input describes the configured project, so it is not applied to a
+    # project given with --path (its provenance table would be checked against the wrong model).
+    effective_input = _get_effective_input(input, config if path is None else None)
     if effective_input is not None and not effective_input.is_file():
         if input is not None:
             err_console.print(f"[red]Error: Input file not found: {escape(str(effective_input))}[/red]")
@@ -1446,8 +1456,8 @@ def upstream(  # noqa: PLR0913, C901
             follow_assumes=follow_assumes,
             input_path=effective_input,
         )
-    except KeyError:
-        err_console.print(f"[red]Error: Definition not found: {escape(node_path)}[/red]")
+    except DefinitionNotFoundError as e:
+        err_console.print(f"[red]Error: {escape(str(e))}[/red]")
         err_console.print("[dim]Use 'veriq list' to see available nodes[/dim]")
         raise typer.Exit(code=1) from None
     except TypeError as e:

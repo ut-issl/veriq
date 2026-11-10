@@ -106,9 +106,9 @@ def test_report_without_key_has_no_aggregation(project: vq.Project) -> None:
 def test_report_with_provenance(project: vq.Project, tmp_path: Path) -> None:
     toml = tmp_path / "in.toml"
     toml.write_text(
-        '[Power.model]\n[Power.provenance.battery]\nsource = "datasheet"\n'
-        '[Power.provenance.battery.capacity]\nrationale = "EOL margin"\n'
-        '[Power.provenance.unused]\nnote = "not read by ?ok"\n',
+        '[Power.model]\n[Power.provenance."$.battery"]\nsource = "datasheet"\n'
+        '[Power.provenance."$.battery.capacity"]\nrationale = "EOL margin"\n'
+        '[Power.provenance."$.unused"]\nnote = "not read by ?ok"\n',
     )
     report = build_upstream_report(project, "Power::?ok", input_path=toml)
     assert report.provenance_loaded is True
@@ -180,7 +180,7 @@ def test_upstream_json_combine_sum_and_no_assumes(project: vq.Project) -> None:
 
 def test_upstream_json_with_input_provenance(project: vq.Project, tmp_path: Path) -> None:
     toml = tmp_path / "in.toml"
-    toml.write_text('[Power.model]\n[Power.provenance.area]\nsource = "CAD"\n')
+    toml.write_text('[Power.model]\n[Power.provenance."$.area"]\nsource = "CAD"\n')
     result = _run(project, "upstream", "Power::?ok", "--json", "-i", str(toml))
     assert result.exit_code == 0, result.output
     data = json.loads(result.stdout)
@@ -191,7 +191,7 @@ def test_upstream_json_with_input_provenance(project: vq.Project, tmp_path: Path
 
 def test_upstream_uses_config_input_when_present(project: vq.Project, tmp_path: Path) -> None:
     toml = tmp_path / "in.toml"
-    toml.write_text('[Power.model]\n[Power.provenance.area]\nsource = "config"\n')
+    toml.write_text('[Power.model]\n[Power.provenance."$.area"]\nsource = "config"\n')
     result = _run(project, "upstream", "Power::?ok", "--json", config=VeriqConfig(input=toml))
     data = json.loads(result.stdout)
     assert data["provenance_loaded"] is True
@@ -201,6 +201,28 @@ def test_upstream_uses_config_input_when_present(project: vq.Project, tmp_path: 
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["provenance_loaded"] is False
     assert "skipping provenance" in result.stderr
+
+
+def test_upstream_ignores_config_input_when_project_is_given_with_path(project: vq.Project, tmp_path: Path) -> None:
+    # The configured input belongs to the configured project; its provenance table does
+    # not have to match a project given with -p (here it names a path this model lacks).
+    toml = tmp_path / "in.toml"
+    toml.write_text('[Power.provenance."$.not_in_this_model"]\nsource = "other project"\n')
+    config = VeriqConfig(input=toml)
+
+    result = _run(project, "upstream", "Power::?ok", "-p", "other.py", "--json", config=config)
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["provenance_loaded"] is False
+
+    # An explicit -i is still honoured together with -p
+    result = _run(project, "upstream", "Power::?ok", "-p", "other.py", "-i", str(toml), config=config)
+    assert result.exit_code == 1
+    assert "Invalid provenance" in result.stderr
+
+    # Without -p the configured input is used, and its error is reported
+    result = _run(project, "upstream", "Power::?ok", config=config)
+    assert result.exit_code == 1
+    assert "Invalid provenance" in result.stderr
 
 
 # --- CLI: human-readable ---
@@ -238,6 +260,36 @@ def test_upstream_unknown_definition(project: vq.Project) -> None:
     assert "Definition not found" in result.stderr
 
 
+def test_upstream_does_not_report_unrelated_key_error_as_missing_definition(project: vq.Project) -> None:
+    with patch("veriq._cli.upstream_query.upstream_subgraph", side_effect=KeyError("boom")):
+        result = _run(project, "upstream", "Power::?ok")
+    assert isinstance(result.exception, KeyError)
+    assert "Definition not found" not in result.stderr
+
+
+def test_upstream_with_empty_root_model() -> None:
+    class Empty(BaseModel): ...
+
+    project = vq.Project(name="P")
+    a = vq.Scope(name="A")
+    b = vq.Scope(name="B")
+    project.add_scope(a)
+    project.add_scope(b)
+    a.root_model(metadata={"owner": "a"})(Empty)
+    b.root_model()(Env)
+
+    @b.verification(imports=["A"])
+    def ok(m: Annotated[Empty, vq.Ref("$", scope="A")], t: Annotated[float, vq.Ref("$.max_temp")]) -> bool:  # noqa: ARG001
+        return t > 0
+
+    result = _run(project, "upstream", "B::?ok", "--json")
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.stdout)
+    nodes = {node["id"]: node for node in data["nodes"]}
+    assert nodes["A::$"]["outputs"] == []
+    assert nodes["A::$"]["user_metadata"] == {"owner": "a"}
+
+
 def test_upstream_unknown_scope(project: vq.Project) -> None:
     result = _run(project, "upstream", "Nope::?ok")
     assert result.exit_code == 1
@@ -264,7 +316,7 @@ def test_upstream_missing_explicit_input(project: vq.Project, tmp_path: Path) ->
 
 def test_upstream_invalid_provenance(project: vq.Project, tmp_path: Path) -> None:
     toml = tmp_path / "in.toml"
-    toml.write_text('[Power.provenance.typo]\nsource = "x"\n')
+    toml.write_text('[Power.provenance."$.typo"]\nsource = "x"\n')
     result = _run(project, "upstream", "Power::?ok", "-i", str(toml))
     assert result.exit_code == 1
     assert "Invalid provenance" in result.stderr
