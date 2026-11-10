@@ -670,7 +670,7 @@ veriq upstream NODE_PATH [OPTIONS]
 |--------|-------|-------------|
 | `--path PATH` | `-p` | Path to Python script or module path |
 | `--project NAME` | | Name of the project variable |
-| `--input FILE` | `-i` | Input TOML; its `provenance` tables are shown for the inputs (defaults to the configured input, if any) |
+| `--input FILE` | `-i` | Input TOML; its `provenance` tables are shown for the inputs. Defaults to the configured input only when the project also comes from the config (no `--path`) |
 | `--key KEY` | | Numeric user-metadata key to aggregate (e.g. `compute_time_s`) |
 | `--combine max\|sum` | | How predecessor values are merged when propagating (default `max`, the critical path) |
 | `--default N` | | Value for definitions whose metadata lacks `--key` (default `0.0`) |
