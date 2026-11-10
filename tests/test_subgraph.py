@@ -1,12 +1,14 @@
 """Tests for the definition-level upstream subgraph API."""
 
 from enum import StrEnum
+from pathlib import Path
 from typing import Annotated
 
 import pytest
 from pydantic import BaseModel
 
 import veriq as vq
+from veriq._cli.discover import load_project_from_script
 from veriq._ir import NodeKind, build_graph_spec
 from veriq._path import parse_project_path
 
@@ -321,3 +323,120 @@ def test_table_outputs_exclude_whole_table_node() -> None:
     (edge,) = [e for e in sub.data_edges if e.source == _did("S::@doubled")]
     assert edge.bindings[0].ref == _pp("S::@doubled")
     assert edge.bindings[0].leaves == frozenset({_pp("S::@doubled[nominal]"), _pp("S::@doubled[safe]")})
+
+
+# --- definitions without leaves ---
+
+
+class Empty(BaseModel): ...
+
+
+class Design(BaseModel):
+    x: float
+
+
+def _build_project_with_leafless_definitions() -> vq.Project:
+    """A::$ (empty) ──────────────┐
+    B::$ ──► @nothing (empty) ──► ?ok        @nothing assumes ?pre, which reads B::$.
+    """
+    project = vq.Project(name="P")
+    a = vq.Scope(name="A")
+    b = vq.Scope(name="B")
+    project.add_scope(a)
+    project.add_scope(b)
+    a.root_model(metadata={"owner": "a"})(Empty)
+    b.root_model()(Design)
+
+    @b.verification(metadata={"t": 1.0})
+    def pre(x: Annotated[float, vq.Ref("$.x")]) -> bool:
+        return x > 0
+
+    @b.calculation(metadata={"t": 2.0})
+    @vq.assume(vq.Ref("?pre"))
+    def nothing(x: Annotated[float, vq.Ref("$.x")]) -> Empty:  # noqa: ARG001
+        return Empty()
+
+    @b.verification(imports=["A"], metadata={"t": 3.0})
+    def ok(
+        e: Annotated[Empty, vq.Ref("@nothing")],  # noqa: ARG001
+        m: Annotated[Empty, vq.Ref("$", scope="A")],  # noqa: ARG001
+    ) -> bool:
+        return True
+
+    return project
+
+
+def test_empty_root_model_is_a_node_without_outputs() -> None:
+    project = _build_project_with_leafless_definitions()
+    sub = vq.upstream_subgraph(project, "B::?ok")
+
+    node = sub.nodes[_did("A::$")]
+    assert node.kind == NodeKind.MODEL
+    assert node.outputs == ()
+    assert node.user_metadata == {"owner": "a"}
+
+    edge = next(e for e in sub.data_edges if e.source == _did("A::$"))
+    assert edge.target == _did("B::?ok")
+    assert [(b.param, b.ref, b.leaves) for b in edge.bindings] == [("m", _pp("A::$"), frozenset())]
+    assert sub.input_leaves() == {_pp("B::$.x")}
+
+
+def test_empty_root_model_can_be_the_target() -> None:
+    project = _build_project_with_leafless_definitions()
+    for source in (project, build_graph_spec(project)):
+        sub = vq.upstream_subgraph(source, "A::$")
+        assert set(sub.nodes) == {_did("A::$")}
+        assert sub.data_edges == ()
+
+
+def test_leafless_calculation_keeps_its_upstream_and_assumptions() -> None:
+    project = _build_project_with_leafless_definitions()
+    sub = vq.upstream_subgraph(project, "B::?ok")
+
+    assert set(sub.nodes) == {_did(s) for s in ("A::$", "B::$", "B::@nothing", "B::?pre", "B::?ok")}
+    nothing = sub.nodes[_did("B::@nothing")]
+    assert nothing.kind == NodeKind.CALCULATION
+    assert nothing.outputs == ()
+    assert nothing.user_metadata == {"t": 2.0}
+    assert sub.predecessors(_did("B::@nothing")) == {_did("B::$")}
+    assert sub.assumptions_of(_did("B::@nothing")) == {_did("B::?pre")}
+
+    by_target = vq.upstream_subgraph(project, "B::@nothing")
+    assert set(by_target.nodes) == {_did("B::$"), _did("B::@nothing"), _did("B::?pre")}
+
+
+def test_leafless_definitions_from_bare_graph_spec() -> None:
+    # The IR has no node for a definition without leaves: it is still shown, with the kind
+    # taken from the path symbol, but its metadata and its own inputs are unknown.
+    project = _build_project_with_leafless_definitions()
+    sub = vq.upstream_subgraph(build_graph_spec(project), "B::?ok")
+
+    assert set(sub.nodes) == {_did("A::$"), _did("B::@nothing"), _did("B::?ok")}
+    assert sub.nodes[_did("A::$")].kind == NodeKind.MODEL
+    assert sub.nodes[_did("A::$")].user_metadata == {}
+    assert sub.nodes[_did("B::@nothing")].kind == NodeKind.CALCULATION
+
+
+def test_unknown_root_model_scope_raises() -> None:
+    project = _build_project_with_leafless_definitions()
+    with pytest.raises(vq.DefinitionNotFoundError, match="Nope::\\$"):
+        vq.upstream_subgraph(project, "Nope::$")
+
+
+def test_every_definition_of_dummysat_has_an_upstream() -> None:
+    # dummysat's Thermal root model has no fields and is read as a whole by a System verification
+    project = load_project_from_script(Path(__file__).resolve().parent.parent / "examples" / "dummysat.py")
+
+    targets = [f"{scope_name}::$" for scope_name in project.scopes]
+    for scope_name, scope in project.scopes.items():
+        targets += [f"{scope_name}::@{name}" for name in scope.calculations]
+        targets += [f"{scope_name}::?{name}" for name in scope.verifications]
+
+    for target in targets:
+        sub = vq.upstream_subgraph(project, target)
+        assert sub.target in sub.nodes
+        assert set(sub.topological_order()) == set(sub.nodes)
+
+    sub = vq.upstream_subgraph(project, "System::?power_thermal_compatibility")
+    assert _did("Thermal::$") in sub.nodes
+    assert sub.nodes[_did("Thermal::$")].outputs == ()
