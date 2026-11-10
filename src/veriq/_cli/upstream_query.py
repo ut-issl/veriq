@@ -92,13 +92,13 @@ def build_upstream_report(  # noqa: PLR0913
     """Build the upstream report for `target`.
 
     Raises:
-        KeyError: If `target` does not name a definition.
+        DefinitionNotFoundError: If `target` does not name a definition.
         TypeError: If a node's metadata value under `key` is not a number.
         ProvenanceError: If the input TOML's `provenance` table does not match the model.
 
     """
-    spec = build_graph_spec(project)
-    sub = upstream_subgraph(spec, target, follow_assumes=follow_assumes)
+    # The project (not a prebuilt spec) is passed so that definitions without leaves keep their metadata
+    sub = upstream_subgraph(project, target, follow_assumes=follow_assumes)
     order = sub.topological_order()
 
     aggregation: MetadataAggregation | None = None
@@ -120,6 +120,7 @@ def build_upstream_report(  # noqa: PLR0913
         )
 
     provenance = load_provenance_from_toml(project, input_path) if input_path is not None else {}
+    spec = build_graph_spec(project)
     inputs = [
         InputLeafInfo(
             path=leaf,
