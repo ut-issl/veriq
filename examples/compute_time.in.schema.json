@@ -68,137 +68,60 @@
       "type": "object"
     },
     "PowerProvenance": {
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
-        "solar_panel": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PowerProvenance_solar_panel"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "$": {
+          "additionalProperties": true,
+          "title": "$",
+          "type": "object"
         },
-        "battery": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PowerProvenance_battery"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "$.solar_panel": {
+          "additionalProperties": true,
+          "title": "$.solar_panel",
+          "type": "object"
         },
-        "bus_voltage_v": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Bus Voltage V"
+        "$.solar_panel.area_m2": {
+          "additionalProperties": true,
+          "title": "$.solar_panel.area_m2",
+          "type": "object"
         },
-        "load_w": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Load W"
+        "$.solar_panel.efficiency": {
+          "additionalProperties": true,
+          "title": "$.solar_panel.efficiency",
+          "type": "object"
+        },
+        "$.solar_panel.max_temp_c": {
+          "additionalProperties": true,
+          "title": "$.solar_panel.max_temp_c",
+          "type": "object"
+        },
+        "$.battery": {
+          "additionalProperties": true,
+          "title": "$.battery",
+          "type": "object"
+        },
+        "$.battery.capacity_ah": {
+          "additionalProperties": true,
+          "title": "$.battery.capacity_ah",
+          "type": "object"
+        },
+        "$.battery.max_c_rate": {
+          "additionalProperties": true,
+          "title": "$.battery.max_c_rate",
+          "type": "object"
+        },
+        "$.bus_voltage_v": {
+          "additionalProperties": true,
+          "title": "$.bus_voltage_v",
+          "type": "object"
+        },
+        "$.load_w": {
+          "additionalProperties": true,
+          "title": "$.load_w",
+          "type": "object"
         }
       },
       "title": "PowerProvenance",
-      "type": "object"
-    },
-    "PowerProvenance_battery": {
-      "additionalProperties": true,
-      "properties": {
-        "capacity_ah": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Capacity Ah"
-        },
-        "max_c_rate": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Max C Rate"
-        }
-      },
-      "title": "PowerProvenance_battery",
-      "type": "object"
-    },
-    "PowerProvenance_solar_panel": {
-      "additionalProperties": true,
-      "properties": {
-        "area_m2": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Area M2"
-        },
-        "efficiency": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Efficiency"
-        },
-        "max_temp_c": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Max Temp C"
-        }
-      },
-      "title": "PowerProvenance_solar_panel",
       "type": "object"
     },
     "SolarPanel": {
@@ -266,33 +189,22 @@
       "type": "object"
     },
     "ThermalProvenance": {
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
-        "ambient_temp_c": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Ambient Temp C"
+        "$": {
+          "additionalProperties": true,
+          "title": "$",
+          "type": "object"
         },
-        "panel_heating_c_per_w": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Panel Heating C Per W"
+        "$.ambient_temp_c": {
+          "additionalProperties": true,
+          "title": "$.ambient_temp_c",
+          "type": "object"
+        },
+        "$.panel_heating_c_per_w": {
+          "additionalProperties": true,
+          "title": "$.panel_heating_c_per_w",
+          "type": "object"
         }
       },
       "title": "ThermalProvenance",
