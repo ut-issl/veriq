@@ -27,7 +27,7 @@ from veriq._eval import evaluate_project
 from veriq._external_data import validate_external_data
 from veriq._io import export_to_toml, load_model_data_from_toml, load_provenance_from_toml
 from veriq._ir import build_graph_spec
-from veriq._path import VerificationPath
+from veriq._path import VerificationPath, parse_project_path
 from veriq._provenance import ProvenanceError, strip_provenance
 from veriq._schema import diff_schemas
 from veriq._toml_edit import dumps_toml, merge_into_document, parse_toml_preserving
@@ -37,6 +37,7 @@ from veriq._update import update_input_data
 from .config import ConfigError, VeriqConfig, get_config
 from .discover import load_project_from_module_path, load_project_from_script
 from .render_trace import render_traceability_summary, render_traceability_table
+from .upstream_query import Combine
 
 
 def _get_version() -> str:
@@ -1144,10 +1145,11 @@ def list_nodes_cmd(  # noqa: PLR0913
                 "path": str(n.path),
                 "kind": n.kind.value,
                 "dependencies": n.dependency_count,
+                "user_metadata": n.user_metadata,
             }
             for n in nodes
         ]
-        out_console.print_json(data=data)
+        out_console.print_json(data=data, default=str)
     else:
         render_node_table(nodes, err_console)
 
@@ -1238,6 +1240,8 @@ def show(
             "dependencies": [str(d) for d in sorted(detail.direct_dependencies, key=str)],
             "dependents": [str(d) for d in sorted(detail.direct_dependents, key=str)],
             "metadata": detail.metadata,
+            "user_metadata": detail.user_metadata,
+            "field_metadata": detail.field_metadata,
         }
         out_console.print_json(data=data, default=str)
     else:
@@ -1337,6 +1341,136 @@ def tree(  # noqa: PLR0913
             err_console.print(f"[dim]{escaped_node_path} has no dependencies[/dim]")
     else:
         render_tree(tree_node, err_console)
+
+
+@app.command()
+def upstream(  # noqa: PLR0913, C901
+    node_path: Annotated[
+        str,
+        typer.Argument(help="Definition path in format 'Scope::path' (e.g., 'Power::?verify_margin')"),
+    ],
+    path: Annotated[
+        str | None,
+        typer.Option("--path", "-p", help="Path to Python script or module path (e.g., examples.dummysat:project)"),
+    ] = None,
+    *,
+    project_var: Annotated[
+        str | None,
+        typer.Option("--project", help="Name of the project variable (for script paths only)"),
+    ] = None,
+    input: Annotated[  # noqa: A002
+        Path | None,
+        typer.Option(
+            "-i",
+            "--input",
+            help=(
+                "Input TOML; its 'provenance' tables are shown for the inputs. "
+                "Defaults to [tool.veriq].input only when the project also comes from the config (no --path)."
+            ),
+        ),
+    ] = None,
+    key: Annotated[
+        str | None,
+        typer.Option("--key", help="Numeric user-metadata key to aggregate (e.g., compute_time_s)"),
+    ] = None,
+    combine: Annotated[
+        Combine,
+        typer.Option("--combine", help="How predecessor values are merged when propagating (max = critical path)"),
+    ] = Combine.MAX,
+    default: Annotated[
+        float,
+        typer.Option("--default", help="Value for definitions whose metadata lacks --key"),
+    ] = 0.0,
+    follow_assumes: Annotated[
+        bool,
+        typer.Option(
+            "--follow-assumes/--no-follow-assumes",
+            help="Include assumed verifications and their upstream in the subgraph (they never affect propagation)",
+        ),
+    ] = True,
+    bindings: Annotated[
+        bool,
+        typer.Option("--bindings", help="List which parameter of each definition reads which path"),
+    ] = False,
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Output as JSON"),
+    ] = False,
+) -> None:
+    """Show the definition-level upstream of a node, with optional metadata aggregation and input provenance.
+
+    Unlike `tree`, every root model, calculation and verification appears once, no matter
+    how many output leaves it has or how many paths lead to it. With --key, the sequential
+    total (sum over definitions) and the value propagated along the DAG (--combine max gives
+    the critical path) are reported.
+    """
+    from veriq._provenance import ProvenanceError  # noqa: PLC0415
+    from veriq._subgraph import DefinitionNotFoundError  # noqa: PLC0415
+
+    from .graph_query import get_available_scopes  # noqa: PLC0415
+    from .graph_render import render_upstream_report  # noqa: PLC0415
+    from .upstream_query import build_upstream_report, report_to_dict  # noqa: PLC0415
+
+    try:
+        config = get_config()
+    except ConfigError as e:
+        err_console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    try:
+        project = _load_project(path, config, project_var)
+    except typer.BadParameter as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    try:
+        ppath = parse_project_path(node_path)
+    except ValueError as e:
+        err_console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from e
+
+    available_scopes = get_available_scopes(project)
+    if ppath.scope not in available_scopes:
+        err_console.print(f"[red]Error: Unknown scope '{escape(ppath.scope)}'[/red]")
+        err_console.print(f"[dim]Available scopes: {', '.join(available_scopes)}[/dim]")
+        raise typer.Exit(code=1)
+
+    # Provenance input: explicit -i must exist; a config default that is missing is skipped.
+    # The configured input describes the configured project, so it is not applied to a
+    # project given with --path (its provenance table would be checked against the wrong model).
+    effective_input = _get_effective_input(input, config if path is None else None)
+    if effective_input is not None and not effective_input.is_file():
+        if input is not None:
+            err_console.print(f"[red]Error: Input file not found: {escape(str(effective_input))}[/red]")
+            raise typer.Exit(code=1)
+        err_console.print(f"[dim]Configured input not found, skipping provenance: {escape(str(effective_input))}[/dim]")
+        effective_input = None
+
+    try:
+        report = build_upstream_report(
+            project,
+            ppath,
+            key=key,
+            combine=combine,
+            default=default,
+            follow_assumes=follow_assumes,
+            input_path=effective_input,
+        )
+    except DefinitionNotFoundError as e:
+        err_console.print(f"[red]Error: {escape(str(e))}[/red]")
+        err_console.print("[dim]Use 'veriq list' to see available nodes[/dim]")
+        raise typer.Exit(code=1) from None
+    except TypeError as e:
+        err_console.print(f"[red]Error: {escape(str(e))}[/red]")
+        raise typer.Exit(code=1) from None
+    except ProvenanceError as e:
+        err_console.print(f"[red]✗ Invalid provenance: {escape(str(e))}[/red]")
+        raise typer.Exit(code=1) from None
+
+    if as_json:
+        out_console.print_json(data=report_to_dict(report), default=str)
+    else:
+        render_upstream_report(report, err_console, show_bindings=bindings)
 
 
 def main() -> None:
