@@ -131,6 +131,7 @@ def test_non_model_nodes_have_empty_field_metadata() -> None:
 
 
 def test_toml_to_provenance_leaf_and_inheritance() -> None:
+    """An entry on a nested model reaches every leaf below it; a leaf's own entry wins per key."""
     project = _make_project()
     toml = {
         "Power": {

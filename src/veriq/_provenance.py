@@ -57,6 +57,7 @@ class Meta:
     data: dict[str, Any] = field(default_factory=dict)
 
     def __init__(self, data: Mapping[str, Any] | None = None, /, **kwargs: Any) -> None:
+        """Take the metadata as a mapping, as keyword arguments, or both; a keyword wins over the mapping."""
         merged = dict(data) if data is not None else {}
         merged.update(kwargs)
         object.__setattr__(self, "data", merged)
@@ -85,6 +86,7 @@ def _merge_along_path(
 
 
 def _resolve_type(type_: Any) -> Any:
+    """Evaluate a forward reference and drop an ``Annotated`` wrapper, leaving the plain type."""
     if isinstance(type_, ForwardRef):
         type_ = type_.evaluate()
     if get_origin(type_) is Annotated:
@@ -110,11 +112,13 @@ def _table_key_strings(table_type: Any) -> list[str] | None:
 
 
 def _table_value_type(table_type: Any) -> Any:
+    """Return ``V`` of a ``Table[K, V]`` type, or ``Any`` if the table is not parametrized."""
     type_args = get_args(table_type)
     return type_args[1] if len(type_args) == 2 else Any
 
 
 def _item_part_for_key(key: str) -> ItemPart:
+    """Turn a TOML table key into a path part; ``"a,b"`` is the key of a multi-dimensional table."""
     return ItemPart(key=tuple(k.strip() for k in key.split(","))) if "," in key else ItemPart(key=key)
 
 
@@ -137,6 +141,12 @@ def _collect_declared_meta(
     parts: tuple[PartBase, ...],
     declared: dict[tuple[PartBase, ...], dict[str, Any]],
 ) -> None:
+    """Walk a type and record every ``Meta`` in ``declared``, keyed by the path it is written on.
+
+    ``parts`` is the path of ``type_`` itself. Nested models are followed field by field and a
+    ``Table`` key by key. Nothing is inherited here; ``collect_field_metadata`` merges the result
+    along each leaf path.
+    """
     type_ = _resolve_type(type_)
 
     table_keys = _table_key_strings(type_)
@@ -238,6 +248,7 @@ def _missing_path_hint(key: str, paths: Mapping[str, tuple[PartBase, ...]]) -> s
 
 
 def _unknown_key_message(scope_name: str, key: str, paths: Mapping[str, tuple[PartBase, ...]]) -> str:
+    """Explain why ``key`` is rejected: not a path at all, a non-canonical spelling, or a missing path."""
     if not key.startswith(ModelPath.ROOT_SYMBOL):
         return (
             f"Provenance key '{key}' of scope '{scope_name}' is not a model path. "
