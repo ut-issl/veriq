@@ -42,6 +42,7 @@ def _make_project(
 
 
 def test_defaults_to_empty_dict() -> None:
+    """Without `metadata=`, every definition and every node carries an empty dict, never None."""
     project = _make_project()
     scope = project.scopes["S"]
 
@@ -54,6 +55,7 @@ def test_defaults_to_empty_dict() -> None:
 
 
 def test_root_model_metadata_on_all_model_leaves() -> None:
+    """A root model expands to one node per field; all of them refer to the scope's one dict."""
     project = _make_project(model_metadata={"owner": "power-team"})
     scope = project.scopes["S"]
     assert scope.root_model_metadata == {"owner": "power-team"}
@@ -69,6 +71,7 @@ def test_root_model_metadata_on_all_model_leaves() -> None:
 
 
 def test_calculation_metadata_shared_across_output_leaves() -> None:
+    """A calculation returning a model expands to one node per field; all refer to its one dict."""
     project = _make_project(calc_metadata={"compute_time_s": 120.0})
     assert project.scopes["S"].calculations["calc"].metadata == {"compute_time_s": 120.0}
 

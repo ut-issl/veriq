@@ -529,7 +529,12 @@ class Scope:
 
     @property
     def root_model_metadata(self) -> dict[str, Any]:
-        """Get the user-defined metadata attached to the root model via `root_model(metadata=...)`."""
+        """Get the user-defined metadata attached to the root model via `root_model(metadata=...)`.
+
+        The dict is the stored one, not a copy: every MODEL leaf node of the root model refers
+        to it as `NodeSpec.user_metadata`, so a change made through this property or through
+        one node is seen by the scope and by all of those nodes.
+        """
         return self._root_model_metadata
 
     @property
@@ -563,6 +568,7 @@ class Scope:
         """
 
         def decorator(model: M) -> M:
+            """Assign `model` as the root model; a scope accepts only one."""
             if self._root_model is not None:
                 msg = f"Scope '{self.name}' already has a root model assigned: {self._root_model.__name__}"
                 raise RuntimeError(msg)
@@ -594,6 +600,7 @@ class Scope:
         """
 
         def decorator(func: Callable[P, T]) -> Verification[T, P]:
+            """Wrap `func` in a `Verification` and register it under a name unique in the scope."""
             if name is None:
                 if not hasattr(func, "__name__") or not isinstance(func.__name__, str):
                     msg = "Function must have a valid name."
@@ -636,6 +643,7 @@ class Scope:
         """
 
         def decorator(func: Callable[P, T]) -> Calculation[T, P]:
+            """Wrap `func` in a `Calculation` and register it under a name unique in the scope."""
             if name is None:
                 if not hasattr(func, "__name__") or not isinstance(func.__name__, str):
                     msg = "Function must have a valid name."
