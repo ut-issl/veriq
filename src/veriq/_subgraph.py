@@ -30,7 +30,7 @@ from ._models import Project
 from ._path import ProjectPath, parse_path, parse_project_path
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
 
     from ._ir import NodeSpec
     from ._models import Calculation, Ref, Verification
@@ -156,6 +156,74 @@ class UpstreamSubgraph:
         for edge in self.data_edges:
             successors[edge.source].add(edge.target)
         return topological_sort(successors)
+
+    def propagate_all(
+        self,
+        key: str,
+        *,
+        combine: Callable[[Iterable[float]], float],
+        default: float = 0.0,
+    ) -> dict[DefinitionId, float]:
+        """Propagate a numeric metadata value along the DAG and return the result at every node.
+
+        In topological order, each node gets::
+
+            value(node) = own(node) + combine(value(p) for p in predecessors(node))
+
+        where ``own(node)`` is ``node.user_metadata[key]`` (or ``default`` when the key is
+        absent) and ``predecessors`` are the sources of the data edges into the node.
+        ``combine`` is only called for nodes with at least one predecessor; input nodes get
+        their own value.
+
+        Assume edges do not take part: an assumed verification is a premise, not an input,
+        and may itself read the assuming definition's output. Assumed definitions are still
+        in ``nodes`` (so set-style totals include them) and get their own propagated value
+        from their data dependencies.
+
+        This is a recurrence along paths, not a reduction over the node set. With
+        ``combine=max`` it yields the critical-path length (parallel makespan). With
+        ``combine=sum`` a dependency shared by several paths (diamond) is counted once per
+        path, so it is **not** a sequential total: for that, iterate ``nodes`` instead.
+
+        Args:
+            key: Metadata key to read from each node's ``user_metadata``.
+            combine: Merges the propagated values of a node's predecessors (e.g. ``max``, ``sum``).
+            default: Own value for nodes whose metadata lacks ``key``.
+
+        Raises:
+            TypeError: If a node's value under ``key`` is not a real number.
+
+        """
+        values: dict[DefinitionId, float] = {}
+        for node_id in self.topological_order():
+            own = self.nodes[node_id].user_metadata.get(key, default)
+            if isinstance(own, bool) or not isinstance(own, (int, float)):
+                msg = f"Metadata '{key}' of {node_id} must be a number, got {type(own).__name__}: {own!r}"
+                raise TypeError(msg)
+            preds = self.predecessors(node_id)
+            if preds:
+                own += combine(values[p] for p in sorted(preds, key=str))
+            values[node_id] = own
+        return values
+
+    def propagate(
+        self,
+        key: str,
+        *,
+        combine: Callable[[Iterable[float]], float],
+        default: float = 0.0,
+    ) -> float:
+        """Propagate a numeric metadata value along the DAG and return the result at ``target``.
+
+        See ``propagate_all`` for the recurrence, the ``combine=sum`` caveat and the arguments.
+
+        Example:
+            >>> sub = upstream_subgraph(project, "Power::?verify_margin")
+            >>> sub.propagate("compute_time_s", combine=max)  # critical path, parallel makespan
+            35.0
+
+        """
+        return self.propagate_all(key, combine=combine, default=default)[self.target]
 
     def __len__(self) -> int:
         return len(self.nodes)

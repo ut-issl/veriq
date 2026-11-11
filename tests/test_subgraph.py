@@ -405,6 +405,14 @@ def test_leafless_calculation_keeps_its_upstream_and_assumptions() -> None:
     assert set(by_target.nodes) == {_did("B::$"), _did("B::@nothing"), _did("B::?pre")}
 
 
+def test_propagate_passes_through_a_leafless_calculation() -> None:
+    project = _build_project_with_leafless_definitions()
+    sub = vq.upstream_subgraph(project, "B::?ok")
+
+    # B::?ok (t=3) reads B::@nothing (t=2); the assumed B::?pre is a premise and does not feed in
+    assert sub.propagate("t", combine=max) == 5.0
+
+
 def test_leafless_definitions_from_bare_graph_spec() -> None:
     # The IR has no node for a definition without leaves: it is still shown, with the kind
     # taken from the path symbol, but its metadata and its own inputs are unknown.
