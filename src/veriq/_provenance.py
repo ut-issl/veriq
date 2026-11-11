@@ -22,6 +22,7 @@ from __future__ import annotations
 from annotationlib import ForwardRef
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from difflib import get_close_matches
 from enum import StrEnum
 from inspect import isclass
 from itertools import product
@@ -186,6 +187,10 @@ def collect_field_metadata(root_model: type[BaseModel]) -> dict[tuple[PartBase, 
 # =============================================================================
 
 
+_MAX_LISTED_TABLE_ENTRIES = 6
+"""How many entries of a table an error message names before it falls back to the closest ones."""
+
+
 def _model_paths(root_model: type[BaseModel]) -> dict[str, tuple[PartBase, ...]]:
     """Every path of a root model that provenance can be attached to, keyed by its string form.
 
@@ -198,6 +203,38 @@ def _model_paths(root_model: type[BaseModel]) -> dict[str, tuple[PartBase, ...]]
             prefix = leaf_parts[:n]
             paths.setdefault(str(ModelPath(root=ModelPath.ROOT_SYMBOL, parts=prefix)), prefix)
     return paths
+
+
+def _missing_path_hint(key: str, paths: Mapping[str, tuple[PartBase, ...]]) -> str:
+    """Suggest existing paths for a key that names no path of the root model.
+
+    Below a ``Table`` the hint lists the entries of that table, because their keys are enum
+    values that cannot be guessed from the input file alone. Elsewhere it is the closest path.
+    """
+    try:
+        parts = ModelPath.parse(key).parts
+    except ValueError:
+        parts = ()
+    path_of = {path_parts: path for path, path_parts in paths.items()}
+    # The deepest part of the key that does exist; the root model always does.
+    parent = next(parts[:n] for n in range(len(parts), -1, -1) if parts[:n] in path_of)
+    entries = [
+        path
+        for path, path_parts in paths.items()
+        if len(path_parts) == len(parent) + 1
+        and path_parts[: len(parent)] == parent
+        and isinstance(path_parts[-1], ItemPart)
+    ]
+    if entries:
+        table = path_of[parent]
+        if len(entries) <= _MAX_LISTED_TABLE_ENTRIES:
+            listed = ", ".join(f'"{entry}"' for entry in entries)
+            return f' "{table}" is a table with the entries {listed}.'
+        closest = get_close_matches(key, entries, n=_MAX_LISTED_TABLE_ENTRIES, cutoff=0.0)
+        listed = ", ".join(f'"{entry}"' for entry in closest)
+        return f' "{table}" is a table with {len(entries)} entries; the closest are {listed}.'
+    closest = get_close_matches(key, paths, n=1)
+    return f' Did you mean "{closest[0]}"?' if closest else ""
 
 
 def _unknown_key_message(scope_name: str, key: str, paths: Mapping[str, tuple[PartBase, ...]]) -> str:
@@ -213,7 +250,7 @@ def _unknown_key_message(scope_name: str, key: str, paths: Mapping[str, tuple[Pa
         canonical = None
     if canonical in paths:
         return f"Provenance path '{scope_name}::{key}' must be written as \"{canonical}\"."
-    return f"Provenance path '{scope_name}::{key}' does not exist in the root model."
+    return f"Provenance path '{scope_name}::{key}' does not exist in the root model.{_missing_path_hint(key, paths)}"
 
 
 def _scope_provenance(
