@@ -1,0 +1,36 @@
+[Power.model]
+bus_voltage_v = 28.0
+load_w = 180.0
+
+[Power.model.battery]
+capacity_ah = 20.0
+max_c_rate = 1.0
+
+[Power.model.solar_panel]
+area_m2 = 1.2
+efficiency = 0.29
+max_temp_c = 85.0
+
+[Power.calc]
+solar_generation = 473.628
+
+[Power.calc.battery_sizing]
+energy_wh = 560.0
+max_discharge_w = 560.0
+
+[Power.calc.power_margin]
+margin_w = 293.628
+ratio = 2.6312666666666664
+
+[Power.verification]
+margin_positive = true
+
+[Thermal.model]
+ambient_temp_c = 20.0
+panel_heating_c_per_w = 0.1
+
+[Thermal.calc]
+panel_temperature = 67.3628
+
+[Thermal.verification]
+panel_within_limit = true

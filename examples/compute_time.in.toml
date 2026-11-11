@@ -1,0 +1,45 @@
+#:schema ./compute_time.in.schema.json
+# Computation-time example input.
+# `model` tables hold the values; `provenance` tables hold why each value is what it is.
+
+[Power.model.solar_panel]
+area_m2 = 1.2
+efficiency = 0.29
+max_temp_c = 85.0
+
+[Power.model.battery]
+capacity_ah = 20.0
+max_c_rate = 1.0
+
+[Power.model]
+bus_voltage_v = 28.0
+load_w = 180.0
+
+[Thermal.model]
+ambient_temp_c = 20.0
+panel_heating_c_per_w = 0.1
+
+# --- Provenance ---------------------------------------------------------------
+# Each entry is keyed by the path of the input it describes ("$" is the whole root
+# model) and holds free-form metadata. Metadata is inherited down the path, the
+# nearest entry winning.
+
+[Power.provenance]
+"$" = { baseline = "PDR-2026-03" }
+
+[Power.provenance."$.solar_panel"]
+source = "vendor datasheet SP-DS-004 rev.B"
+
+[Power.provenance."$.solar_panel.efficiency"]
+rationale = "BOL 0.31 derated by 2 points for 5-year EOL"
+
+[Power.provenance."$.battery.capacity_ah"]
+source = "cell datasheet"
+rationale = "two 10 Ah strings in parallel"
+
+[Power.provenance."$.load_w"]
+source = "power budget v3"
+rationale = "nominal-mode average including 15% contingency"
+
+[Thermal.provenance."$.panel_heating_c_per_w"]
+source = "thermal FEM run 2026-02-14"
