@@ -337,7 +337,7 @@ Rules:
 - Metadata is free-form: any key, with a scalar, array or table as its value. Because paths and metadata keys are kept apart, a metadata key may have the same name as a model field.
 - Only the keys of the `provenance` table are paths. A table below an entry is metadata of that entry, never a sub-path, so `"$.battery" = { capacity = { ... } }` describes `$.battery`.
 - Metadata is inherited along the path from the root model to each leaf. The nearest path wins per key; a table value is replaced as a whole, not merged.
-- A key that is not a path of the root model is an error, so typos are never silently dropped.
+- A key that is not a path of the root model is an error, so typos are never silently dropped. The error names the entries of the `Table` the key points into, or else the closest existing path.
 - `veriq update` never generates or removes `provenance` tables; `veriq schema` describes them in the JSON schema, so an editor can complete the path keys.
 
 Load provenance separately from model data:

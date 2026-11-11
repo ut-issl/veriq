@@ -244,6 +244,63 @@ def test_toml_to_provenance_invalid_entry_is_error(provenance: dict, match: str)
         vq.toml_to_provenance(project, {"Power": {"provenance": provenance}})
 
 
+_POWER_ENTRIES = '"$.power" is a table with the entries "$.power[nominal]", "$.power[safe]".'
+
+
+@pytest.mark.parametrize(
+    ("key", "hint"),
+    [
+        # Below a table the error names the entries, whose keys are enum values
+        ("$.power[mission]", _POWER_ENTRIES),
+        ("$.power[nominl]", _POWER_ENTRIES),
+        ("$.power.safe", _POWER_ENTRIES),
+        (
+            "$.matrix[launch]",
+            '"$.matrix" is a table with the entries "$.matrix[launch,nominal]", "$.matrix[launch,safe]"',
+        ),
+        # Elsewhere it suggests the closest path
+        ("$.batery", 'Did you mean "$.battery"?'),
+        ("$.batery.capacity", 'Did you mean "$.battery.capacity"?'),
+        ("$.battery.capacitty", 'Did you mean "$.battery.capacity"?'),
+        ("$.area.unit", 'Did you mean "$.area"?'),
+        ("$.power[safe]]", 'Did you mean "$.power[safe]"?'),
+    ],
+)
+def test_toml_to_provenance_missing_path_error_has_a_hint(key: str, hint: str) -> None:
+    project = _make_project()
+    with pytest.raises(vq.ProvenanceError) as exc_info:
+        vq.toml_to_provenance(project, {"Power": {"provenance": {key: {"note": "x"}}}})
+    assert f"'Power::{key}' does not exist in the root model. {hint}" in str(exc_info.value)
+
+
+def test_toml_to_provenance_missing_path_error_without_a_close_path_has_no_hint() -> None:
+    project = _make_project()
+    with pytest.raises(vq.ProvenanceError) as exc_info:
+        vq.toml_to_provenance(project, {"Power": {"provenance": {"$.qqqqqqqqqqqq": {"note": "x"}}}})
+    assert str(exc_info.value) == "Provenance path 'Power::$.qqqqqqqqqqqq' does not exist in the root model."
+
+
+def test_toml_to_provenance_missing_path_error_names_only_the_closest_entries_of_a_large_table() -> None:
+    class Axis(StrEnum):
+        X = "x"
+        Y = "y"
+        Z = "z"
+
+    class Inertia(BaseModel):
+        tensor: vq.Table[tuple[Axis, Axis], float]
+
+    project = vq.Project(name="P")
+    scope = vq.Scope(name="Adcs")
+    project.add_scope(scope)
+    scope.root_model()(Inertia)
+
+    with pytest.raises(vq.ProvenanceError) as exc_info:
+        vq.toml_to_provenance(project, {"Adcs": {"provenance": {"$.tensor[x,w]": {"note": "x"}}}})
+    message = str(exc_info.value)
+    assert '"$.tensor" is a table with 9 entries; the closest are "$.tensor[x,' in message
+    assert message.count('"$.tensor[') == 6
+
+
 def test_toml_to_provenance_table_valued_metadata_is_allowed() -> None:
     project = _make_project()
     review = {"board": "PDR", "actions": [{"id": 12, "closed": True}]}
