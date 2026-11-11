@@ -445,6 +445,28 @@ This means:
 - Circular dependencies are detected and reported
 - Cross-scope dependencies work seamlessly
 
+### Upstream Subgraph
+
+Internally the graph has one node per *output leaf*, so a calculation returning a model with three fields is three nodes. For questions like "what does this verification ultimately depend on?" that granularity double-counts. `vq.upstream_subgraph()` reduces the graph to **definition granularity** (one node per root model, calculation or verification) while keeping the parameter-level wiring:
+
+```python
+sub = vq.upstream_subgraph(project, "Power::?verify_margin")
+
+sub.nodes  # {DefinitionId: DefinitionNode}, target included, each definition once
+sub.data_edges  # producer -> consumer, with the parameter bindings of the consumer
+sub.assume_edges  # @vq.assume references, kept separate from data flow
+sub.inputs_of(node_id)  # which parameter reads which path, and the leaf paths it expands to
+sub.input_leaves()  # root-model leaves at the start of every chain (join key for provenance)
+sub.topological_order()  # producers before consumers (data edges only)
+
+# Set-style aggregation over definitions, no double counting:
+total = sum(n.user_metadata.get("compute_time_s", 0.0) for n in sub.nodes.values())
+```
+
+`follow_assumes=True` (default) also walks through assumed verifications, so the result contains the full assumption closure. With `follow_assumes=False` the assume edges and the assumed verifications are present but their own upstream is not. Assume edges are premises, not data flow: an assumed verification may itself read the assuming calculation's output, so they never take part in ordering.
+
+A definition without any leaf, such as an empty root model that another scope reads as a whole, is still a node; its `outputs` are empty. An unknown target raises `vq.DefinitionNotFoundError` (a `KeyError`).
+
 ## Execution Flow
 
 When you run `veriq calc`:
