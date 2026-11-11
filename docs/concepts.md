@@ -29,6 +29,22 @@ project = vq.Project("MySatellite")
 
 A project contains one or more scopes and manages the overall dependency graph.
 
+To load a project defined in another file the way the CLI does, use `vq.load_project()` with either a script path or a `module.path:variable` string:
+
+```python
+project = vq.load_project("examples/compute_time.py")
+project = vq.load_project("examples.compute_time:project")
+project = vq.load_project()  # [tool.veriq].project from the nearest pyproject.toml
+```
+
+The CLI's defaults from `[tool.veriq]` (project, input and output paths, resolved against the project root) are available through `vq.get_config()`, so tools built on veriq can honour the same configuration:
+
+```python
+config = vq.get_config()  # or vq.get_config(start_dir)
+project = vq.load_project(config=config)
+provenance = vq.load_provenance_from_toml(project, config.input) if config.input else {}
+```
+
 ## Scope
 
 A **Scope** groups related models, calculations, and verifications:

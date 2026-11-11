@@ -736,6 +736,8 @@ The JSON output contains `target`, `nodes` (topological order, with `user_metada
 
 You can configure default project, input, and output paths in your `pyproject.toml` file. This allows you to omit these arguments when running CLI commands.
 
+The same configuration is available from Python through `vq.get_config()`; `vq.load_project()` without arguments loads the configured project. See [Concepts: Project](concepts.md#project).
+
 ```toml
 [tool.veriq]
 # Option 1: Module path format (for installed packages)
@@ -785,7 +787,7 @@ veriq check path/to/my_project.py
 veriq will:
 
 1. Load the Python script
-2. Find a `Project` instance (or use `--project` to specify)
+2. Find a `Project` instance (or use `--project` to specify). If the script defines several, the one named `project` is used; without such a variable `--project` is required
 
 ### Module Path
 
