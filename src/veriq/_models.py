@@ -184,25 +184,38 @@ class Project:
         """Get all scopes in the project."""
         return self._scopes
 
-    def input_model(self) -> type[BaseModel]:
+    def input_model(self, *, include_provenance: bool = False) -> type[BaseModel]:
         """Generate a Pydantic BaseModel for the project input file.
 
         The input model has the structure:
         {
             "ScopeName": {
-                "model": <root model instance>
+                "model": <root model instance>,
+                "provenance": <optional, model path -> metadata table; only if include_provenance>
             },
             ...
         }
+
+        Args:
+            include_provenance: Also describe the optional ``provenance`` table of each
+                scope (used for JSON schema generation). Default generation via
+                ``veriq update`` must not include it.
+
         """
+        from ._provenance import PROVENANCE_KEY, build_provenance_model  # noqa: PLC0415
+
         # Create a model for each scope that contains just the root model
         scope_models: dict[str, Any] = {}
         for scope_name, scope in self._scopes.items():
             root_model_type = scope.get_root_model()
             # Create a model with a "model" field
+            scope_fields: dict[str, Any] = {"model": (root_model_type, ...)}
+            if include_provenance:
+                provenance_model = build_provenance_model(root_model_type, f"{scope_name}Provenance")
+                scope_fields[PROVENANCE_KEY] = (provenance_model | None, None)
             scope_input_model = create_model(
                 f"{scope_name}Input",
-                model=(root_model_type, ...),
+                **scope_fields,
             )
             scope_models[scope_name] = (scope_input_model, ...)
 

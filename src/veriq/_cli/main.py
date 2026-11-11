@@ -25,9 +25,10 @@ from veriq._default import default
 from veriq._diff import DiffKind, diff_dicts, format_toml_path
 from veriq._eval import evaluate_project
 from veriq._external_data import validate_external_data
-from veriq._io import export_to_toml, load_model_data_from_toml
+from veriq._io import export_to_toml, load_model_data_from_toml, load_provenance_from_toml
 from veriq._ir import build_graph_spec
 from veriq._path import VerificationPath
+from veriq._provenance import ProvenanceError, strip_provenance
 from veriq._schema import diff_schemas
 from veriq._toml_edit import dumps_toml, merge_into_document, parse_toml_preserving
 from veriq._traceability import RequirementStatus, build_traceability_report
@@ -211,6 +212,13 @@ def calc(  # noqa: C901, PLR0912, PLR0915
     # Load model data
     err_console.print(f"[cyan]Loading input from:[/cyan] {effective_input}")
     model_data = load_model_data_from_toml(project, effective_input)
+
+    # Validate the optional provenance tables against the root models
+    try:
+        load_provenance_from_toml(project, effective_input)
+    except ProvenanceError as e:
+        err_console.print(f"[red]✗ Invalid provenance: {escape(str(e))}[/red]")
+        raise typer.Exit(code=1) from e
 
     # Validate external data checksums
     validation_result = validate_external_data(model_data)
@@ -534,7 +542,7 @@ def schema(
 
     # Generate input model schema
     err_console.print("[cyan]Generating input model JSON schema...[/cyan]")
-    input_model = project.input_model()
+    input_model = project.input_model(include_provenance=True)
     json_schema = input_model.model_json_schema()
 
     if check:
@@ -546,6 +554,7 @@ def schema(
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w") as f:
         json.dump(json_schema, f, indent=indent)
+        f.write("\n")
 
     err_console.print()
     err_console.print("[green]✓ Schema generation complete[/green]")
@@ -757,7 +766,9 @@ def update(
     # Perform the update (functional core for warnings/logic)
     err_console.print("[cyan]Merging existing data with new defaults...[/cyan]")
     new_default_dict = new_default_data.model_dump()
-    result = update_input_data(new_default_dict, existing_data)
+    # The reserved `provenance` tables are user-maintained; they are neither generated
+    # nor removed by `update`, so they are left out of the schema comparison.
+    result = update_input_data(new_default_dict, strip_provenance(existing_data))
 
     # Merge into the TOML document (parsed with tomlkit) to preserve comments.
     # Check and write modes share this code path so that --check always agrees

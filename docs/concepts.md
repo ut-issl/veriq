@@ -284,6 +284,69 @@ def verify_margin(
     return vq.Table({mode: margin[mode] > 0 for mode in Mode})
 ```
 
+## Input Provenance
+
+Input values rarely come from nowhere: a capacity comes from a datasheet, a margin from a review decision. veriq lets you record this **per input field**, in two complementary places. veriq does not interpret the contents; it only stores them and makes them retrievable per leaf path.
+
+### Field definition metadata (`vq.Meta`)
+
+Properties of the field itself (unit, governing document, owner) belong next to the field definition:
+
+```python
+from typing import Annotated
+
+
+class Battery(BaseModel):
+    capacity: Annotated[float, vq.Meta({"unit": "Wh", "source_doc": "EPS-ICD-001"})]
+    min_capacity: float
+
+
+class PowerModel(BaseModel):
+    battery: Annotated[Battery, vq.Meta(owner="power-team")]  # inherited by battery.*
+```
+
+The resolved metadata appears as `NodeSpec.field_metadata` on the corresponding MODEL leaf nodes of the dependency graph. It is kept separate from `@scope.root_model(metadata=...)`, which is shared by all leaves of the root model.
+
+### Value provenance (`provenance` table)
+
+The rationale for a *concrete value* belongs next to the value, in the reserved `provenance` table of the input TOML file. Each entry is keyed by the path of the input it describes, in the same syntax as `vq.Ref`, and holds the metadata for that path:
+
+```toml
+[Power.model.battery]
+capacity = 100.0
+min_capacity = 50.0
+
+[Power.provenance."$.battery"]
+source = "vendor datasheet rev.C"      # applies to capacity and min_capacity
+
+[Power.provenance."$.battery.capacity"]
+rationale = "20% EOL degradation applied"   # adds to the entry above
+```
+
+Short entries can also be written inline, in one table:
+
+```toml
+[Power.provenance]
+"$" = { baseline = "PDR-2026-03" }                    # the whole root model
+"$.power_consumption[safe]" = { rationale = "heaters off" }   # one Table entry
+```
+
+Rules:
+
+- A key is the path of a leaf, a nested model, a whole `Table`, or `"$"` for the root model. Table entries use brackets (`"$.power[safe]"`, `"$.matrix[launch,nominal]"`). The quotes are required by TOML.
+- Metadata is free-form: any key, with a scalar, array or table as its value. Because paths and metadata keys are kept apart, a metadata key may have the same name as a model field.
+- Only the keys of the `provenance` table are paths. A table below an entry is metadata of that entry, never a sub-path, so `"$.battery" = { capacity = { ... } }` describes `$.battery`.
+- Metadata is inherited along the path from the root model to each leaf. The nearest path wins per key; a table value is replaced as a whole, not merged.
+- A key that is not a path of the root model is an error, so typos are never silently dropped. The error names the entries of the `Table` the key points into, or else the closest existing path.
+- `veriq update` never generates or removes `provenance` tables; `veriq schema` describes them in the JSON schema, so an editor can complete the path keys.
+
+Load provenance separately from model data:
+
+```python
+provenance = vq.load_provenance_from_toml(project, "input.toml")
+# {ProjectPath(Power::$.battery.capacity): {"source": "vendor datasheet rev.C", "rationale": "..."}, ...}
+```
+
 ## External Data (FileRef)
 
 **FileRef** allows you to reference external files in your models with automatic checksum tracking for reproducibility:

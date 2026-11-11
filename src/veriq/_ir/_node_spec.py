@@ -41,6 +41,9 @@ class NodeSpec:
             `root_model` / `calculation` / `verification` decorators. Kept separate
             from `metadata` so that user keys never collide with engine keys.
             All leaf nodes expanded from one definition share the same dict.
+        field_metadata: Metadata declared on the root-model field definition via
+            `Annotated[T, vq.Meta(...)]`, merged along the path from the root model to
+            this leaf (nearest wins). Only MODEL nodes carry it; empty otherwise.
 
     Example:
         A calculation node that computes power from voltage and current:
@@ -70,6 +73,7 @@ class NodeSpec:
     param_mapping: dict[str, ProjectPath] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
     user_metadata: dict[str, Any] = field(default_factory=dict)
+    field_metadata: dict[str, Any] = field(default_factory=dict)
 
     def is_input(self) -> bool:
         """Check if this is an input node (MODEL kind with no dependencies)."""

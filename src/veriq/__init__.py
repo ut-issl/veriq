@@ -8,10 +8,12 @@ __all__ = [
     "ExternalData",
     "FileRef",
     "GraphSpec",
+    "Meta",
     "NodeKind",
     "NodeSpec",
     "PathNode",
     "Project",
+    "ProvenanceError",
     "Ref",
     "Requirement",
     "RequirementStatus",
@@ -33,6 +35,8 @@ __all__ = [
     "input_base_dir",
     "is_valid_verification_return_type",
     "load_model_data_from_toml",
+    "load_provenance_from_toml",
+    "toml_to_provenance",
     "validate_external_data",
     "with_range",
 ]
@@ -50,9 +54,10 @@ from ._external_data import (
     validate_external_data,
 )
 from ._graph import DependencyGraph
-from ._io import export_to_toml, input_base_dir, load_model_data_from_toml
+from ._io import export_to_toml, input_base_dir, load_model_data_from_toml, load_provenance_from_toml
 from ._ir import GraphSpec, NodeKind, NodeSpec, build_graph_spec
 from ._models import Project, Ref, Requirement, Scope, is_valid_verification_return_type
+from ._provenance import Meta, ProvenanceError, toml_to_provenance
 from ._range_enum import with_range
 from ._relations import depends
 from ._str_enum_with_doc import StrEnumWithDoc
