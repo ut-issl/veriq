@@ -160,7 +160,7 @@ def test_table_with_tuple_index_as_calc_output() -> None:
         input_table: Annotated[vq.Table[tuple[Region, Product], float], vq.Ref("$.input_table")],
     ) -> vq.Table[tuple[Region, Product], float]:
         # Transform the input table by multiplying by 2
-        return vq.Table(  # ty: ignore[invalid-return-type]  # tuple-key Table inference limitation
+        return vq.Table(
             {
                 (Region.NORTH, Product.WIDGET): input_table[(Region.NORTH, Product.WIDGET)] * 2,
                 (Region.NORTH, Product.GADGET): input_table[(Region.NORTH, Product.GADGET)] * 2,
@@ -242,7 +242,7 @@ def test_table_with_tuple_index_as_calc_output_with_calc_input() -> None:
         input_table: Annotated[vq.Table[tuple[Region, Product], float], vq.Ref("$.input_table")],
     ) -> vq.Table[tuple[Region, Product], float]:
         # Transform the input table by multiplying by 2
-        return vq.Table(  # ty: ignore[invalid-return-type]  # tuple-key Table inference limitation
+        return vq.Table(
             {
                 (Region.NORTH, Product.WIDGET): input_table[(Region.NORTH, Product.WIDGET)] * 2,
                 (Region.NORTH, Product.GADGET): input_table[(Region.NORTH, Product.GADGET)] * 2,
@@ -256,7 +256,7 @@ def test_table_with_tuple_index_as_calc_output_with_calc_input() -> None:
         doubled_table: Annotated[vq.Table[tuple[Region, Product], float], vq.Ref("@double_table")],
     ) -> vq.Table[tuple[Region, Product], float]:
         # Further transform the doubled table by multiplying by 3
-        return vq.Table(  # ty: ignore[invalid-return-type]  # tuple-key Table inference limitation
+        return vq.Table(
             {
                 (Region.NORTH, Product.WIDGET): doubled_table[(Region.NORTH, Product.WIDGET)] * 3,
                 (Region.NORTH, Product.GADGET): doubled_table[(Region.NORTH, Product.GADGET)] * 3,

@@ -297,7 +297,7 @@ def test_multidim_table_verification_evaluation() -> None:
     def verify_matrix(
         matrix: Annotated[vq.Table[tuple[Phase, Mode], float], vq.Ref("$.matrix")],
     ) -> vq.Table[tuple[Phase, Mode], bool]:
-        return vq.Table(  # ty: ignore[invalid-return-type]  # tuple-key Table inference limitation
+        return vq.Table(
             {(phase, mode): matrix[(phase, mode)] > 0 for phase in Phase for mode in Mode},
         )
 
