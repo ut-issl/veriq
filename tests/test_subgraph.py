@@ -116,7 +116,7 @@ def test_target_forms_are_equivalent(project: vq.Project) -> None:
 
 
 def test_unknown_target_raises(project: vq.Project) -> None:
-    with pytest.raises(KeyError, match="Power::\\?nope"):
+    with pytest.raises(vq.DefinitionNotFoundError, match="Power::\\?nope"):
         vq.upstream_subgraph(project, "Power::?nope")
 
 
@@ -381,12 +381,12 @@ def test_empty_root_model_is_a_node_without_outputs() -> None:
     assert sub.input_leaves() == {_pp("B::$.x")}
 
 
-def test_empty_root_model_can_be_the_target() -> None:
+@pytest.mark.parametrize("from_spec", [False, True], ids=["project", "graph_spec"])
+def test_empty_root_model_can_be_the_target(*, from_spec: bool) -> None:
     project = _build_project_with_leafless_definitions()
-    for source in (project, build_graph_spec(project)):
-        sub = vq.upstream_subgraph(source, "A::$")
-        assert set(sub.nodes) == {_did("A::$")}
-        assert sub.data_edges == ()
+    sub = vq.upstream_subgraph(build_graph_spec(project) if from_spec else project, "A::$")
+    assert set(sub.nodes) == {_did("A::$")}
+    assert sub.data_edges == ()
 
 
 def test_leafless_calculation_keeps_its_upstream_and_assumptions() -> None:
@@ -417,6 +417,20 @@ def test_leafless_definitions_from_bare_graph_spec() -> None:
     assert sub.nodes[_did("B::@nothing")].kind == NodeKind.CALCULATION
 
 
+def test_leafless_definition_read_by_another_can_be_the_target_of_a_bare_graph_spec() -> None:
+    # `B::?ok` reads `B::@nothing`, so the spec knows that it exists although it has no node.
+    spec = build_graph_spec(_build_project_with_leafless_definitions())
+    sub = vq.upstream_subgraph(spec, "B::@nothing")
+
+    assert set(sub.nodes) == {_did("B::@nothing")}
+    assert sub.nodes[_did("B::@nothing")].kind == NodeKind.CALCULATION
+    assert sub.nodes[_did("B::@nothing")].outputs == ()
+    assert sub.data_edges == ()
+
+    with pytest.raises(vq.DefinitionNotFoundError, match="B::@never_read"):
+        vq.upstream_subgraph(spec, "B::@never_read")
+
+
 def test_unknown_root_model_scope_raises() -> None:
     project = _build_project_with_leafless_definitions()
     with pytest.raises(vq.DefinitionNotFoundError, match="Nope::\\$"):
@@ -440,3 +454,93 @@ def test_every_definition_of_dummysat_has_an_upstream() -> None:
     sub = vq.upstream_subgraph(project, "System::?power_thermal_compatibility")
     assert _did("Thermal::$") in sub.nodes
     assert sub.nodes[_did("Thermal::$")].outputs == ()
+
+
+def test_topological_order_of_definitions_that_become_ready_together_is_fixed() -> None:
+    # Both calculations become ready as soon as the root model is done. Their order must not
+    # depend on the iteration order of a set, which changes with the hash seed of the process.
+    class Design(BaseModel):
+        x: float
+
+    project = vq.Project(name="P")
+    scope = vq.Scope(name="S")
+    project.add_scope(scope)
+    scope.root_model()(Design)
+
+    @scope.calculation()
+    def zeta(x: Annotated[float, vq.Ref("$.x")]) -> float:
+        return x
+
+    @scope.calculation()
+    def alpha(x: Annotated[float, vq.Ref("$.x")]) -> float:
+        return x
+
+    @scope.verification()
+    def ok(a: Annotated[float, vq.Ref("@alpha")], z: Annotated[float, vq.Ref("@zeta")]) -> bool:
+        return a == z
+
+    sub = vq.upstream_subgraph(project, "S::?ok")
+    assert sub.topological_order() == [_did(s) for s in ("S::$", "S::@alpha", "S::@zeta", "S::?ok")]
+
+
+def test_whole_table_of_empty_models_is_not_an_output() -> None:
+    # The entries have no leaves, so the IR holds the whole-table node and nothing below it.
+    class Empty(BaseModel):
+        pass
+
+    class Design(BaseModel):
+        slots: vq.Table[Mode, Empty]
+        x: float
+
+    project = vq.Project(name="P")
+    scope = vq.Scope(name="S")
+    project.add_scope(scope)
+    scope.root_model()(Design)
+
+    @scope.verification()
+    def ok(slots: Annotated[vq.Table[Mode, Empty], vq.Ref("$.slots")]) -> bool:  # noqa: ARG001
+        return True
+
+    assert _pp("S::$.slots") in build_graph_spec(project).nodes
+
+    sub = vq.upstream_subgraph(project, "S::?ok")
+    assert sub.nodes[_did("S::$")].outputs == (_pp("S::$.x"),)
+    assert [(b.param, b.ref, b.leaves) for b in sub.inputs_of(_did("S::?ok"))] == [
+        ("slots", _pp("S::$.slots"), frozenset()),
+    ]
+    assert sub.input_leaves() == frozenset()
+
+
+def test_annotated_table_is_recognised_as_a_whole_table() -> None:
+    class Design(BaseModel):
+        load: Annotated[vq.Table[Mode, float], vq.Meta(owner="eps")]
+
+    project = vq.Project(name="P")
+    scope = vq.Scope(name="S")
+    project.add_scope(scope)
+    scope.root_model()(Design)
+
+    sub = vq.upstream_subgraph(project, "S::$")
+    assert sub.nodes[_did("S::$")].outputs == (_pp("S::$.load[nominal]"), _pp("S::$.load[safe]"))
+
+
+def test_ir_dependency_without_a_parameter_binding_is_kept_as_an_edge() -> None:
+    # `build_graph_spec` never produces this, but a hand-built GraphSpec may list a dependency
+    # that no parameter reads. Evaluation orders by it, so the subgraph must show it.
+    model = vq.NodeSpec(id=_pp("S::$.x"), kind=NodeKind.MODEL, dependencies=frozenset(), output_type=float)
+    verification = vq.NodeSpec(
+        id=_pp("S::?ok"),
+        kind=NodeKind.VERIFICATION,
+        dependencies=frozenset({model.id}),
+        output_type=bool,
+        compute_fn=lambda: True,
+        param_mapping={},
+    )
+    spec = vq.GraphSpec(nodes={model.id: model, verification.id: verification}, scope_names=("S",))
+
+    sub = vq.upstream_subgraph(spec, "S::?ok")
+    assert set(sub.nodes) == {_did("S::$"), _did("S::?ok")}
+    assert sub.predecessors(_did("S::?ok")) == {_did("S::$")}
+    assert [(e.source, e.target, e.bindings) for e in sub.data_edges] == [(_did("S::$"), _did("S::?ok"), ())]
+    assert sub.inputs_of(_did("S::?ok")) == ()
+    assert sub.topological_order() == [_did("S::$"), _did("S::?ok")]

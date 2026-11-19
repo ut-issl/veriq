@@ -22,12 +22,14 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from inspect import isclass
+from typing import TYPE_CHECKING, Annotated, Any, get_args, get_origin
 
 from ._graph import topological_sort
 from ._ir import GraphSpec, NodeKind, build_graph_spec
 from ._models import Project
 from ._path import ProjectPath, parse_path, parse_project_path
+from ._table import Table
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -85,7 +87,12 @@ class InputBinding:
 
 @dataclass(frozen=True, slots=True)
 class DataEdge:
-    """`target` reads data produced by `source`, through the listed parameter bindings."""
+    """`target` reads data produced by `source`, through the listed parameter bindings.
+
+    `bindings` is empty only for a hand-built `GraphSpec` whose node lists a dependency that
+    none of its parameters reads. The dependency is kept as an edge, because evaluation orders
+    by it, but it names no parameter and adds no leaves to `input_leaves()`.
+    """
 
     source: DefinitionId
     target: DefinitionId
@@ -151,10 +158,16 @@ class UpstreamSubgraph:
         checked after the fact and may itself depend on the assuming definition's output,
         so including them could introduce cycles. Assumed definitions are still part of
         `nodes` and appear in the order wherever their data dependencies place them.
+
+        The order is the same on every run: definitions that become ready together keep the
+        order of `nodes` and `data_edges`.
         """
-        successors: dict[DefinitionId, set[DefinitionId]] = {node_id: set() for node_id in self.nodes}
+        # Lists, not sets: the sort visits successors in iteration order, and the iteration
+        # order of a set of DefinitionId changes with the hash seed of the process.
+        successors: dict[DefinitionId, list[DefinitionId]] = {node_id: [] for node_id in self.nodes}
         for edge in self.data_edges:
-            successors[edge.source].add(edge.target)
+            if edge.target not in successors[edge.source]:
+                successors[edge.source].append(edge.target)
         return topological_sort(successors)
 
     def __len__(self) -> int:
@@ -188,6 +201,12 @@ class _Definition:
     outputs: tuple[ProjectPath, ...]
     bindings: tuple[InputBinding, ...]
     assumed: frozenset[DefinitionId]
+    unbound_sources: frozenset[DefinitionId] = frozenset()
+    """Definitions the IR lists as dependencies although no parameter binding refers to them."""
+
+    def sources(self) -> frozenset[DefinitionId]:
+        """Every definition this one reads data from."""
+        return self.unbound_sources | {DefinitionId.from_path(binding.ref) for binding in self.bindings}
 
 
 def _group_by_definition(spec: GraphSpec) -> dict[DefinitionId, list[NodeSpec]]:
@@ -206,26 +225,22 @@ def _is_under(leaf: ProjectPath, ref: ProjectPath) -> bool:
     )
 
 
-def _value_leaves(spec: GraphSpec) -> frozenset[ProjectPath]:
-    """Node IDs that carry a value: those that are not a proper prefix of another node in the same definition.
+def _is_table_type(type_: Any) -> bool:
+    if get_origin(type_) is Annotated:
+        type_ = get_args(type_)[0]
+    origin = get_origin(type_) or type_
+    return isclass(origin) and issubclass(origin, Table)
 
-    `Table` fields appear in the IR as the whole table plus one node per key; only the
-    per-key nodes (and non-table leaves) hold values.
+
+def _value_leaves(spec: GraphSpec) -> frozenset[ProjectPath]:
+    """Node IDs that carry a value: every node except the whole-table ones.
+
+    `Table` fields appear in the IR as the whole table plus the nodes of each entry; only
+    the latter (and non-table leaves) hold values. The whole table is recognised by its
+    output type, so it is left out even when its entries have no leaves of their own
+    (a table of empty models).
     """
-    by_definition: dict[DefinitionId, list[ProjectPath]] = {}
-    for path in spec.nodes:
-        by_definition.setdefault(DefinitionId.from_path(path), []).append(path)
-    value_leaves: set[ProjectPath] = set()
-    for paths in by_definition.values():
-        for path in paths:
-            n = len(path.path.parts)
-            is_prefix = any(
-                other is not path and len(other.path.parts) > n and other.path.parts[:n] == path.path.parts
-                for other in paths
-            )
-            if not is_prefix:
-                value_leaves.add(path)
-    return frozenset(value_leaves)
+    return frozenset(path for path, node in spec.nodes.items() if not _is_table_type(node.output_type))
 
 
 def _bindings_of(leaves: list[NodeSpec], value_leaves: frozenset[ProjectPath]) -> tuple[InputBinding, ...]:
@@ -240,6 +255,21 @@ def _bindings_of(leaves: list[NodeSpec], value_leaves: frozenset[ProjectPath]) -
         )
         for param, ref in representative.param_mapping.items()
     )
+
+
+def _unbound_sources(
+    node_id: DefinitionId,
+    leaves: list[NodeSpec],
+    bindings: tuple[InputBinding, ...],
+) -> frozenset[DefinitionId]:
+    """Definitions among the IR dependencies of `leaves` that no binding refers to.
+
+    `build_graph_spec` derives the dependencies from the parameter references, so this is
+    empty for every spec it builds. A hand-built `GraphSpec` may list more.
+    """
+    bound = {DefinitionId.from_path(binding.ref) for binding in bindings}
+    dependencies = {DefinitionId.from_path(dep) for leaf in leaves for dep in leaf.dependencies}
+    return frozenset(dependencies - bound - {node_id})
 
 
 def _assumed_ids(leaves: list[NodeSpec]) -> frozenset[DefinitionId]:
@@ -260,16 +290,18 @@ def _resolve_target(target: ProjectPath | str | DefinitionId) -> DefinitionId:
 
 def _definitions_from_spec(spec: GraphSpec, value_leaves: frozenset[ProjectPath]) -> dict[DefinitionId, _Definition]:
     """One `_Definition` per definition that has at least one node in the IR."""
-    return {
-        node_id: _Definition(
+    definitions: dict[DefinitionId, _Definition] = {}
+    for node_id, leaves in _group_by_definition(spec).items():
+        bindings = _bindings_of(leaves, value_leaves)
+        definitions[node_id] = _Definition(
             kind=leaves[0].kind,
             user_metadata=leaves[0].user_metadata,
             outputs=tuple(sorted((leaf.id for leaf in leaves if leaf.id in value_leaves), key=str)),
-            bindings=_bindings_of(leaves, value_leaves),
+            bindings=bindings,
             assumed=_assumed_ids(leaves),
+            unbound_sources=_unbound_sources(node_id, leaves, bindings),
         )
-        for node_id, leaves in _group_by_definition(spec).items()
-    }
+    return definitions
 
 
 def _leafless_definitions(
@@ -354,6 +386,10 @@ class _Reducer:
             )
         return self.definitions[node_id]
 
+    def is_read(self, node_id: DefinitionId) -> bool:
+        """True if some definition reads data from `node_id`."""
+        return any(node_id in definition.sources() for definition in self.definitions.values())
+
     def add_node(self, node_id: DefinitionId) -> None:
         if node_id in self.nodes:
             return
@@ -371,6 +407,8 @@ class _Reducer:
         by_source: dict[DefinitionId, list[InputBinding]] = {}
         for binding in definition.bindings:
             by_source.setdefault(DefinitionId.from_path(binding.ref), []).append(binding)
+        for source_id in sorted(definition.unbound_sources, key=str):
+            by_source[source_id] = []
         for source_id, bindings in by_source.items():
             if source_id != node_id:
                 self.data_edges.append(DataEdge(source=source_id, target=node_id, bindings=tuple(bindings)))
@@ -386,9 +424,10 @@ class _Reducer:
                 self.add_node(assumed_id)
 
     def run(self, target_id: DefinitionId) -> UpstreamSubgraph:
-        # A root model without leaves has no node in a bare GraphSpec, but every scope has one.
+        # A definition without leaves has no node in a bare GraphSpec. It still exists if it is
+        # a root model (every scope has one) or if another definition reads it.
         is_root_model = target_id.root == "$" and target_id.scope in self.scope_names
-        if target_id not in self.definitions and not is_root_model:
+        if target_id not in self.definitions and not is_root_model and not self.is_read(target_id):
             msg = f"Definition not found: {target_id}"
             raise DefinitionNotFoundError(msg)
         self.add_node(target_id)
@@ -425,11 +464,14 @@ def upstream_subgraph(
             may be given; the whole definition is used.
         follow_assumes: If True (default), traversal continues through verifications referenced
             by `@vq.assume`, so the result contains the full assumption closure. If False, the
-            assume edges and the assumed verifications are included but their own upstream is not.
+            assume edges and the assumed verifications are included but traversal does not continue
+            through an assume edge. The upstream of an assumed verification is then present only
+            where a data path reaches it as well.
 
     A definition whose type has no leaves (e.g. an empty root model that another scope reads
     as a whole) is included as a node with empty `outputs`. Its user metadata and its own
-    inputs are only known when a `Project` is given: the IR has no node to carry them.
+    inputs are only known when a `Project` is given: the IR has no node to carry them. With a
+    bare `GraphSpec` it can be the target only if it is a root model or another definition reads it.
 
     Raises:
         DefinitionNotFoundError: If `target` does not name a definition in the graph
