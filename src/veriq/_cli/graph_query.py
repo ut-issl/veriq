@@ -4,7 +4,7 @@ This module provides pure functions for querying the dependency graph.
 These are the functional core - no I/O, no Rich rendering.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from veriq._graph import DependencyGraph
@@ -43,6 +43,7 @@ class NodeInfo:
     path: ProjectPath
     kind: NodeKind
     dependency_count: int
+    user_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +56,8 @@ class NodeDetail:
     direct_dependencies: frozenset[ProjectPath]
     direct_dependents: frozenset[ProjectPath]
     metadata: dict
+    user_metadata: dict[str, Any] = field(default_factory=dict)
+    field_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -224,6 +227,7 @@ def list_nodes(
             path=n.id,
             kind=n.kind,
             dependency_count=len(n.dependencies),
+            user_metadata=dict(n.user_metadata),
         )
         for n in nodes
     ]
@@ -264,6 +268,8 @@ def get_node_detail(project: Project, path: ProjectPath) -> NodeDetail:
         direct_dependencies=graph.predecessors(path),
         direct_dependents=graph.successors(path),
         metadata=dict(node.metadata),
+        user_metadata=dict(node.user_metadata),
+        field_metadata=dict(node.field_metadata),
     )
 
 
