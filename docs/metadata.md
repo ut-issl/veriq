@@ -107,18 +107,21 @@ Upstream of Power::?margin_positive (8 definitions, 10 data edges, 1 assume edge
 ┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
 │ MODEL        │ Power::$                         │      0 │              0 │                0 │
 │ MODEL        │ Thermal::$                       │      0 │              0 │                0 │
-│ CALCULATION  │ Power::@solar_generation         │      1 │             30 │               30 │
 │ CALCULATION  │ Power::@battery_sizing           │      1 │            120 │              120 │
-│ CALCULATION  │ Thermal::@panel_temperature      │      2 │             45 │               75 │
+│ CALCULATION  │ Power::@solar_generation         │      1 │             30 │               30 │
 │ CALCULATION  │ Power::@power_margin             │      3 │              5 │              125 │
-│ VERIFICATION │ Thermal::?panel_within_limit     │      2 │              1 │               76 │
+│ CALCULATION  │ Thermal::@panel_temperature      │      2 │             45 │               75 │
 │ VERIFICATION │ Power::?margin_positive (target) │      1 │              2 │              127 │
+│ VERIFICATION │ Thermal::?panel_within_limit     │      2 │              1 │               76 │
 └──────────────┴──────────────────────────────────┴────────┴────────────────┴──────────────────┘
 
 Sequential total of compute_time_s (each definition once): 203
 Propagated to target (combine=max): 127 (critical path)
 
 Bindings (parameter <- reference):
+  Power::@battery_sizing
+    battery <- Power::$.battery (2 leaves)
+    bus_voltage_v <- Power::$.bus_voltage_v
   Power::@solar_generation
     panel <- Power::$.solar_panel (3 leaves)
     assumes Thermal::?panel_within_limit
