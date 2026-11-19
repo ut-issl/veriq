@@ -463,7 +463,7 @@ sub.topological_order()  # producers before consumers (data edges only)
 total = sum(n.user_metadata.get("compute_time_s", 0.0) for n in sub.nodes.values())
 ```
 
-`follow_assumes=True` (default) also walks through assumed verifications, so the result contains the full assumption closure. With `follow_assumes=False` the assume edges and the assumed verifications are present but their own upstream is not. Assume edges are premises, not data flow: an assumed verification may itself read the assuming calculation's output, so they never take part in ordering.
+`follow_assumes=True` (default) also walks through assumed verifications, so the result contains the full assumption closure. With `follow_assumes=False` the assume edges and the assumed verifications are present, but traversal does not continue through an assume edge: the upstream of an assumed verification appears only where a data path reaches it as well. Assume edges are premises, not data flow: an assumed verification may itself read the assuming calculation's output, so they never take part in ordering.
 
 A definition without any leaf, such as an empty root model that another scope reads as a whole, is still a node; its `outputs` are empty. An unknown target raises `vq.DefinitionNotFoundError` (a `KeyError`).
 
