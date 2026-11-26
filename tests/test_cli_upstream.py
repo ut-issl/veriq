@@ -178,6 +178,29 @@ def test_upstream_json_combine_sum_and_no_assumes(project: vq.Project) -> None:
     assert data["aggregation"]["propagated"] == 27.0
 
 
+@pytest.mark.parametrize(
+    ("combine", "propagated"),
+    [
+        pytest.param("max", 30.0, id="max"),  # $ (3) -> heat (23) -> budget (28) -> ok (30)
+        pytest.param("sum", 43.0, id="sum"),  # budget = 5 + (13 + 23) = 41, ok = 43
+    ],
+)
+def test_upstream_json_default_reaches_total_and_propagation(
+    project: vq.Project,
+    combine: str,
+    propagated: float,
+) -> None:
+    result = _run(
+        project,
+        *("upstream", "Power::?ok", "--json", "--key", "compute_time_s", "--combine", combine, "--default", "3"),
+    )
+    assert result.exit_code == 0, result.output
+    aggregation = json.loads(result.stdout)["aggregation"]
+    assert aggregation["default"] == 3.0
+    assert aggregation["total"] == 44.0  # 38 + the two root models, which lack the key
+    assert aggregation["propagated"] == propagated
+
+
 def test_upstream_json_with_input_provenance(project: vq.Project, tmp_path: Path) -> None:
     toml = tmp_path / "in.toml"
     toml.write_text('[Power.model]\n[Power.provenance."$.area"]\nsource = "CAD"\n')
@@ -322,6 +345,16 @@ def test_upstream_invalid_provenance(project: vq.Project, tmp_path: Path) -> Non
     assert "Invalid provenance" in result.stderr
 
 
+def test_upstream_malformed_input_toml(project: vq.Project, tmp_path: Path) -> None:
+    toml = tmp_path / "in.toml"
+    toml.write_text("[Power\n")
+    result = _run(project, "upstream", "Power::?ok", "-i", str(toml))
+    assert result.exit_code == 1
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert "Invalid TOML" in result.stderr
+    assert "in.toml" in result.stderr.replace("\n", "")
+
+
 # --- show / list expose metadata ---
 
 
@@ -361,3 +394,18 @@ def test_list_json_serializes_non_json_metadata(project: vq.Project) -> None:
     assert result.exit_code == 0, result.output
     data = json.loads(result.stdout)
     assert "float" in {n["path"]: n for n in data}["Power::@gen"]["user_metadata"]["type"]
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param(("list", "--json", "--kind", "calc"), id="list"),
+        pytest.param(("show", "Power::@gen", "--json"), id="show"),
+        pytest.param(("upstream", "Power::@gen", "--json"), id="upstream"),
+    ],
+)
+def test_json_serializes_metadata_with_non_json_keys(project: vq.Project, args: tuple[str, ...]) -> None:
+    project.scopes["Power"].calculations["gen"].metadata["costs"] = {("nominal", "safe"): 1, "plain": 2}
+    result = _run(project, *args)
+    assert result.exit_code == 0, result.output
+    assert "{\"('nominal', 'safe')\": 1, \"plain\": 2}" in json.dumps(json.loads(result.stdout))

@@ -140,7 +140,7 @@ def build_upstream_report(  # noqa: PLR0913
 
 
 def report_to_dict(report: UpstreamReport) -> dict[str, Any]:
-    """Convert a report to a JSON-friendly dict (callers serialize with `default=str`)."""
+    """Convert a report to a JSON-friendly dict (user metadata is kept as is; callers make it serializable)."""
     sub = report.subgraph
     agg = report.aggregation
     nodes = [

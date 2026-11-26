@@ -687,16 +687,16 @@ With `--key`, two numbers are reported and they mean different things:
 
 ```bash
 # What does a verification depend on, and how long is the critical path?
-veriq upstream "Power::?verify_margin" -p examples/dummysat.py --key compute_time_s
+veriq upstream "Power::?verify_battery" -p examples/dummysat.py --key compute_time_s
 
 # Parameter wiring and input provenance from the input file
-veriq upstream "Power::?verify_margin" -p examples/dummysat.py --bindings -i examples/dummysat.in.toml
+veriq upstream "Power::?verify_battery" -p examples/dummysat.py --bindings -i examples/dummysat.in.toml
 
 # Machine-readable: nodes, data edges with bindings, assume edges, inputs, aggregation
-veriq upstream "Power::?verify_margin" -p examples/dummysat.py --json --key compute_time_s
+veriq upstream "Power::?verify_battery" -p examples/dummysat.py --json --key compute_time_s
 ```
 
-**Example output:**
+**Example output** (schematic: it shows a project whose definitions carry `compute_time_s`, which `examples/dummysat.py` does not define):
 
 ```
 Upstream of Power::?verify_margin (5 definitions, 4 data edges, 1 assume edges)

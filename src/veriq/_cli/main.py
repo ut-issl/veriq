@@ -61,6 +61,27 @@ CHECK_EXIT_STALE = 1
 CHECK_EXIT_INVALID = 2
 
 
+def _with_json_keys(value: Any) -> Any:
+    """Return `value` with every mapping key the JSON encoder rejects replaced by its `str()`.
+
+    `json.dumps(default=str)` converts unsupported values but still raises on unsupported
+    keys (a tuple, an enum member, ...), which free-form user metadata may contain.
+    """
+    if isinstance(value, dict):
+        return {
+            key if key is None or isinstance(key, (str, int, float)) else str(key): _with_json_keys(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_with_json_keys(item) for item in value]
+    return value
+
+
+def _print_json(data: Any) -> None:
+    """Print data that may hold user metadata as JSON on stdout: unsupported keys and values become strings."""
+    out_console.print_json(data=_with_json_keys(data), default=str)
+
+
 def _version_callback(value: bool) -> None:  # noqa: FBT001
     """Print version and exit."""
     if value:
@@ -1149,7 +1170,7 @@ def list_nodes_cmd(  # noqa: PLR0913
             }
             for n in nodes
         ]
-        out_console.print_json(data=data, default=str)
+        _print_json(data)
     else:
         render_node_table(nodes, err_console)
 
@@ -1243,7 +1264,7 @@ def show(
             "user_metadata": detail.user_metadata,
             "field_metadata": detail.field_metadata,
         }
-        out_console.print_json(data=data, default=str)
+        _print_json(data)
     else:
         render_node_detail(detail, err_console)
 
@@ -1344,7 +1365,7 @@ def tree(  # noqa: PLR0913
 
 
 @app.command()
-def upstream(  # noqa: PLR0913, C901
+def upstream(  # noqa: PLR0913, PLR0915, C901
     node_path: Annotated[
         str,
         typer.Argument(help="Definition path in format 'Scope::path' (e.g., 'Power::?verify_margin')"),
@@ -1463,12 +1484,15 @@ def upstream(  # noqa: PLR0913, C901
     except TypeError as e:
         err_console.print(f"[red]Error: {escape(str(e))}[/red]")
         raise typer.Exit(code=1) from None
+    except tomllib.TOMLDecodeError as e:
+        err_console.print(f"[red]Error: Invalid TOML in {escape(str(effective_input))}: {escape(str(e))}[/red]")
+        raise typer.Exit(code=1) from None
     except ProvenanceError as e:
         err_console.print(f"[red]✗ Invalid provenance: {escape(str(e))}[/red]")
         raise typer.Exit(code=1) from None
 
     if as_json:
-        out_console.print_json(data=report_to_dict(report), default=str)
+        _print_json(report_to_dict(report))
     else:
         render_upstream_report(report, err_console, show_bindings=bindings)
 
