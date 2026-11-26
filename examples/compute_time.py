@@ -53,28 +53,28 @@ project.add_scope(thermal)
 
 
 class SolarPanel(BaseModel):
-    area_m2: Annotated[float, vq.Meta(unit="m^2")]
-    efficiency: Annotated[float, vq.Meta(unit="-", source_doc="SP-DS-004")]
-    max_temp_c: Annotated[float, vq.Meta(unit="degC", source_doc="SP-DS-004")]
+    area_m2: Annotated[float, vq.Meta({"unit": "m^2"})]
+    efficiency: Annotated[float, vq.Meta({"unit": "-", "source_doc": "SP-DS-004"})]
+    max_temp_c: Annotated[float, vq.Meta({"unit": "degC", "source_doc": "SP-DS-004"})]
 
 
 class Battery(BaseModel):
-    capacity_ah: Annotated[float, vq.Meta(unit="Ah")]
-    max_c_rate: Annotated[float, vq.Meta(unit="1/h")]
+    capacity_ah: Annotated[float, vq.Meta({"unit": "Ah"})]
+    max_c_rate: Annotated[float, vq.Meta({"unit": "1/h"})]
 
 
 @power.root_model(metadata={"owner": "eps-team"})
 class PowerDesign(BaseModel):
-    solar_panel: Annotated[SolarPanel, vq.Meta(source_doc="SP-DS-004")]  # inherited by solar_panel.*
+    solar_panel: Annotated[SolarPanel, vq.Meta({"source_doc": "SP-DS-004"})]  # inherited by solar_panel.*
     battery: Battery
-    bus_voltage_v: Annotated[float, vq.Meta(unit="V")]
-    load_w: Annotated[float, vq.Meta(unit="W")]
+    bus_voltage_v: Annotated[float, vq.Meta({"unit": "V"})]
+    load_w: Annotated[float, vq.Meta({"unit": "W"})]
 
 
 @thermal.root_model(metadata={"owner": "thermal-team"})
 class ThermalDesign(BaseModel):
-    ambient_temp_c: Annotated[float, vq.Meta(unit="degC")]
-    panel_heating_c_per_w: Annotated[float, vq.Meta(unit="degC/W")]
+    ambient_temp_c: Annotated[float, vq.Meta({"unit": "degC"})]
+    panel_heating_c_per_w: Annotated[float, vq.Meta({"unit": "degC/W"})]
 
 
 # -----------------------------------------------------------------------------

@@ -38,13 +38,13 @@ One definition may expand to several graph nodes: a calculation returning a mode
 
 ```python
 class SolarPanel(BaseModel):
-    area_m2: Annotated[float, vq.Meta(unit="m^2")]
-    efficiency: Annotated[float, vq.Meta(unit="-", source_doc="SP-DS-004")]
+    area_m2: Annotated[float, vq.Meta({"unit": "m^2"})]
+    efficiency: Annotated[float, vq.Meta({"unit": "-", "source_doc": "SP-DS-004"})]
 
 
 @power.root_model()
 class PowerDesign(BaseModel):
-    solar_panel: Annotated[SolarPanel, vq.Meta(source_doc="SP-DS-004")]  # inherited by solar_panel.*
+    solar_panel: Annotated[SolarPanel, vq.Meta({"source_doc": "SP-DS-004"})]  # inherited by solar_panel.*
 ```
 
 `vq.Meta` may sit on a leaf field, on a nested-model field (inherited by everything below it), or on the value type of a `Table` (applies to every key). Along the path from the root model to a leaf the dicts are shallow-merged, nearest wins.
