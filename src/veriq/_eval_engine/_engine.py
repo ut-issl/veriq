@@ -44,6 +44,8 @@ class EvaluationResult:
     Attributes:
         scopes: Tree-structured values organized by scope name.
         errors: List of (node_path, error_message) for any failed evaluations.
+        raw_values: For verifications overridden to False because an assumption failed,
+            the value the verification function actually returned. Empty otherwise.
         validity: Mapping from node path to validity status. True means the node's
             assumptions hold, False means an assumed verification failed.
 
@@ -52,19 +54,23 @@ class EvaluationResult:
     scopes: dict[str, ScopeTree] = field(default_factory=dict)
     errors: list[tuple[ProjectPath, str]] = field(default_factory=list)
     validity: dict[ProjectPath, bool] = field(default_factory=dict)
+    raw_values: dict[ProjectPath, Any] = field(default_factory=dict)
 
     @property
     def success(self) -> bool:
         """Check if evaluation completed without errors."""
         return len(self.errors) == 0
 
-    def get_value(self, path: ProjectPath) -> Any:
+    def get_value(self, path: ProjectPath, *, raw: bool = False) -> Any:
         """Get a computed value by path.
 
         Navigates the tree structure to find the value at the given path.
 
         Args:
             path: The ProjectPath to look up.
+            raw: If True, return the value the function actually produced, even for a
+                verification that was overridden to False because an assumption it relies
+                on failed (see `raw_values`). Default False returns the overridden value.
 
         Returns:
             The computed value at the given path.
@@ -73,6 +79,8 @@ class EvaluationResult:
             KeyError: If no value exists at the given path.
 
         """
+        if raw and path in self.raw_values:
+            return self.raw_values[path]
         scope_tree = self.scopes.get(path.scope)
         if scope_tree is None:
             msg = f"Scope '{path.scope}' not found"
@@ -174,7 +182,7 @@ def _check_validity(  # noqa: C901, PLR0912
     graph_spec: GraphSpec,
     values: dict[ProjectPath, Any],
     eval_order: list[ProjectPath],
-) -> dict[ProjectPath, bool]:
+) -> tuple[dict[ProjectPath, bool], dict[ProjectPath, Any]]:
     """Check validity based on assumed verifications.
 
     A node is invalid if:
@@ -190,7 +198,9 @@ def _check_validity(  # noqa: C901, PLR0912
         eval_order: The topological order of evaluation.
 
     Returns:
-        Dictionary mapping paths to validity status (True = valid).
+        Tuple of (validity, raw_values): validity maps paths to validity status
+        (True = valid); raw_values holds the pre-override value of every verification
+        that was overridden to False.
 
     """
     validity: dict[ProjectPath, bool] = dict.fromkeys(values, True)
@@ -243,13 +253,15 @@ def _check_validity(  # noqa: C901, PLR0912
                 validity[path] = False
                 break
 
-    # Override invalid verification values to False
+    # Override invalid verification values to False, keeping the original value aside.
     # This ensures consistent behavior for both Python API and CLI users
+    raw_values: dict[ProjectPath, Any] = {}
     for path, is_valid in validity.items():
-        if not is_valid and isinstance(path.path, VerificationPath):
+        if not is_valid and isinstance(path.path, VerificationPath) and path in values:
+            raw_values[path] = values[path]
             values[path] = False
 
-    return validity
+    return validity, raw_values
 
 
 def _make_output_leaf_path(
@@ -411,9 +423,9 @@ def evaluate_graph(  # noqa: C901
     # Check validity based on assumed verifications
     # Note: _check_validity modifies values in place for invalid verifications
     # (invalid verifications are overridden to False)
-    validity = _check_validity(graph_spec, values, eval_order)
+    validity, raw_values = _check_validity(graph_spec, values, eval_order)
 
     # Build tree structure from flat values
     scopes = build_scope_trees(values)
 
-    return EvaluationResult(scopes=scopes, errors=errors, validity=validity)
+    return EvaluationResult(scopes=scopes, errors=errors, validity=validity, raw_values=raw_values)
