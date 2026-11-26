@@ -1,0 +1,228 @@
+{
+  "$defs": {
+    "Battery": {
+      "properties": {
+        "capacity_ah": {
+          "title": "Capacity Ah",
+          "type": "number"
+        },
+        "max_c_rate": {
+          "title": "Max C Rate",
+          "type": "number"
+        }
+      },
+      "required": [
+        "capacity_ah",
+        "max_c_rate"
+      ],
+      "title": "Battery",
+      "type": "object"
+    },
+    "PowerDesign": {
+      "properties": {
+        "solar_panel": {
+          "$ref": "#/$defs/SolarPanel"
+        },
+        "battery": {
+          "$ref": "#/$defs/Battery"
+        },
+        "bus_voltage_v": {
+          "title": "Bus Voltage V",
+          "type": "number"
+        },
+        "load_w": {
+          "title": "Load W",
+          "type": "number"
+        }
+      },
+      "required": [
+        "solar_panel",
+        "battery",
+        "bus_voltage_v",
+        "load_w"
+      ],
+      "title": "PowerDesign",
+      "type": "object"
+    },
+    "PowerInput": {
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/PowerDesign"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PowerProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "model"
+      ],
+      "title": "PowerInput",
+      "type": "object"
+    },
+    "PowerProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "$": {
+          "additionalProperties": true,
+          "title": "$",
+          "type": "object"
+        },
+        "$.solar_panel": {
+          "additionalProperties": true,
+          "title": "$.solar_panel",
+          "type": "object"
+        },
+        "$.solar_panel.area_m2": {
+          "additionalProperties": true,
+          "title": "$.solar_panel.area_m2",
+          "type": "object"
+        },
+        "$.solar_panel.efficiency": {
+          "additionalProperties": true,
+          "title": "$.solar_panel.efficiency",
+          "type": "object"
+        },
+        "$.solar_panel.max_temp_c": {
+          "additionalProperties": true,
+          "title": "$.solar_panel.max_temp_c",
+          "type": "object"
+        },
+        "$.battery": {
+          "additionalProperties": true,
+          "title": "$.battery",
+          "type": "object"
+        },
+        "$.battery.capacity_ah": {
+          "additionalProperties": true,
+          "title": "$.battery.capacity_ah",
+          "type": "object"
+        },
+        "$.battery.max_c_rate": {
+          "additionalProperties": true,
+          "title": "$.battery.max_c_rate",
+          "type": "object"
+        },
+        "$.bus_voltage_v": {
+          "additionalProperties": true,
+          "title": "$.bus_voltage_v",
+          "type": "object"
+        },
+        "$.load_w": {
+          "additionalProperties": true,
+          "title": "$.load_w",
+          "type": "object"
+        }
+      },
+      "title": "PowerProvenance",
+      "type": "object"
+    },
+    "SolarPanel": {
+      "properties": {
+        "area_m2": {
+          "title": "Area M2",
+          "type": "number"
+        },
+        "efficiency": {
+          "title": "Efficiency",
+          "type": "number"
+        },
+        "max_temp_c": {
+          "title": "Max Temp C",
+          "type": "number"
+        }
+      },
+      "required": [
+        "area_m2",
+        "efficiency",
+        "max_temp_c"
+      ],
+      "title": "SolarPanel",
+      "type": "object"
+    },
+    "ThermalDesign": {
+      "properties": {
+        "ambient_temp_c": {
+          "title": "Ambient Temp C",
+          "type": "number"
+        },
+        "panel_heating_c_per_w": {
+          "title": "Panel Heating C Per W",
+          "type": "number"
+        }
+      },
+      "required": [
+        "ambient_temp_c",
+        "panel_heating_c_per_w"
+      ],
+      "title": "ThermalDesign",
+      "type": "object"
+    },
+    "ThermalInput": {
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/ThermalDesign"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ThermalProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "model"
+      ],
+      "title": "ThermalInput",
+      "type": "object"
+    },
+    "ThermalProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "$": {
+          "additionalProperties": true,
+          "title": "$",
+          "type": "object"
+        },
+        "$.ambient_temp_c": {
+          "additionalProperties": true,
+          "title": "$.ambient_temp_c",
+          "type": "object"
+        },
+        "$.panel_heating_c_per_w": {
+          "additionalProperties": true,
+          "title": "$.panel_heating_c_per_w",
+          "type": "object"
+        }
+      },
+      "title": "ThermalProvenance",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "Power": {
+      "$ref": "#/$defs/PowerInput"
+    },
+    "Thermal": {
+      "$ref": "#/$defs/ThermalInput"
+    }
+  },
+  "required": [
+    "Power",
+    "Thermal"
+  ],
+  "title": "ComputeTimeInput",
+  "type": "object"
+}
