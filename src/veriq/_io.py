@@ -11,7 +11,8 @@ from ._context import (  # noqa: F401 - get_input_base_dir re-exported
     reset_input_base_dir,
     set_input_base_dir,
 )
-from ._path import AttributePart, CalcPath, ItemPart, ModelPath, PartBase, VerificationPath
+from ._path import AttributePart, CalcPath, ItemPart, ModelPath, PartBase, ProjectPath, VerificationPath
+from ._provenance import toml_to_provenance
 from ._table import Table
 
 if TYPE_CHECKING:
@@ -280,3 +281,31 @@ def load_model_data_from_toml(
 
     logger.debug(f"Loaded model data from {input_path}")
     return model_data
+
+
+def load_provenance_from_toml(
+    project: Project,
+    input_path: Path | str,
+) -> dict[ProjectPath, dict[str, Any]]:
+    """Load input-value provenance from the ``provenance`` tables of an input TOML file.
+
+    See ``toml_to_provenance`` for the table format. Files without any ``provenance``
+    table yield an empty mapping.
+
+    Args:
+        project: The project containing scope definitions
+        input_path: Path to the input TOML file
+
+    Returns:
+        A mapping from root-model leaf path to its merged provenance metadata
+
+    Raises:
+        ProvenanceError: If a provenance entry does not match the root model structure
+
+    """
+    input_path = Path(input_path).resolve()
+    with input_path.open("rb") as f:
+        toml_contents = tomllib.load(f)
+    provenance = toml_to_provenance(project, toml_contents)
+    logger.debug(f"Loaded provenance for {len(provenance)} input paths from {input_path}")
+    return provenance
