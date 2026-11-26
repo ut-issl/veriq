@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class Battery(BaseModel):
-    capacity: Annotated[float, vq.Meta(unit="Wh")]
+    capacity: Annotated[float, vq.Meta({"unit": "Wh"})]
     min_capacity: float
 
 
