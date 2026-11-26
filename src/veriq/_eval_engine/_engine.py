@@ -204,7 +204,7 @@ def _check_validity(  # noqa: C901, PLR0912
         if spec.kind in (NodeKind.CALCULATION, NodeKind.VERIFICATION):
             func_key = _get_function_key(path)
             func_nodes.setdefault(func_key, []).append(path)
-            assumed_paths = spec.metadata.get("assumed_verification_paths", [])
+            assumed_paths = spec.engine_metadata.get("assumed_verification_paths", [])
             if assumed_paths and func_key not in func_assumptions:
                 func_assumptions[func_key] = assumed_paths
 
@@ -398,8 +398,8 @@ def evaluate_graph(  # noqa: C901
         logger.debug("Result for %s: %r", node_path, result)
 
         # Decompose result into leaf values
-        # Use root_output_type from metadata to get the full output structure
-        root_output_type = spec.metadata.get("root_output_type", spec.output_type)
+        # Use root_output_type from engine metadata to get the full output structure
+        root_output_type = spec.engine_metadata.get("root_output_type", spec.output_type)
         for leaf_parts in iter_leaf_path_parts(root_output_type):
             leaf_ppath = _make_output_leaf_path(node_path, leaf_parts)
             leaf_value = get_value_by_parts(result, leaf_parts)

@@ -36,10 +36,10 @@ class NodeSpec:
         compute_fn: Function to compute the value. None for MODEL nodes.
         param_mapping: Maps function parameter names to dependency ProjectPaths.
             This is the high-level mapping before leaf expansion.
-        metadata: Internal engine metadata (e.g., xfail flag, assumed verifications).
+        engine_metadata: Internal engine metadata (e.g., xfail flag, assumed verifications).
         user_metadata: User-defined metadata given via the `metadata=` argument of
             `root_model` / `calculation` / `verification` decorators. Kept separate
-            from `metadata` so that user keys never collide with engine keys.
+            from `engine_metadata` so that user keys never collide with engine keys.
             All leaf nodes expanded from one definition share the same dict.
 
     Example:
@@ -68,7 +68,7 @@ class NodeSpec:
     output_type: TypeForm[Any]
     compute_fn: Callable[..., Any] | None = None
     param_mapping: dict[str, ProjectPath] = field(default_factory=dict)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    engine_metadata: dict[str, Any] = field(default_factory=dict)
     user_metadata: dict[str, Any] = field(default_factory=dict)
 
     def is_input(self) -> bool:

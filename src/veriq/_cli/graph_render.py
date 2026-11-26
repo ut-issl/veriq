@@ -117,10 +117,10 @@ def render_node_detail(detail: NodeDetail, console: Console) -> None:
         console.print("[cyan]Dependents:[/cyan] [dim]None[/dim]")
         console.print()
 
-    # Metadata
-    if detail.metadata:
-        console.print("[cyan]Metadata:[/cyan]")
-        for key, value in detail.metadata.items():
+    # Engine metadata
+    if detail.engine_metadata:
+        console.print("[cyan]Engine Metadata:[/cyan]")
+        for key, value in detail.engine_metadata.items():
             formatted_value = format_for_display(value, escape_markup=True)
             console.print(f"  {key}: {formatted_value}")
 

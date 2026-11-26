@@ -115,12 +115,12 @@ def test_user_metadata_does_not_collide_with_internal_metadata() -> None:
     spec = build_graph_spec(project)
 
     calc_node = spec.get_node(ProjectPath(scope="S", path=CalcPath.parse("@calc.a")))
-    assert calc_node.metadata["root_output_type"] is Inner
-    assert "assumed_verification_paths" not in calc_node.metadata
+    assert calc_node.engine_metadata["root_output_type"] is Inner
+    assert "assumed_verification_paths" not in calc_node.engine_metadata
     assert calc_node.user_metadata["root_output_type"] == "user-value"
 
     verif_node = spec.get_node(ProjectPath(scope="S", path=VerificationPath(root="?verif", parts=())))
-    assert verif_node.metadata["xfail"] is False
+    assert verif_node.engine_metadata["xfail"] is False
     assert verif_node.user_metadata == {"xfail": True}
     assert project.scopes["S"].verifications["verif"].xfail is False
 

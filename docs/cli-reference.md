@@ -577,7 +577,7 @@ Dependencies (5 direct):
 Dependents (1 direct):
   Thermal::@calculate_temperature.solar_panel_temperature_max
 
-Metadata:
+Engine Metadata:
   root_output_type: SolarPanelResult
   assumed_verification_paths: [Power::?solar_panel_max_temperature]
 ```

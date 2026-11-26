@@ -119,7 +119,7 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
                 output_type=leaf_type,
                 compute_fn=None,
                 param_mapping={},
-                metadata={},
+                engine_metadata={},
                 user_metadata=scope.root_model_metadata,
             )
             type_registry[leaf_ppath] = leaf_type
@@ -143,8 +143,8 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
                 )
                 leaf_type = _get_leaf_type(project, leaf_ppath)
 
-                # Build metadata
-                metadata: dict[str, Any] = {
+                # Build engine metadata
+                engine_metadata: dict[str, Any] = {
                     # Store the full output type for decomposition during evaluation
                     "root_output_type": calc.output_type,
                 }
@@ -159,7 +159,7 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
                             path=parse_path(ref.path),
                         )
                         assumed_paths.append(verif_ppath)
-                    metadata["assumed_verification_paths"] = assumed_paths
+                    engine_metadata["assumed_verification_paths"] = assumed_paths
 
                 nodes[leaf_ppath] = NodeSpec(
                     id=leaf_ppath,
@@ -168,7 +168,7 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
                     output_type=leaf_type,
                     compute_fn=calc.func,
                     param_mapping=dict(calc.dep_ppaths),
-                    metadata=metadata,
+                    engine_metadata=engine_metadata,
                     user_metadata=calc.metadata,
                 )
                 type_registry[leaf_ppath] = leaf_type
@@ -191,8 +191,8 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
                 )
                 leaf_type = _get_leaf_type(project, leaf_ppath)
 
-                # Build metadata
-                metadata: dict[str, Any] = {
+                # Build engine metadata
+                engine_metadata: dict[str, Any] = {
                     "xfail": verif.xfail,
                     # Store the full output type for decomposition during evaluation
                     "root_output_type": verif.output_type,
@@ -208,7 +208,7 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
                             path=parse_path(ref.path),
                         )
                         assumed_paths.append(verif_ppath)
-                    metadata["assumed_verification_paths"] = assumed_paths
+                    engine_metadata["assumed_verification_paths"] = assumed_paths
 
                 nodes[leaf_ppath] = NodeSpec(
                     id=leaf_ppath,
@@ -217,7 +217,7 @@ def build_graph_spec(project: Project) -> GraphSpec:  # noqa: C901, PLR0912
                     output_type=leaf_type,
                     compute_fn=verif.func,
                     param_mapping=dict(verif.dep_ppaths),
-                    metadata=metadata,
+                    engine_metadata=engine_metadata,
                     user_metadata=verif.metadata,
                 )
                 type_registry[leaf_ppath] = leaf_type

@@ -54,7 +54,7 @@ class NodeDetail:
     output_type: TypeForm[Any]
     direct_dependencies: frozenset[ProjectPath]
     direct_dependents: frozenset[ProjectPath]
-    metadata: dict
+    engine_metadata: dict
 
 
 @dataclass(slots=True)
@@ -263,7 +263,7 @@ def get_node_detail(project: Project, path: ProjectPath) -> NodeDetail:
         output_type=node.output_type,
         direct_dependencies=graph.predecessors(path),
         direct_dependents=graph.successors(path),
-        metadata=dict(node.metadata),
+        engine_metadata=dict(node.engine_metadata),
     )
 
 
