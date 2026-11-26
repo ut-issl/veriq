@@ -108,16 +108,18 @@ def test_missing_key_uses_default() -> None:
     assert sub.propagate("nope", combine=max, default=1.0) == 4.0
 
 
-def test_non_numeric_value_raises() -> None:
+@pytest.mark.parametrize(
+    ("value", "error_pattern"),
+    [
+        pytest.param("slow", r"compute_time_s.*S::@a.*str", id="str"),
+        pytest.param(True, r"compute_time_s.*S::@a.*bool", id="bool"),
+    ],
+)
+def test_non_numeric_value_raises(value: object, error_pattern: str) -> None:
     project = _diamond()
-    project.scopes["S"].calculations["a"].metadata["compute_time_s"] = "slow"
+    project.scopes["S"].calculations["a"].metadata["compute_time_s"] = value
     sub = vq.upstream_subgraph(project, "S::?ok")
-    with pytest.raises(TypeError, match=r"compute_time_s.*S::@a.*str"):
-        sub.propagate("compute_time_s", combine=max)
-
-    project.scopes["S"].calculations["a"].metadata["compute_time_s"] = True
-    sub = vq.upstream_subgraph(project, "S::?ok")
-    with pytest.raises(TypeError, match="bool"):
+    with pytest.raises(TypeError, match=error_pattern):
         sub.propagate("compute_time_s", combine=max)
 
 
