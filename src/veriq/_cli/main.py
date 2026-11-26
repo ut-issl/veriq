@@ -1226,7 +1226,7 @@ def show(
             ),
             "dependencies": [str(d) for d in sorted(detail.direct_dependencies, key=str)],
             "dependents": [str(d) for d in sorted(detail.direct_dependents, key=str)],
-            "metadata": detail.metadata,
+            "engine_metadata": detail.engine_metadata,
         }
         out_console.print_json(data=data, default=str)
     else:

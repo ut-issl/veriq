@@ -79,10 +79,10 @@ def test_show_json_serializes_metadata(simple_project: vq.Project, node_path: st
     data = json.loads(result.stdout)
     assert data["path"] == node_path
     if node_path == "ScopeA::$.value":
-        assert data["metadata"] == {}
+        assert data["engine_metadata"] == {}
     else:
         expected_type = float if "@" in node_path else bool
-        assert data["metadata"]["root_output_type"] == str(expected_type)
+        assert data["engine_metadata"]["root_output_type"] == str(expected_type)
 
 
 # --- parse_project_path tests ---

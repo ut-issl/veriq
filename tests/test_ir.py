@@ -220,7 +220,7 @@ def test_build_graph_spec_model_with_verification() -> None:
     verif_node = verif_nodes[0]
     assert len(verif_node.dependencies) == 1
     assert verif_node.output_type is bool
-    assert verif_node.metadata.get("xfail") is False
+    assert verif_node.engine_metadata.get("xfail") is False
 
 
 def test_build_graph_spec_verification_xfail_metadata() -> None:
@@ -240,7 +240,7 @@ def test_build_graph_spec_verification_xfail_metadata() -> None:
     spec = build_graph_spec(project)
 
     verif_nodes = spec.get_nodes_by_kind(NodeKind.VERIFICATION)
-    assert verif_nodes[0].metadata["xfail"] is True
+    assert verif_nodes[0].engine_metadata["xfail"] is True
 
 
 def test_build_graph_spec_chained_calculations() -> None:
