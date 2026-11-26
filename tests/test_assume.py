@@ -334,6 +334,33 @@ def test_assume_can_be_applied_outside_the_registering_decorator() -> None:
     assert len(sub.assume_edges) == 1
 
 
+def test_outside_assume_does_not_leak_into_other_registrations_of_the_function() -> None:
+    scope = vq.Scope("TestScope")
+
+    @scope.root_model()
+    class TestModel(BaseModel):
+        value: float
+
+    @scope.verification()
+    def inner_premise(val: Annotated[float, vq.Ref("$.value")]) -> bool:
+        return val > 0
+
+    @scope.verification()
+    def outer_premise(val: Annotated[float, vq.Ref("$.value")]) -> bool:
+        return val < 100
+
+    @vq.assume(vq.Ref("?inner_premise"))
+    def doubled(val: Annotated[float, vq.Ref("$.value")]) -> float:
+        return val * 2
+
+    first = scope.calculation(name="first")(doubled)
+    second = scope.calculation(name="second")(doubled)
+    vq.assume(vq.Ref("?outer_premise"))(second)
+
+    assert [ref.path for ref in first.assumed_refs] == ["?inner_premise"]
+    assert [ref.path for ref in second.assumed_refs] == ["?inner_premise", "?outer_premise"]
+
+
 def test_overridden_verification_keeps_raw_value() -> None:
     """An invalid verification reads False, but the value its function returned is still available."""
     project = vq.Project("TestProject")

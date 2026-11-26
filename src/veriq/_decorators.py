@@ -37,7 +37,9 @@ def assume(ref: Ref) -> Callable[[Callable[P, T]], Callable[P, T]]:
         from ._models import Calculation, Verification  # noqa: PLC0415
 
         if isinstance(func, (Calculation, Verification)):
-            func.assumed_refs.append(ref)
+            # A new list: the current one may be shared with other registrations of the
+            # same function (it comes from the function's inner @assume decorators).
+            func.assumed_refs = [*func.assumed_refs, ref]
             return func
 
         # HACK: We should avoid modifying the function object directly,
