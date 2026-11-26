@@ -275,7 +275,7 @@ def _unbound_sources(
 def _assumed_ids(leaves: list[NodeSpec]) -> frozenset[DefinitionId]:
     assumed: set[DefinitionId] = set()
     for leaf in leaves:
-        for path in leaf.metadata.get("assumed_verification_paths", ()):
+        for path in leaf.engine_metadata.get("assumed_verification_paths", ()):
             assumed.add(DefinitionId.from_path(path))
     return frozenset(assumed)
 
