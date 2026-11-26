@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from annotationlib import ForwardRef
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from difflib import get_close_matches
 from enum import StrEnum
 from inspect import isclass
@@ -49,18 +49,16 @@ class Meta:
 
         class Design(BaseModel):
             battery_capacity: Annotated[float, vq.Meta({"source_doc": "EPS-ICD-001", "unit": "Wh"})]
-            battery: Annotated[Battery, vq.Meta(owner="power-team")]  # inherited by battery.* leaves
+            battery: Annotated[Battery, vq.Meta({"owner": "power-team"})]  # inherited by battery.* leaves
 
     veriq does not interpret the contents. A shallow copy is stored.
     """
 
-    data: dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any]
 
-    def __init__(self, data: Mapping[str, Any] | None = None, /, **kwargs: Any) -> None:
-        """Take the metadata as a mapping, as keyword arguments, or both; a keyword wins over the mapping."""
-        merged = dict(data) if data is not None else {}
-        merged.update(kwargs)
-        object.__setattr__(self, "data", merged)
+    def __init__(self, data: Mapping[str, Any], /) -> None:
+        """Take the metadata as a mapping, the same form as the `metadata=` argument of the decorators."""
+        object.__setattr__(self, "data", dict(data))
 
 
 class ProvenanceError(ValueError):

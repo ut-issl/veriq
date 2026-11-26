@@ -33,10 +33,10 @@ class Battery(BaseModel):
 
 
 class Design(BaseModel):
-    battery: Annotated[Battery, vq.Meta(owner="power-team", unit="Ah")]
+    battery: Annotated[Battery, vq.Meta({"owner": "power-team", "unit": "Ah"})]
     area: Annotated[float, vq.Meta({"source_doc": "SP-001"})]
     plain: float
-    power: Annotated[vq.Table[Mode, Annotated[float, vq.Meta(unit="W")]], vq.Meta(owner="eps")]
+    power: Annotated[vq.Table[Mode, Annotated[float, vq.Meta({"unit": "W"})]], vq.Meta({"owner": "eps"})]
     matrix: vq.Table[tuple[Phase, Mode], float]
 
 
@@ -65,12 +65,18 @@ def _mp(scope: str, path: str) -> ProjectPath:
 # =============================================================================
 
 
-def test_meta_accepts_mapping_and_kwargs_and_copies() -> None:
+def test_meta_copies_its_mapping() -> None:
     src = {"a": 1}
-    meta = vq.Meta(src, b=2)
+    meta = vq.Meta(src)
     src["a"] = 99
-    assert meta.data == {"a": 1, "b": 2}
-    assert vq.Meta().data == {}
+    assert meta.data == {"a": 1}
+
+
+def test_meta_takes_only_a_mapping() -> None:
+    with pytest.raises(TypeError):
+        vq.Meta(unit="Wh")  # ty: ignore[unknown-argument, missing-argument]
+    with pytest.raises(TypeError):
+        vq.Meta()  # ty: ignore[missing-argument]
 
 
 def test_collect_field_metadata_inherits_and_overrides() -> None:

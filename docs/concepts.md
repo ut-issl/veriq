@@ -302,7 +302,7 @@ class Battery(BaseModel):
 
 
 class PowerModel(BaseModel):
-    battery: Annotated[Battery, vq.Meta(owner="power-team")]  # inherited by battery.*
+    battery: Annotated[Battery, vq.Meta({"owner": "power-team"})]  # inherited by battery.*
 ```
 
 The resolved metadata appears as `NodeSpec.field_metadata` on the corresponding MODEL leaf nodes of the dependency graph. It is kept separate from `@scope.root_model(metadata=...)`, which is shared by all leaves of the root model.
