@@ -513,7 +513,7 @@ def test_whole_table_of_empty_models_is_not_an_output() -> None:
 
 def test_annotated_table_is_recognised_as_a_whole_table() -> None:
     class Design(BaseModel):
-        load: Annotated[vq.Table[Mode, float], vq.Meta(owner="eps")]
+        load: Annotated[vq.Table[Mode, float], vq.Meta({"owner": "eps"})]
 
     project = vq.Project(name="P")
     scope = vq.Scope(name="S")
